@@ -37,6 +37,11 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `CartLine` | `src/components/commerce/CartLine.tsx` | Cart, MCart, Checkout |
 | Commerce | `CartSummary` | `src/components/commerce/CartSummary.tsx` | Checkout |
 | Commerce | `CartPanel` | `src/components/commerce/CartPanel.tsx` | Cart (drawer), MCart (/cart) |
+| Commerce | `ShoppingListTable` | `src/components/commerce/ShoppingListTable.tsx` | ShoppingList, MShoppingList |
+| Commerce | `PrintMat` | `src/components/commerce/PrintMat.tsx` | Print, MPrint |
+| Commerce | `PrintCard` | `src/components/commerce/PrintCard.tsx` | Print ("Other editions") |
+| Commerce | `GiftCardPreview` | `src/components/commerce/GiftCardPreview.tsx` | GiftCard, MGiftCard |
+| Layout | `ArticleCard` | `src/components/layout/ArticleCard.tsx` | Journal, MJournal, Article ("Keep reading") |
 | Commerce | `CheckoutStepper` | `src/components/commerce/CheckoutStepper.tsx` | Checkout, MCheckout |
 | Commerce | `EditionCounter` | `src/components/commerce/EditionCounter.tsx` | Print |
 | Commerce | `ExpressPay` | `src/components/commerce/ExpressPay.tsx` | Checkout |
@@ -499,7 +504,7 @@ export interface MobileMenuProps {
 
 `src/components/layout/SiteFooter.tsx` · used on all store pages
 
-**SiteFooter** — Desktop: 6-column grid, newsletter spans 2. Phone (< 768 px, board MHome): "Letters from the studio.", 2×2 columns of three merged links, "© 2026 Geste Studio" and "USD $ EN FR". Padding 56 32 28 (phone 64 16 24).
+**SiteFooter** — Desktop: 6-column grid (32 px gaps), newsletter spans 2 (340 px max, 10 px gaps), 72 px above the bottom row. Column titles in Stone, 6 px under each (desktop only); links stacked at 22 px, each with a 24 px hit area (1 px padding cancelled by a -1 px margin, in a flex column so the margins do not collapse). EN/FR are 32 px buttons. Phone (< 768 px, board MHome): "Letters from the studio.", 2×2 columns of three merged links, "© 2026 Geste Studio" and "USD $ EN FR". Padding 56 32 28 (phone 64 16 24).
 
 ```ts
 export interface SiteFooterProps {
@@ -573,7 +578,7 @@ export interface CartPanelProps {
   cart: PricedCart;              // useCart({ shippingMethod: "mondial_relay" }): cheapest carrier for "from $4"
   variant: "drawer" | "page";
   onRemove: (lineId: string) => void;
-  onQuantity: (lineId: string, quantity: number) => void;
+  onQuantity?: (lineId: string, quantity: number) => void; // unused by the cart: no stepper is drawn on Cart / MCart
   onUndo?: () => void;
   onNavigate?: () => void;
 }
@@ -946,3 +951,48 @@ export interface TimelineEvent {
   kind?: "system" | "note";
 }
 ```
+
+
+## ShoppingListTable
+
+`src/components/commerce/ShoppingListTable.tsx` · used on ShoppingList, MShoppingList
+
+**ShoppingListTable** — Materials of a guide. Desktop: table "Item · What to look for · Price · Where" (columns 32 px, 1.2fr, 1.6fr, 70 px, 110 px; 12 px gaps), rows 48 px + 1 px rule. Phone: checkbox, name over what to look for, price over "Find it". A ticked row ("I already have") turns Stone, its name struck through. "Find it" opens the partner shop in a new tab (`rel="noopener sponsored"`).
+
+```ts
+export interface ShoppingListTableProps {
+  lines: ShoppingListLine[];
+  tier: "standard" | "budget";
+  have: ReadonlySet<number>;
+  onToggle: (position: number) => void;
+}
+```
+
+
+## PrintMat
+
+`src/components/commerce/PrintMat.tsx` · used on Print, MPrint
+
+**PrintMat** — A print on its white mat over Sand. Desktop: 760 px panel, mat padding 36 36 64, 400 × 500 picture, `shadow-mat`, caption "N°07 · 12/50 · Geste Studio". Phone: 36 px Sand padding, mat 16 16 32, 220 × 275, `shadow-mat-sm`, no caption.
+
+
+## PrintCard
+
+`src/components/commerce/PrintCard.tsx` · used on Print ("Other editions")
+
+**PrintCard** — Sand mat with 24 px padding and a fixed 212 × 265 picture (as drawn, the mat is wider than the picture), title + price, edition number in Stone.
+
+
+## GiftCardPreview
+
+`src/components/commerce/GiftCardPreview.tsx` · used on GiftCard, MGiftCard
+
+**GiftCardPreview** — The emailed card over Sand. Desktop: 640 px panel, 440 px card (`shadow-card`), 260 px picture, "geste.studio gift card", "For Léa, from Camille", message, "Code GESTE-XXXX-XXXX · valid 12 months". Phone: 24 px padding, `shadow-card-sm`, 160 px picture, "Gift card", no code line. Empty names show "…".
+
+
+## ArticleCard
+
+`src/components/layout/ArticleCard.tsx` · used on Journal, MJournal, Article
+
+**ArticleCard** — Journal tile: picture (300 px, phone 200; `keep` variant 240 px), "Method · Sept 24" in Stone, title (medium, underlined on hover), excerpt (desktop only).
+

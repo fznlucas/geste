@@ -107,7 +107,8 @@ export default async function HomePage() {
             {prints.map((e, i) => (
               <Link key={e.id} href={`/prints/${e.workSlug}`} className={`group flex-col gap-8 lg:flex lg:gap-10 ${i === 0 ? "flex" : "hidden"}`}>
                 <span className="flex justify-center bg-surface-sunk p-32 lg:block lg:p-24">
-                  <span className="relative block aspect-[4/5] w-220 lg:w-full">
+                  {/* Fixed sizes as drawn (desktop 197 × 246, a little wider than its column; phone 220 × 275). */}
+                  <span className="relative block h-275 w-220 lg:h-246 lg:w-197">
                     <Image src={e.imageUrl} alt="" fill sizes="(min-width: 1200px) 200px, 220px" className="object-cover" />
                   </span>
                 </span>
@@ -166,14 +167,9 @@ function SectionHead({ title, href, link, shortLink }: { title: string; href: st
   );
 }
 
-/** One edition per work, in the editions' order (N°07, N°01, N°08): the first size with copies left, else the first size. */
+/** Home board: the first three A3 editions with copies left, in the editions' order (N°07, N°01, N°08). */
 function featuredPrints(editions: PrintEdition[]): PrintEdition[] {
-  const byWork = new Map<string, PrintEdition>();
-  for (const e of editions) {
-    const current = byWork.get(e.workId);
-    if (!current || (current.soldOut && !e.soldOut)) byWork.set(e.workId, e);
-  }
-  return [...byWork.values()].slice(0, 3);
+  return editions.filter((e) => e.size === "A3" && !e.soldOut).slice(0, 3);
 }
 
 /** "Edition 12/50" (desktop), "12/50" (phone), or "Sold out". */

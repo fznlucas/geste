@@ -34,9 +34,10 @@ JetBrains Mono 400 and 500 only. Sentence case. No italic, no uppercase, no lett
 | --- | --- | --- | --- | --- |
 | xs | `text-xs` | 12 / 20 | 400 | Default for everything: body, UI, buttons, labels |
 | sm | `text-sm` | 14 / 22 | 400 | Phone step text, emphasis |
+| body | `text-body` | 14 / 24 | 400 | Journal article body and lede (Article / MArticle) |
 | md | `text-md` | 22 / 30 | 500 | Desktop reader step text, phone page titles, mobile menu |
-| lg | `text-lg` | 28 / 34 | 500 | Page and section titles, KPI values |
-| xl | `text-xl` | 40 / 46 | 500 | Hero lines |
+| lg | `text-lg` | 28 / 1.2 (33.6) | 500 | Page and section titles, KPI values |
+| xl | `text-xl` | 40 / 1.2 (48) | 500 | Hero lines |
 | 2xl | `text-2xl` | 96 / 96 | 500 | Drying timer digits (tabular) |
 | admin-title | `text-admin-title` | 20 / 24 | 500 | Admin page title only |
 
@@ -60,7 +61,7 @@ Tailwind spacing unit is **1 px** (`--spacing: 1px`), so utilities read in pixel
 | --- | --- |
 | Radius | 0 everywhere · `rounded-bar` 3 px on chart bar data ends · `rounded-full` status dots |
 | Border | 1 px · focus ring 1 px Ink, offset 2–3 px (`outline-offset-3` on buttons) |
-| Shadows | `shadow-pop` 0 16 40 rgba(17,17,17,.16) menus/popovers · `shadow-modal` 0 20 48 rgba(17,17,17,.18) · nothing else (no card shadows, no image shadows) |
+| Shadows | `shadow-pop` 0 16 40 rgba(17,17,17,.16) menus/popovers · `shadow-modal` 0 20 48 rgba(17,17,17,.18) · `shadow-mat` 0 10 30 rgba(17,17,17,.10) and `shadow-mat-sm` 0 8 24 (print on its mat, Print / MPrint) · `shadow-card` 0 16 40 rgba(17,17,17,.14) and `shadow-card-sm` 0 10 28 (gift card preview, GiftCard / MGiftCard) · nothing else (no card shadows on tiles, no image shadows) |
 | Z-index | base 0 · sticky 10 · popover 20 · drawer 30 · modal 40 · toast 50 (`z-sticky`…`z-toast`) |
 | Hit targets | 44 px min · 48 px primary · 32 px dense admin |
 

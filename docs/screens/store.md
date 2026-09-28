@@ -39,10 +39,13 @@
 ## Shopping list — `/works/[slug]/list`
 
 - **Boards:** ShoppingList, MShoppingList.
-- **Layout:** work + format selector · "Standard / Budget" switch · list of ShoppingListItem (name · quantity scaled to the format · option label · ~price · Buy ↗) · total estimate · disclosure "Links are affiliate links: Geste earns a small commission at no cost to you."
-- **Acceptance:** quantities change with the format; each link opens in a new tab with `rel="noopener sponsored"` and fires `affiliate_click`.
+- **Layout:** breadcrumb "Library / N°03 / Shopping list" · thumbnail + "Shopping list" + "N°03 · 60×80 · Intermediate · Original palette" · "Standard / Budget" + "0 of 10 already at home" · ShoppingListTable (tick what you already have; "Find it" to the partner shop) · "From your kitchen" panel · side panel "Estimated budget": Still to buy, Full list, disclosure "Prices are indicative. Links may earn the studio a small commission, at no cost to you.", "Email me this list →", "Open the guide".
+- **Data:** format, level and palette from the work page link (?format=&level=&palette=).
+- **Acceptance:** labels change with the format; each link opens in a new tab with `rel="noopener sponsored"` and fires `affiliate_click`.
 
 ## Prints — `/prints`, `/prints/[slug]`
+
+- `/prints` has no board: it shows the leading print (N°07).
 
 - **Boards:** Print (1440 × 2000), MPrint.
 - **Layout:** artwork on a Sand mat · size choice (A3 $45, A2 $75, 50×70 $95) · EditionCounter ("12 of 50 left", Signal when ≤ 5) · paper, signature and certificate details · "Add to cart" · cross-sell "Paint it yourself instead? Guide from $12".
@@ -50,7 +53,7 @@
 
 ## Gift cards — `/gift-cards`
 
-- **Boards:** GiftCard, MGiftCard. Amounts $30 / $50 / $100 / custom ($10–500), recipient email, name, message, send date. Delivered by email at the chosen date (cron). Code format `GESTE-XXXX-XXXX`.
+- **Boards:** GiftCard, MGiftCard. Amounts $15 / $30 / $50 / $100 / $150 (what each covers under them), card design (N°03, N°07, N°01), their name, your name, their email, message, "Send it: Now / On a date". Live preview of the card. Delivered by email at the chosen date (cron). Code format `GESTE-XXXX-XXXX`.
 
 ## Method `/method`, About `/about`, Journal `/journal` + `/journal/[slug]`, Help `/help`, Legal `/legal/[doc]`
 

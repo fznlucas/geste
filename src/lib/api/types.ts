@@ -88,7 +88,7 @@ export interface WorksQuery {
 export interface ShoppingListLine {
   position: number;
   name: string;
-  quantity: string; // "60 ml", scaled to the format
+  /** "What to look for", already scaled to the format: "Acrylic, 60 ml". */
   standard: { label: string; priceCents: number; url: string };
   budget: { label: string; priceCents: number; url: string };
 }
@@ -102,14 +102,30 @@ export interface GuideOutlineStep {
 
 // ── Journal ────────────────────────────────────────────────────────────────
 
+export type ArticleCategory = "Method" | "Stories" | "Studio";
+
+export interface ArticleBlock {
+  kind: "p" | "h2";
+  text: string;
+  /** Phone wording when the board shortens it (MArticle). */
+  short?: string;
+}
+
 export interface Article {
   slug: string;
   title: string;
-  category: "Method" | "Stories";
+  category: ArticleCategory;
   readMinutes: number;
   excerpt: string;
   coverUrl: string;
+  coverAlt: string;
   publishedAt: string;
+}
+
+export interface ArticleDetail extends Article {
+  body: ArticleBlock[];
+  /** "Try it on a Beginner work, about an hour.   See N°01" */
+  cta: { text: string; work: { number: string; slug: string; duration: string } } | null;
 }
 
 // ── Guides ─────────────────────────────────────────────────────────────────

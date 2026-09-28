@@ -95,7 +95,8 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
 
   return (
     <div className="mx-auto flex w-full max-w-1264 flex-col gap-22 px-16 pb-120 lg:gap-24 lg:px-32 lg:pb-0 lg:pt-24">
-      <nav aria-label="Breadcrumb" className="flex gap-8 leading-[16px] text-fg-muted">
+      {/* Product board: no line-height on main (normal ≈ 16 px); MProduct: 20 px. */}
+      <nav aria-label="Breadcrumb" className="flex gap-8 text-fg-muted lg:leading-[16px]">
         <Link href="/shop" className="hover:text-fg">Shop</Link>
         <span aria-hidden="true">/</span>
         <span aria-current="page" className="text-fg">{work.number}</span>
@@ -159,7 +160,7 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
                         <span className="text-fg-muted">{it.price}</span>
                       </div>
                     ))}
-                    <Link href={`/works/${work.slug}/list?format=${config.format}`} className="mt-8 self-start underline underline-offset-3 hover:text-fg-muted">See a full shopping list</Link>
+                    <Link href={`/works/${work.slug}/list?format=${config.format}&level=${config.level}&palette=${config.palette}`} className="mt-8 self-start underline underline-offset-3 hover:text-fg-muted">See a full shopping list</Link>
                   </div>
                 ),
               },

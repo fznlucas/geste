@@ -4,7 +4,7 @@
  * Pages import from "@/lib/api" only, never from "@/data".
  */
 export { getWorks, getWork, getWorkById, getHomeHeroWork, getShoppingList, getGuideOutline, toWorkCard, toConfiguratorPalettes } from "./works";
-export { getArticles } from "./articles";
+export { getArticles, getArticle, articleDate } from "./articles";
 export { getGuide, findGuide, flattenSteps } from "./guides";
 export { getEditions, getEdition, getPrintCopies } from "./editions";
 export { getOrders, getOrder } from "./orders";

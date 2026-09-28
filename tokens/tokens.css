@@ -45,6 +45,10 @@
   --radius-bar: 3px;
   --shadow-pop: 0 16px 40px rgba(17,17,17,0.16);
   --shadow-modal: 0 20px 48px rgba(17,17,17,0.18);
+  --shadow-mat: 0 10px 30px rgba(17,17,17,0.10); /* Print on its mat (Print board) */
+  --shadow-mat-sm: 0 8px 24px rgba(17,17,17,0.10); /* Print on its mat, phone (MPrint) */
+  --shadow-card: 0 16px 40px rgba(17,17,17,0.14); /* Gift card preview (GiftCard) */
+  --shadow-card-sm: 0 10px 28px rgba(17,17,17,0.14); /* Gift card preview, phone (MGiftCard) */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-pen: cubic-bezier(0.45, 0.05, 0.55, 0.95);
   --dur-fast: 150ms;

@@ -12,8 +12,8 @@ import { palettes, workFormats, works } from "@/data/works";
 import { minGuidePriceCents } from "./works";
 import type { CartLineInput, CartTotals, PricedCart, PricedCartLine, StoredCartLine } from "./types";
 
-/** Gift card amounts (GiftCard board): $30 / $50 / $100 or custom between $10 and $500. */
-export const GIFT_CARD_PRESETS = [3000, 5000, 10000] as const;
+/** Gift card amounts (GiftCard board): $15 / $30 / $50 / $100 / $150. Min/max guard stored lines. */
+export const GIFT_CARD_PRESETS = [1500, 3000, 5000, 10000, 15000] as const;
 export const GIFT_CARD_MIN = 1000;
 export const GIFT_CARD_MAX = 50000;
 

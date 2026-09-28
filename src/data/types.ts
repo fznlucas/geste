@@ -7,6 +7,7 @@ import type {
   ReviewStatus, ShippingMethod, Swatch, ThreadStatus, WorkStatus,
 } from "@/lib/api/types";
 
+export type { ArticleRow } from "./articles";
 export type { Address, FulfilmentStatus, ItemKind, OrderStatus, PaletteKey, ReviewStatus, Swatch, ThreadStatus, WorkStatus };
 export type CopyStatus = "available" | "reserved" | "sold" | "void";
 
@@ -76,13 +77,14 @@ export interface ShoppingItemRow {
   workId: string;
   position: number;
   name: string;
+  /** "Acrylic, {q}": {q} is replaced by quantityRule[format] (the canvas size, the tube). */
   standardLabel: string;
   budgetLabel: string;
   standardCents: number;
   budgetCents: number;
   standardUrl: string;
   budgetUrl: string;
-  quantityRule: Record<FormatKey, string>;
+  quantityRule: Record<FormatKey, string> | null;
 }
 
 export interface PrintEditionRow {

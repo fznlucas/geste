@@ -2,7 +2,7 @@
 
 import * as RA from "@radix-ui/react-accordion";
 import type { ReactNode } from "react";
-import { Icon } from "../brand/Icon";
+import { cn } from "@/lib/cn";
 
 export interface AccordionItem {
   value: string;
@@ -17,19 +17,18 @@ export interface AccordionProps {
   defaultValue?: string[];
 }
 
-/** Rows of 44 px with a Line rule; plus → minus; panel height animates 240 ms (off under reduced motion). */
+/** Rows of 48 px on phones, 44 px on desktop (MProduct / Product), with a Line rule; "+" → "−" (text, as drawn); panel height animates 240 ms (off under reduced motion). */
 export function Accordion({ items, type = "single", defaultValue }: AccordionProps) {
-  const body = items.map((it) => (
-    <RA.Item key={it.value} value={it.value} className="border-b border-border">
+  // Boards: each row is 44 px (48 on phones) borders included; a rule above every row but the first,
+  // and under the last one (Product, MProduct).
+  const body = items.map((it, i) => (
+    <RA.Item key={it.value} value={it.value}>
       <RA.Header>
-        <RA.Trigger className="group flex min-h-44 w-full items-center justify-between text-left hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:outline-fg">
+        <RA.Trigger className={cn("group flex min-h-48 w-full items-center justify-between border-border text-left lg:min-h-44", i > 0 && "border-t", i === items.length - 1 && "border-b", "hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:outline-fg")} >
           {it.title}
-          <span className="group-data-[state=open]:hidden">
-            <Icon name="plus" />
-          </span>
-          <span className="hidden group-data-[state=open]:inline">
-            <Icon name="minus" />
-          </span>
+          {/* Text signs, as drawn on the boards. */}
+          <span aria-hidden="true" className="group-data-[state=open]:hidden">+</span>
+          <span aria-hidden="true" className="hidden group-data-[state=open]:inline">−</span>
         </RA.Trigger>
       </RA.Header>
       <RA.Content className="overflow-hidden pb-16 text-fg-muted data-[state=closed]:animate-[collapse_240ms_var(--ease-standard)] data-[state=open]:animate-[expand_240ms_var(--ease-standard)]">

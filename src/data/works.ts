@@ -92,19 +92,31 @@ export const palettes: PaletteRow[] = works.flatMap((w, i) =>
   (["original", ...EXTRA_PALETTES[i]!] as PaletteKey[]).map((key) => ({ ...PALETTE_TEMPLATES[key], workId: w.id, active: true })),
 );
 
+const CANVAS_RULE = { "30x40": "30 × 40 cm", "40x50": "40 × 50 cm", "60x80": "60 × 80 cm", "80x100": "80 × 100 cm" } as const;
 const TUBE_RULE = { "30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml" } as const;
-const ONE = { "30x40": "1", "40x50": "1", "60x80": "1", "80x100": "1" } as const;
-const CANVAS_RULE = { "30x40": "30×40 cm", "40x50": "40×50 cm", "60x80": "60×80 cm", "80x100": "80×100 cm" } as const;
+const WHITE_RULE = { "30x40": "40 ml", "40x50": "80 ml", "60x80": "120 ml", "80x100": "250 ml" } as const;
 const STD_URL = "https://partner.example/std?ref=geste";
 const BUDGET_URL = "https://partner.example/budget?ref=geste";
 
-/** Shopping list of the seed (canvas, two tubes, flat brush), used for every work in the mock. */
-export const shoppingItems: ShoppingItemRow[] = works.flatMap((w) => [
-  { workId: w.id, position: 0, name: "Canvas", standardLabel: "Primed cotton, stretched", budgetLabel: "Roll + stretcher bars", standardCents: 2400, budgetCents: 1400, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule: CANVAS_RULE },
-  { workId: w.id, position: 1, name: "Turquoise", standardLabel: "Artist range", budgetLabel: "Student range", standardCents: 700, budgetCents: 350, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule: TUBE_RULE },
-  { workId: w.id, position: 2, name: "Payne’s grey", standardLabel: "Artist range", budgetLabel: "Student range", standardCents: 700, budgetCents: 350, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule: TUBE_RULE },
-  { workId: w.id, position: 3, name: "Flat brush 50 mm", standardLabel: "Synthetic artist brush", budgetLabel: "Decorating brush", standardCents: 800, budgetCents: 300, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule: ONE },
-]);
+/** The ten items of the ShoppingList board (N°03, 60×80), used for every work in the mock. Prices as drawn. */
+const LIST: Array<[name: string, standard: string, budget: string, stdCents: number, budgetCents: number, rule: Record<FormatKey, string> | null]> = [
+  ["Canvas", "Primed cotton canvas {q}, stretched", "Unprimed roll + 4 stretcher bars", 2400, 1400, CANVAS_RULE],
+  ["Cadmium yellow", "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE],
+  ["Orange", "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE],
+  ["Turquoise", "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE],
+  ["Ultramarine", "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE],
+  ["Payne’s grey", "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE],
+  ["Titanium white", "Acrylic, {q}", "Student range, 120 ml", 900, 450, WHITE_RULE],
+  ["Flat brush 50 mm", "Synthetic, long handle", "Decorating brush 50 mm", 800, 300, null],
+  ["Flat brush 25 mm", "Synthetic, long handle", "Decorating brush 25 mm", 600, 250, null],
+  ["Round brush n°6", "Synthetic", "Round n°6, any range", 400, 200, null],
+];
+
+export const shoppingItems: ShoppingItemRow[] = works.flatMap((w) =>
+  LIST.map(([name, standardLabel, budgetLabel, standardCents, budgetCents, quantityRule], position) => ({
+    workId: w.id, position, name, standardLabel, budgetLabel, standardCents, budgetCents, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule,
+  })),
+);
 
 /** site_settings.home.hero_work */
 export const HOME_HERO_WORK = "n03";

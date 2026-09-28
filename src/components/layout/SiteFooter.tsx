@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { cn } from "@/lib/cn";
 
 const COLS = [
   { title: "Shop", links: [["All works", "/shop"], ["Prints", "/prints"], ["Shopping lists", "/method#materials"], ["Gift cards", "/gift-cards"]] },
@@ -20,11 +21,12 @@ const PHONE_COLS = [
 
 function Column({ title, links, className }: { title: string; links: ReadonlyArray<readonly [string, string]>; className?: string }) {
   return (
-    <div className={className}>
-      <div className="mb-6 leading-[22px] text-fg-muted">{title}</div>
+    // Flex column: the links' negative margins must not collapse into each other.
+    <div className={cn("flex-col", className)}>
+      <div className="leading-[22px] text-fg-muted md:mb-6">{title}</div>
       {links.map(([l, h]) => (
-        // 24 px rows (board: 22 px): WCAG 2.2 target size.
-        <Link key={l} href={h} className="block leading-[24px] hover:text-fg-muted">{l}</Link>
+        // 22 px rows as drawn; the 1 px padding cancelled by a -1 px margin makes each target 24 px tall (WCAG 2.2).
+        <Link key={l} href={h} className="-my-1 block py-1 leading-[22px] hover:text-fg-muted">{l}</Link>
       ))}
     </div>
   );
@@ -46,9 +48,11 @@ export function SiteFooter({ locale, onLocaleChange, subscribe }: SiteFooterProp
   const [done, setDone] = useState(false);
   return (
     <footer className="flex flex-col gap-36 px-16 pb-24 pt-64 lg:gap-72 lg:px-32 lg:pb-28 lg:pt-56">
-      <div className="grid grid-cols-2 gap-x-32 gap-y-24 md:gap-y-32 lg:grid-cols-6">
-        <div className="col-span-2 mb-12 flex max-w-340 flex-col gap-10 md:mb-0">
-          <span>Letters from the studio.<span className="hidden md:inline"> New works, new methods.</span></span>
+      <div className="grid grid-cols-2 gap-y-24 md:gap-x-32 md:gap-y-32 lg:grid-cols-6">
+        {/* Phone: its own block, 36 px above the columns (24 px row gap + 12 px). Desktop: 2 of the 6 columns, 340 px max. */}
+        <div className="col-span-2 mb-12 flex flex-col gap-10 md:mb-0 md:max-w-340">
+          <span className="md:hidden">Letters from the studio.</span>
+          <span className="hidden md:inline">Letters from the studio. New works, new methods.</span>
           {done ? (
             <span className="flex min-h-44 items-center text-fg-muted">Thank you. The first letter lands next month.</span>
           ) : (
@@ -62,20 +66,21 @@ export function SiteFooter({ locale, onLocaleChange, subscribe }: SiteFooterProp
             >
               <label htmlFor="news-email" className="sr-only">Email address</label>
               <input id="news-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" className="w-full border-b border-border-field bg-transparent py-10 outline-none placeholder:text-fg-muted focus:border-fg" />
-              <button type="submit" className="min-h-44 hover:text-fg-muted">Subscribe</button>
+              <button type="submit" className="flex min-h-44 items-center hover:text-fg-muted">Subscribe</button>
             </form>
           )}
         </div>
-        {COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="hidden md:block" />)}
-        {PHONE_COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="md:hidden" />)}
+        {COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="hidden md:flex" />)}
+        {PHONE_COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="flex md:hidden" />)}
       </div>
       <div className="flex items-center justify-between text-fg-muted">
-        <span>© {new Date().getFullYear()} Geste Studio<span className="hidden md:inline"> — Lyon, France</span></span>
+        <span className="md:hidden">{`© ${new Date().getFullYear()} Geste Studio`}</span>
+        <span className="hidden md:inline">{`© ${new Date().getFullYear()} Geste Studio — Lyon, France`}</span>
         <div className="flex items-center gap-12 md:gap-14">
           <span>USD $</span>
           <span aria-hidden="true" className="hidden md:inline">·</span>
           {(["en", "fr"] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange(l)} className={locale === l ? "text-fg underline underline-offset-4" : "text-fg"}>
+            <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange(l)} className={locale === l ? "inline-flex min-h-32 items-center text-fg underline underline-offset-4" : "inline-flex min-h-32 items-center text-fg"}>
               {l.toUpperCase()}
             </button>
           ))}

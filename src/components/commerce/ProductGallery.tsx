@@ -54,7 +54,8 @@ export function ProductGallery({ workNumber, imageUrl, filter, format, caption, 
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between text-fg-muted">
+      {/* Board Product: the caption sits at the top of the 32 px row, in the normal line-height. */}
+      <div className="flex items-start justify-between text-fg-muted">
         <Segmented<"preview" | "result">
           label="Picture"
           gap="gap-x-16 lg:gap-x-20"
@@ -62,7 +63,7 @@ export function ProductGallery({ workNumber, imageUrl, filter, format, caption, 
           onChange={setView}
           options={[{ value: "preview", label: "Preview" }, { value: "result", label: "Real result" }]}
         />
-        <span className="hidden lg:inline">{preview ? caption : "Same guide, first-time painter"}</span>
+        <span className="hidden leading-[normal] lg:inline">{preview ? caption : "Same guide, first-time painter"}</span>
       </div>
     </div>
   );

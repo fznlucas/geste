@@ -14,7 +14,8 @@ export interface CartPanelProps {
   /** drawer = board Cart (440 px drawer). page = board MCart (/cart, phone). */
   variant: "drawer" | "page";
   onRemove: (lineId: string) => void;
-  onQuantity: (lineId: string, quantity: number) => void;
+  /** Not used by the boards' cart (no stepper drawn); kept for the checkout summary. */
+  onQuantity?: (lineId: string, quantity: number) => void;
   /** Shows "Undo" in the empty state after the last line was removed. */
   onUndo?: () => void;
   /** Called when a link inside is followed (the drawer closes). */
@@ -31,7 +32,7 @@ const ISSUES: Record<NonNullable<PricedCartLine["unavailable"]>, string> = {
  * Cart content shared by the drawer and the /cart page: lines, cross-sell (drawer), Subtotal,
  * Shipping, Estimated total, "Checkout   $68". Empty: canvas diagram, "Your cart is empty.", Browse works.
  */
-export function CartPanel({ cart, variant, onRemove, onQuantity, onUndo, onNavigate }: CartPanelProps) {
+export function CartPanel({ cart, variant, onRemove, onUndo, onNavigate }: CartPanelProps) {
   const drawer = variant === "drawer";
 
   if (cart.lines.length === 0) {
@@ -60,8 +61,7 @@ export function CartPanel({ cart, variant, onRemove, onQuantity, onUndo, onNavig
             note={l.note}
             issue={l.unavailable && ISSUES[l.unavailable]}
             size={drawer ? "md" : "lg"}
-            maxQuantity={l.maxQuantity}
-            onQuantity={(q) => onQuantity(l.id, q)}
+            // No quantity stepper: none is drawn on Cart / MCart (adding the same print again adds a copy).
             onRemove={() => onRemove(l.id)}
             onNavigate={onNavigate}
           />

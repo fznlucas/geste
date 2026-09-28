@@ -40,7 +40,7 @@ export function Drawer({ open, onOpenChange, title, header, side = "right", chil
           )}
         >
           <div className={right ? "flex min-h-44 items-center justify-between px-16 pt-20 md:px-32" : "flex items-center justify-between py-4 pl-16 pr-4"}>
-            {header ?? <D.Title className="font-medium">{title}</D.Title>}
+            {header ?? <D.Title className="font-medium tracking-normal">{title}</D.Title>}
             <D.Close className={cn("flex min-h-44 items-center hover:text-fg-muted", right ? "underline underline-offset-3" : "px-12")}>Close</D.Close>
           </div>
           {header && <D.Title className="sr-only">{title}</D.Title>}

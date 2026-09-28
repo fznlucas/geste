@@ -7,12 +7,12 @@
 import { useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
-  EditionCounter, ExpressPay, Field, GuideConfigurator, ProductGallery, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
-import { priceCart, type StoredCartLine } from "@/lib/api";
+import { priceCart, type ShoppingListLine, type StoredCartLine } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { asset } from "@/lib/asset";
 import type { GuideConfig } from "@/lib/pricing";
@@ -28,7 +28,7 @@ const PALETTES = [
   { id: "cool", name: "Cool", swatches: ["#2F5FB3", "#A9A3D9", "#F2DC5A"] },
   { id: "earth", name: "Earth", swatches: ["#A0522D", "#6F5A45", "#C9A27E"] },
 ];
-// Cart fixtures (board Cart): N°03 guide + N°07 A2 print; the A3 of N°07 is sold out in the mock.
+// Cart fixtures (board Cart): N°03 guide + N°07 A2 print; N°12 A3 is the sold-out edition of the mock.
 const N03 = "00000000-0000-0000-0000-000000000003";
 const CART_LINES: StoredCartLine[] = [
   { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: N03, format: "60x80", level: "match", palette: "original" },
@@ -36,8 +36,15 @@ const CART_LINES: StoredCartLine[] = [
 ];
 const CART_FULL = priceCart(CART_LINES, { shippingMethod: "mondial_relay" });
 const CART_GUIDE = priceCart(CART_LINES.slice(0, 1), { shippingMethod: "mondial_relay" });
-const CART_SOLD_OUT = priceCart([...CART_LINES.slice(0, 1), { id: "l3", addedAt: "2026-10-01T10:02:00Z", kind: "print", editionId: "ed-07-a3", quantity: 1 }], { shippingMethod: "mondial_relay" });
+const CART_SOLD_OUT = priceCart([...CART_LINES.slice(0, 1), { id: "l3", addedAt: "2026-10-01T10:02:00Z", kind: "print", editionId: "ed-12-a3", quantity: 1 }], { shippingMethod: "mondial_relay" });
 const CART_EMPTY = priceCart([]);
+
+// Shopping list fixture (board ShoppingList, 60×80): three of the ten lines.
+const LIST: ShoppingListLine[] = [
+  { position: 0, name: "Canvas", standard: { label: "Primed cotton canvas 60 × 80 cm, stretched", priceCents: 2400, url: "#" }, budget: { label: "Unprimed roll + 4 stretcher bars", priceCents: 1400, url: "#" } },
+  { position: 1, name: "Cadmium yellow", standard: { label: "Acrylic, 60 ml", priceCents: 700, url: "#" }, budget: { label: "Student range, 75 ml", priceCents: 350, url: "#" } },
+  { position: 2, name: "Orange", standard: { label: "Acrylic, 60 ml", priceCents: 700, url: "#" }, budget: { label: "Student range, 75 ml", priceCents: 350, url: "#" } },
+];
 
 const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
 
@@ -191,6 +198,17 @@ export default function KitPage() {
               <ButtonLink href="/cart" variant="ghost">Open /cart</ButtonLink>
             </div>
           </State>
+          <div className="grid grid-cols-2 gap-40">
+            <State label="Shopping list · standard, first line ticked"><ShoppingListTable lines={LIST} tier="standard" have={new Set([0])} onToggle={() => {}} /></State>
+            <State label="Shopping list · budget"><ShoppingListTable lines={LIST} tier="budget" have={new Set()} onToggle={() => {}} /></State>
+            <State label="Print mat (board Print)"><PrintMat imageUrl={asset("mock/work-07.jpg")} alt="N°07, limited print" caption="N°07 · 12/50" /></State>
+            <State label="Gift card preview · empty names show …"><GiftCardPreview imageUrl={asset("mock/work-03.jpg")} amountCents={3000} toName="Léa" fromName="" message="For your first canvas." /></State>
+          </div>
+          <div className="grid grid-cols-4 gap-40">
+            <State label="Print card"><PrintCard href="#" imageUrl={asset("mock/work-01.jpg")} title="N°01 print" price="from $45" note="4/50" /></State>
+            <State label="Article card · journal"><ArticleCard href="#" imageUrl={asset("mock/work-09.jpg")} title="How to avoid mud: three rules" category="Method" date="Sept 24" excerpt="Why colours turn grey-brown, and the three habits that keep them clean." /></State>
+            <State label="Article card · keep reading"><ArticleCard href="#" imageUrl={asset("mock/work-10.jpg")} title="First canvas, first signature" excerpt="Five first-time painters, the same guide, five different paintings." variant="keep" /></State>
+          </div>
           <Modal open={modal} onOpenChange={setModal} title="Payment declined" description="Your bank refused the payment. No money was taken." actions={<><Button variant="ghost" className="flex-1" onClick={() => setModal(false)}>Use another card</Button><Button className="flex-[2]" trailing="→" onClick={() => setModal(false)}>Try again</Button></>} />
         </Board>
 

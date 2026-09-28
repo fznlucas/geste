@@ -95,8 +95,9 @@ export async function getHomeHeroWork(): Promise<CatalogWork | null> {
   return getWork(HOME_HERO_WORK);
 }
 
-/** Shopping list of a work, quantities scaled to the format. */
+/** Shopping list of a work (board ShoppingList), labels scaled to the format. */
 export async function getShoppingList(workId: string, format: FormatKey): Promise<ShoppingListLine[]> {
+  const fill = (label: string, rule: Record<FormatKey, string> | null) => (rule ? label.replace("{q}", rule[format]) : label);
   return clone(
     shoppingItems
       .filter((i) => i.workId === workId)
@@ -104,9 +105,8 @@ export async function getShoppingList(workId: string, format: FormatKey): Promis
       .map((i) => ({
         position: i.position,
         name: i.name,
-        quantity: i.quantityRule[format],
-        standard: { label: i.standardLabel, priceCents: i.standardCents, url: i.standardUrl },
-        budget: { label: i.budgetLabel, priceCents: i.budgetCents, url: i.budgetUrl },
+        standard: { label: fill(i.standardLabel, i.quantityRule), priceCents: i.standardCents, url: i.standardUrl },
+        budget: { label: fill(i.budgetLabel, i.quantityRule), priceCents: i.budgetCents, url: i.budgetUrl },
       })),
   );
 }

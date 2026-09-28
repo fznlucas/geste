@@ -45,7 +45,7 @@ export function CartLine({ item, href, note, issue, onRemove, onQuantity, maxQua
         {item.detail && <span className="text-fg-muted">{item.detail}</span>}
         {note && !lg && <span className="text-fg-muted">{note}</span>}
         {issue && <span role="status" className="text-danger">{issue}</span>}
-        <span className="mt-4 flex items-center gap-14">
+        <span className={lg ? "flex items-center gap-14" : "mt-4 flex items-center gap-14"}>
           {item.kind === "print" && onQuantity && !issue && (
             <span className="flex items-center gap-8" role="group" aria-label="Quantity">
               <button type="button" aria-label="One less" disabled={item.quantity <= 1} onClick={() => onQuantity(item.quantity - 1)} className="min-h-32 min-w-32 disabled:opacity-40">−</button>

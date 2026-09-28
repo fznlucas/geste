@@ -24,12 +24,14 @@
   --text-xs--line-height: 20px;
   --text-sm: 14px;
   --text-sm--line-height: 22px;
+  --text-body: 14px;
+  --text-body--line-height: 24px;
   --text-md: 22px;
   --text-md--line-height: 30px;
   --text-lg: 28px;
-  --text-lg--line-height: 34px;
+  --text-lg--line-height: 1.2; /* boards: h1 line-height 1.2 (33.6 px) */
   --text-xl: 40px;
-  --text-xl--line-height: 46px;
+  --text-xl--line-height: 1.2; /* boards: 48 px */
   --text-2xl: 96px;
   --text-2xl--line-height: 96px;
   --text-admin-title: 20px;
@@ -39,6 +41,10 @@
   --shadow-*: initial;
   --shadow-pop: var(--shadow-pop);
   --shadow-modal: var(--shadow-modal);
+  --shadow-mat: var(--shadow-mat);
+  --shadow-mat-sm: var(--shadow-mat-sm);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-sm: var(--shadow-card-sm);
   --spacing: 1px; /* p-12 = 12px, gap-24 = 24px: spacing utilities read in px */
   --breakpoint-*: initial;
   --breakpoint-md: 768px;

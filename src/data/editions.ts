@@ -21,15 +21,24 @@ function edition(n: number, size: PrintSize, editionSize: number, soldCount: num
   };
 }
 
+/**
+ * Home board "Limited prints": N°07, N°01 and N°08 in A3 at $45, next numbers 12/50, 4/50 and 21/50
+ * (these three come first: the Home shows the first three A3 with copies left). N°12 A3 is the
+ * sold-out example, on a work the Home does not show.
+ */
 export const printEditions: PrintEditionRow[] = [
-  edition(7, "A3", 50, 45, 5), // sold out: shows the "Sold out" state
+  edition(7, "A3", 50, 11, 0),
+  edition(1, "A3", 50, 3, 0),
+  edition(8, "A3", 50, 20, 0),
   edition(7, "A2", 30, 12, 0),
-  edition(1, "A3", 50, 18, 1),
+  edition(7, "50×70", 25, 3, 0), // Print board: N°07 in the three sizes
   edition(1, "A2", 30, 9, 1),
   edition(8, "50×70", 25, 21, 0),
-  edition(5, "A3", 50, 9, 0),
-  edition(2, "A3", 50, 17, 0),
+  // Print board "Other editions": N°05 9/50, N°02 17/50.
+  edition(5, "A3", 50, 8, 0),
+  edition(2, "A3", 50, 16, 0),
   edition(3, "A3", 50, 0, 0), // seed
+  edition(12, "A3", 50, 50, 0), // sold out: shows the "Sold out" state
 ];
 
 function copy(editionId: string, number: number, orderItemId: string, fulfilment: PrintCopyRow["fulfilment"], printedAt: string | null): PrintCopyRow {
@@ -47,9 +56,10 @@ function copy(editionId: string, number: number, orderItemId: string, fulfilment
 }
 
 export const printCopies: PrintCopyRow[] = [
-  copy("ed-07-a3", 12, "item-2041-2", "to_print", null),
-  copy("ed-07-a3", 13, "item-2036-1", "to_print", null),
-  copy("ed-01-a3", 4, "item-2031-1", "to_print", null),
+  // Numbered below the Home board's next numbers (AdminFulfilment shows 12/50 for GS-2041: docs/decisions.md).
+  copy("ed-07-a3", 10, "item-2041-2", "to_print", null),
+  copy("ed-07-a3", 11, "item-2036-1", "to_print", null),
+  copy("ed-01-a3", 3, "item-2031-1", "to_print", null),
   copy("ed-01-a2", 9, "item-2038-2", "printed", "2026-10-01T15:10:00Z"),
   copy("ed-08-50x70", 21, "item-2033-1", "shipped", "2026-09-29T10:00:00Z"),
   copy("ed-05-a3", 2, "item-2014-1", "delivered", "2026-09-20T09:30:00Z"),
