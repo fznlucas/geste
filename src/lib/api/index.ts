@@ -7,9 +7,12 @@ export { getWorks, getWork, getWorkById, getHomeHeroWork, getShoppingList, toWor
 export { getGuide, findGuide, flattenSteps } from "./guides";
 export { getEditions, getEdition, getPrintCopies } from "./editions";
 export { getOrders, getOrder } from "./orders";
-export { getCustomers, getCustomer } from "./customers";
+export { getCustomers, getCustomer, findCustomerByEmail } from "./customers";
 export { getLibrary, getEntitlement } from "./library";
 export { getReviews } from "./reviews";
+export { priceCart, sameCartLine, GIFT_CARD_PRESETS, GIFT_CARD_MIN, GIFT_CARD_MAX } from "./cart";
+export { getStaffMember } from "./staff";
 export { getSupportThreads } from "./support";
 export { MOCK_NOW, DEMO_CUSTOMER_ID } from "@/data/customers";
+export { DEMO_STAFF_ID } from "@/data/staff";
 export type * from "./types";

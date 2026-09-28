@@ -4,8 +4,10 @@
  */
 import type { FormatKey, LevelKey, PrintSize, ShippingMethod } from "@/lib/pricing";
 import type { DiagramStroke } from "@/components/reader/CanvasDiagram";
+import type { CartTotals } from "@/components/commerce/CartSummary";
+import type { CartItem, StaffRole } from "@/lib/types";
 
-export type { FormatKey, LevelKey, PrintSize, ShippingMethod, DiagramStroke };
+export type { FormatKey, LevelKey, PrintSize, ShippingMethod, DiagramStroke, CartTotals, StaffRole };
 
 export type WorkStatus = "draft" | "scheduled" | "live" | "archived";
 export type PaletteKey = "original" | "warm" | "cool" | "earth";
@@ -159,6 +161,39 @@ export interface PrintCopy {
   city: string | null;
 }
 
+// ── Cart ───────────────────────────────────────────────────────────────────
+
+/** What "Add to cart" sends: choices only, never a price. */
+export type CartLineInput =
+  | { kind: "guide"; workId: string; format: FormatKey; level: LevelKey | "match"; palette: PaletteKey }
+  | { kind: "print"; editionId: string; quantity: number }
+  | { kind: "gift_card"; amountCents: number; recipientEmail?: string; recipientName?: string; message?: string; sendOn?: string };
+
+/** A cart line as stored (browser in the mock, `carts.items` later). */
+export type StoredCartLine = CartLineInput & { id: string; addedAt: string };
+
+export interface PricedCartLine extends CartItem {
+  /** Second line under the detail: "+ shopping list", "Signed, with certificate". */
+  note: string | null;
+  /** Where the title links (the work page with the same config), null when unknown. */
+  href: string | null;
+  /** Stepper limit: 1 for guides and gift cards, copies left for prints. */
+  maxQuantity: number;
+  /** Not counted in the totals: the work was unpublished, the edition sold out, or the amount is invalid. */
+  unavailable: "unknown" | "sold_out" | "invalid" | null;
+}
+
+export interface PricedCart {
+  lines: PricedCartLine[];
+  /** "Cart (2)": number of payable items. */
+  count: number;
+  hasPhysical: boolean;
+  /** A guide is in the cart → withdrawal-waiver checkbox at payment. */
+  hasGuide: boolean;
+  totals: CartTotals;
+  crossSell: { workNumber: string; href: string; fromPriceCents: number } | null;
+}
+
 // ── Orders ─────────────────────────────────────────────────────────────────
 
 export type OrderDisplayStatus =
@@ -293,6 +328,14 @@ export interface LibraryItem {
   completedAt: string | null;
   revoked: boolean;
   createdAt: string;
+}
+
+export interface StaffMember {
+  id: string;
+  email: string;
+  fullName: string;
+  role: StaffRole;
+  totpEnabled: boolean;
 }
 
 export interface Review {

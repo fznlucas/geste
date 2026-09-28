@@ -61,3 +61,10 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
     reviews: reviews.filter((r) => r.userId === id).map(mapReview),
   });
 }
+
+/** Login and checkout: the account an email belongs to (case-insensitive). */
+export async function findCustomerByEmail(email: string): Promise<CustomerSummary | null> {
+  const wanted = email.trim().toLowerCase();
+  const row = customers.find((c) => c.email === wanted);
+  return row ? clone(mapCustomer(row)) : null;
+}

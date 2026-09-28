@@ -7,10 +7,9 @@ import { FORMATS, LEVELS, SHIPPING, guidePriceCents, resolveLevel, type FormatKe
 import { customers } from "./customers";
 import { printCopies, printEditions } from "./editions";
 import { guideId } from "./guides";
+import { includedVatCents } from "./tax";
 import { palettes, works } from "./works";
 import type { OrderItemRow, OrderRow, OrderStatus, PaletteKey, RefundRow, ShipmentRow } from "./types";
-
-const VAT_RATES: Record<string, number> = { FR: 0.2, BE: 0.21, CH: 0.081 };
 
 type Line =
   | { kind: "guide"; work: number; format?: FormatKey; level?: LevelKey; palette?: PaletteKey }
@@ -56,7 +55,6 @@ function order(number: number, at: string, customerSlug: string, lines: Line[], 
   const shippingMethod = hasPrint ? (opts.shipping ?? "colissimo") : null;
   const shippingCents = shippingMethod ? SHIPPING[shippingMethod].cents : 0;
   const totalCents = subtotalCents + shippingCents;
-  const rate = VAT_RATES[customer.defaultAddress.country] ?? 0;
   return {
     id: `order-${number}`,
     number: `GS-${number}`,
@@ -67,7 +65,7 @@ function order(number: number, at: string, customerSlug: string, lines: Line[], 
     discountCents: 0,
     shippingCents,
     shippingMethod,
-    taxCents: Math.round(totalCents - totalCents / (1 + rate)),
+    taxCents: includedVatCents(totalCents, customer.defaultAddress.country),
     totalCents,
     shippingAddress: hasPrint ? customer.defaultAddress : null,
     stripePaymentIntent: `pi_mock_${number}`,

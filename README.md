@@ -11,6 +11,7 @@ Everything needed to build geste.studio exactly as designed: store, guide reader
 | `CLAUDE.md` | Rules and workflow for Claude Code (or any developer) | ready |
 | `tokens/` | `tokens.json` (source, W3C format), `tokens.css`, `theme.css` (Tailwind 4), `tailwind.preset.ts` (Tailwind 3) | ready |
 | `src/components/` | 52 component files (≈ 60 exports) in 7 layers: brand, primitives, overlay, layout, commerce, reader, admin | **type-checked and rendered** |
+| `src/data/`, `src/lib/api/`, `src/lib/client/` | Mock phase: mock tables, the data API pages read, browser state (cart, fake session, reader progress). See `docs/mock-plan.md` | mock |
 | `src/lib/` | `motion.ts` (all timings), `pricing.ts` (the one pricing function, server + client), `format.ts`, `types.ts`, `cn.ts` | ready |
 | `src/app/` | root layout (font, metadata), `globals.css`, `(dev)/kit` living style guide showing every component in every state | builds with `next build` |
 | `supabase/migrations/0001_init.sql` | 33 tables, enums, RLS policies (57), functions (print numbering, credits), admin views | **applied and tested on Postgres 16** |
