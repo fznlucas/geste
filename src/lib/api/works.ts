@@ -3,13 +3,22 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, estimatedTime, guidePriceCents, type FormatKey } from "@/lib/pricing";
+import { FORMATS, LEVELS, estimatedTime, guidePriceCents, type FormatKey, type LevelKey } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
 import type { WorkRow } from "@/data/types";
 import { HISTORICAL_SALES, HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/data/works";
 import { clone } from "./clone";
-import type { CatalogWork, ShoppingListLine, WorkFormat, WorksQuery } from "./types";
+import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorksQuery } from "./types";
+
+/** Cheapest guide of a work: its active formats at Beginner level ("from $12"). */
+export function minGuidePriceCents(workId: string): number {
+  return Math.min(
+    ...workFormats
+      .filter((f) => f.workId === workId && f.active)
+      .map((f) => guidePriceCents({ format: f.format, level: "beginner", palette: "original" })),
+  );
+}
 
 export function mapWork(row: WorkRow): CatalogWork {
   const formats: WorkFormat[] = workFormats
@@ -49,6 +58,7 @@ export function mapWork(row: WorkRow): CatalogWork {
       .filter((p) => p.workId === row.id && p.active)
       .map((p) => ({ key: p.key, name: p.name, swatches: p.swatches, previewFilter: p.previewFilter })),
     fromPriceCents: card.priceCents,
+    minPriceCents: minGuidePriceCents(row.id),
     levelLabel: card.levelLabel,
     duration: card.duration,
     soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
@@ -119,4 +129,37 @@ export function toWorkCard(work: CatalogWork): WorkCardData {
 /** Props for <GuideConfigurator palettes>. */
 export function toConfiguratorPalettes(work: CatalogWork): ConfiguratorPalette[] {
   return work.palettes.map((p) => ({ id: p.key, name: p.name, swatches: p.swatches.map((s) => s.hex) }));
+}
+
+/**
+ * Outline of the guide for the work page accordion, worded with the palette's colour names.
+ * Mock: the wording of the Product / MProduct boards; later it is derived from the published
+ * guide version (one line per layer).
+ */
+export async function getGuideOutline(workId: string, level: LevelKey, palette: PaletteKey): Promise<GuideOutlineStep[]> {
+  const p = palettes.find((x) => x.workId === workId && x.key === palette) ?? palettes.find((x) => x.workId === workId && x.key === "original")!;
+  const [c0, c1, c2, c3] = p.swatches.map((s) => s.name) as [string, string, string, string];
+  const underlayer = { text: `Underlayer. Thin patches of ${c2} and ${c3}. Let dry.`, short: `Underlayer: thin patches of ${c2} and ${c3}.` };
+  const lines: Record<LevelKey, Array<{ text: string; short: string }>> = {
+    beginner: [
+      { text: `Underlayer. Thin, loose patches of ${c2} and ${c3}. Leave white canvas showing. Let dry.`, short: underlayer.short },
+      { text: `Gestures. Fast, wide strokes of ${c0} and ${c1}, mostly horizontal.`, short: `Gestures: wide strokes of ${c0} and ${c1}.` },
+      { text: "Stop earlier than you think. Sign.", short: "Stop earlier than you think. Sign." },
+    ],
+    intermediate: [
+      underlayer,
+      { text: `Gestures. Wide strokes of ${c0} and ${c1}. Let dry.`, short: `Gestures: wide strokes of ${c0} and ${c1}.` },
+      { text: `Veils. ${c0} mixed with white, dragged semi-opaque on top.`, short: `Veils: ${c0} with white, semi-opaque.` },
+      { text: "Stop earlier than you think. Sign.", short: "Stop earlier than you think. Sign." },
+    ],
+    advanced: [
+      underlayer,
+      { text: `Gestures. Wide strokes of ${c0} and ${c1}.`, short: `Gestures: wide strokes of ${c0} and ${c1}.` },
+      { text: `Drips. Thin ${c1} with water, let it run.`, short: `Drips: thinned ${c1}.` },
+      { text: `Knife. Scrape and drag ${c2} across the wet layer.`, short: `Knife: drag ${c2} across.` },
+      { text: `Veils. ${c0} mixed with white, semi-opaque.`, short: `Veils: ${c0} with white.` },
+      { text: "Stop earlier than you think. Sign.", short: "Stop. Sign." },
+    ],
+  };
+  return lines[level].map((l, i) => ({ n: String(i + 1).padStart(2, "0"), ...l }));
 }

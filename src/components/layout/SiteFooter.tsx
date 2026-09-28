@@ -23,7 +23,8 @@ function Column({ title, links, className }: { title: string; links: ReadonlyArr
     <div className={className}>
       <div className="mb-6 leading-[22px] text-fg-muted">{title}</div>
       {links.map(([l, h]) => (
-        <Link key={l} href={h} className="block leading-[22px] hover:text-fg-muted">{l}</Link>
+        // 24 px rows (board: 22 px): WCAG 2.2 target size.
+        <Link key={l} href={h} className="block leading-[24px] hover:text-fg-muted">{l}</Link>
       ))}
     </div>
   );

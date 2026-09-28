@@ -1,10 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export interface SegmentedOption<V extends string> {
   value: V;
-  label: string;
+  /** Text, or responsive text (e.g. "+ print" on phones, "Guide + list + print" on desktop). */
+  label: ReactNode;
   disabled?: boolean;
   /** Small Stone note after the label, e.g. "+$2" for Custom level. */
   note?: string;
@@ -16,13 +18,15 @@ export interface SegmentedProps<V extends string> {
   value: V;
   onChange: (value: V) => void;
   className?: string;
+  /** Space between choices (cn does not merge classes, so it is its own prop). Default 14 px. */
+  gap?: string;
 }
 
 /**
  * Text choices in a row (format, level, palette, filters). Unselected: Stone. Hover: Ink.
  * Selected: Ink + underline offset 4. Implemented as a radiogroup for arrow-key support.
  */
-export function Segmented<V extends string>({ label, options, value, onChange, className }: SegmentedProps<V>) {
+export function Segmented<V extends string>({ label, options, value, onChange, className, gap = "gap-x-14" }: SegmentedProps<V>) {
   const move = (dir: 1 | -1) => {
     const enabled = options.filter((o) => !o.disabled);
     const i = enabled.findIndex((o) => o.value === value);
@@ -33,7 +37,7 @@ export function Segmented<V extends string>({ label, options, value, onChange, c
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn("flex flex-wrap items-center gap-x-14 gap-y-4", className)}
+      className={cn("flex flex-wrap items-center gap-y-4", gap, className)}
       onKeyDown={(e) => {
         const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
         if (dir) {
@@ -54,7 +58,8 @@ export function Segmented<V extends string>({ label, options, value, onChange, c
             disabled={o.disabled}
             onClick={() => onChange(o.value)}
             className={cn(
-              "inline-flex min-h-32 items-center gap-6 transition-colors duration-150",
+              // Phone boards draw these 36 px tall (.pill), desktop boards 32 px (.tx).
+              "inline-flex min-h-36 items-center gap-6 transition-colors duration-150 lg:min-h-32",
               on ? "text-fg underline underline-offset-4" : "text-fg-muted hover:text-fg",
               "disabled:cursor-not-allowed disabled:line-through disabled:opacity-40",
               "focus-visible:outline focus-visible:outline-1 focus-visible:outline-fg focus-visible:outline-offset-2",

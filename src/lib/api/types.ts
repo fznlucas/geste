@@ -69,6 +69,8 @@ export interface CatalogWork {
   palettes: WorkPalette[];
   /** Card line (Home/Shop): the default format at its default level. */
   fromPriceCents: number;
+  /** Cheapest guide of the work (any active format, Beginner): "Start with N°03   from $12". */
+  minPriceCents: number;
   levelLabel: string;
   duration: string;
   soldCount: number;
@@ -89,6 +91,25 @@ export interface ShoppingListLine {
   quantity: string; // "60 ml", scaled to the format
   standard: { label: string; priceCents: number; url: string };
   budget: { label: string; priceCents: number; url: string };
+}
+
+/** "The guide · 4 steps" on the work page: one line per layer, then "Stop… Sign." (Product / MProduct boards). */
+export interface GuideOutlineStep {
+  n: string; // "01"
+  text: string; // desktop wording
+  short: string; // phone wording
+}
+
+// ── Journal ────────────────────────────────────────────────────────────────
+
+export interface Article {
+  slug: string;
+  title: string;
+  category: "Method" | "Stories";
+  readMinutes: number;
+  excerpt: string;
+  coverUrl: string;
+  publishedAt: string;
 }
 
 // ── Guides ─────────────────────────────────────────────────────────────────
@@ -143,6 +164,8 @@ export interface PrintEdition {
   reserved: number;
   left: number;
   soldOut: boolean;
+  /** Number the next buyer gets ("Edition 12/50"); null when sold out. */
+  nextNumber: number | null;
 }
 
 export interface PrintCopy {

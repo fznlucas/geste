@@ -44,7 +44,8 @@ export const works: WorkRow[] = DEFAULT_FORMATS.map((defaultFormat, i) => {
     defaultFormat,
     description: "Gestural abstraction. Wide strokes over a thin underlayer, dark marks on top.",
     previewPath: `mock/work-${pad(n)}.jpg`,
-    resultPhotoPath: NOT_TESTED.has(n) ? null : `mock/work-${pad(n)}.jpg`,
+    // No real result photos yet: the work page shows the board's dashed placeholder.
+    resultPhotoPath: null,
     studioTested: !NOT_TESTED.has(n),
     seoTitle: `N°${pad(n)} — paint it yourself · Geste`,
     seoDescription: `${article} ${level} abstract painting in ${LEVELS[level].layers} layers. Guide, shopping list, from $12.`,

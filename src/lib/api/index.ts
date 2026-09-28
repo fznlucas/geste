@@ -3,7 +3,8 @@
  * re-implemented on Supabase with the same signature, and the pages do not change.
  * Pages import from "@/lib/api" only, never from "@/data".
  */
-export { getWorks, getWork, getWorkById, getHomeHeroWork, getShoppingList, toWorkCard, toConfiguratorPalettes } from "./works";
+export { getWorks, getWork, getWorkById, getHomeHeroWork, getShoppingList, getGuideOutline, toWorkCard, toConfiguratorPalettes } from "./works";
+export { getArticles } from "./articles";
 export { getGuide, findGuide, flattenSteps } from "./guides";
 export { getEditions, getEdition, getPrintCopies } from "./editions";
 export { getOrders, getOrder } from "./orders";

@@ -9,21 +9,13 @@ import { FORMATS, LEVELS, SHIPPING, guidePriceCents, resolveLevel, type Shipping
 import { printEditions } from "@/data/editions";
 import { includedVatCents } from "@/data/tax";
 import { palettes, workFormats, works } from "@/data/works";
+import { minGuidePriceCents } from "./works";
 import type { CartLineInput, CartTotals, PricedCart, PricedCartLine, StoredCartLine } from "./types";
 
 /** Gift card amounts (GiftCard board): $30 / $50 / $100 or custom between $10 and $500. */
 export const GIFT_CARD_PRESETS = [3000, 5000, 10000] as const;
 export const GIFT_CARD_MIN = 1000;
 export const GIFT_CARD_MAX = 50000;
-
-/** Cheapest guide of a work: "Guide from $12" in the cart cross-sell. */
-function guideFromCents(workId: string): number {
-  return Math.min(
-    ...workFormats
-      .filter((f) => f.workId === workId && f.active)
-      .map((f) => guidePriceCents({ format: f.format, level: "beginner", palette: "original" })),
-  );
-}
 
 /** Number the next buyer of an edition gets ("Edition 12/50"). */
 function nextEditionNumber(sold: number, reserved: number) {
@@ -133,7 +125,7 @@ export function priceCart(lines: StoredCartLine[], opts: PriceCartOptions = {}):
     hasPhysical,
     hasGuide: payable.some((l) => l.kind === "guide"),
     totals,
-    crossSell: crossWork ? { workNumber: crossWork.number, href: `/works/${crossWork.slug}`, fromPriceCents: guideFromCents(crossWork.id) } : null,
+    crossSell: crossWork ? { workNumber: crossWork.number, href: `/works/${crossWork.slug}`, fromPriceCents: minGuidePriceCents(crossWork.id) } : null,
   };
 }
 

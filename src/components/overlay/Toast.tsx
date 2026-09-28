@@ -4,13 +4,19 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { duration } from "@/lib/motion";
 
 type Tone = "default" | "danger";
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 interface ToastItem {
   id: number;
   text: string;
   tone: Tone;
+  action?: ToastAction;
 }
 interface ToastApi {
-  show: (text: string, opts?: { tone?: Tone; ms?: number }) => void;
+  /** `action`: one text button after the message ("Added to cart · View"). */
+  show: (text: string, opts?: { tone?: Tone; ms?: number; action?: ToastAction }) => void;
 }
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -32,7 +38,7 @@ export function ToastProvider({ children, surface = "store" }: { children: React
     (text, opts) => {
       const id = ++n.current;
       const tone = opts?.tone ?? "default";
-      setItems((xs) => [...xs, { id, text, tone }]);
+      setItems((xs) => [...xs, { id, text, tone, action: opts?.action }]);
       if (tone !== "danger") {
         const ms = opts?.ms ?? (surface === "admin" ? duration.toastAdmin : duration.toastStore);
         setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), ms);
@@ -43,7 +49,8 @@ export function ToastProvider({ children, surface = "store" }: { children: React
   return (
     <Ctx.Provider value={{ show }}>
       {children}
-      <div className="pointer-events-none fixed bottom-24 left-16 right-16 z-toast flex flex-col items-center gap-8 md:left-auto md:right-32 md:items-end">
+      {/* Phones: above the work page's buy bar when it shows (--sticky-bar-h is set by StickyBuyBar). */}
+      <div className="pointer-events-none fixed bottom-[calc(var(--spacing)*24+var(--sticky-bar-h,0px))] left-16 right-16 z-toast flex flex-col items-center gap-8 md:left-auto md:right-32 md:items-end lg:bottom-24">
         {items.map((t) => (
           <div
             key={t.id}
@@ -51,6 +58,18 @@ export function ToastProvider({ children, surface = "store" }: { children: React
             className={`pointer-events-auto flex items-center gap-16 px-14 py-10 text-fg-inverse animate-[rise-in_240ms_var(--ease-standard)] ${t.tone === "danger" ? "bg-danger" : "bg-fg"}`}
           >
             {t.text}
+            {t.action && (
+              <button
+                type="button"
+                className="underline underline-offset-3"
+                onClick={() => {
+                  t.action!.onClick();
+                  setItems((xs) => xs.filter((x) => x.id !== t.id));
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             {t.tone === "danger" && (
               <button type="button" className="underline underline-offset-3" onClick={() => setItems((xs) => xs.filter((x) => x.id !== t.id))}>
                 Dismiss

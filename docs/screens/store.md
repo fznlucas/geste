@@ -12,7 +12,7 @@
 ## Home — `/`
 
 - **Boards:** Home (1440 × 3200), MHome.
-- **Sections (top → bottom):** hero with the featured work and "Paint it yourself." + lead + "Browse all works" / "Start with N°03" · How it works (01 Choose, 02 Get, 03 Paint) + "Read the method" · New works row (5 WorkCards) + "See all 15 works" · Limited prints · Real results (featured reviews) · Journal teasers · newsletter.
+- **Sections (top → bottom):** hero with the featured work and "Paint it yourself." + lead + "Browse all works" / "Start with N°03" · How it works (01 Choose, 02 Get, 03 Paint) + "Read the method" · New works row (5 WorkCards) + "See all 15 works" · Limited prints (3 editions) · From the journal (2 articles). No reviews section and no newsletter block: the footer has the newsletter (Home board; see docs/decisions.md).
 - **Data:** live works ordered by `sort_order`; hero from `site_settings.home.hero_work`; featured reviews; 3 latest articles.
 - **Events:** `view_work` source=home on card click.
 - **Acceptance:** LCP image is the hero; no layout shift; works row prices follow `cardPriceCents(default_format)`.
@@ -30,7 +30,7 @@
 - **Boards:** Product (template), Product01–15, MProduct, MProduct01–15.
 - **Layout desktop:** breadcrumb "Shop / N°03" · left: ProductGallery (Preview · Real result, caption "Original palette, 60×80") · right: N°03, price, description, GuideConfigurator, then Accordion ("The guide · 4 steps", "Included · 2 items", "Shipping & returns").
 - **Configurator:** see `src/components/commerce/GuideConfigurator.tsx` doc comment. Price = `pricing.ts`. Palette changes the preview with `palettes.preview_filter`.
-- **Phone:** gallery, title/price on one line, configurator, Buy visible without scrolling at 390 × 844, StickyBuyBar once it scrolls away.
+- **Phone:** gallery, title/price on one line, configurator, and StickyBuyBar always pinned to the bottom ("N°03 · 60×80 / Guide + list · Add $19", board MProduct), so Buy is visible without scrolling at 390 × 844.
 - **Copy under the button:** "Digital preview. A similar original sells from $600: yours will be signed by you. Guide unlocks instantly, prints ship in 3–5 days."
 - **Data:** work, active formats, palettes, published guide summary (steps count), edition stock (for the print option).
 - **Events:** `view_work`, `configure`, `add_to_cart`.

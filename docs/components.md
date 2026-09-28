@@ -292,12 +292,12 @@ export interface ProgressBarProps {
 
 `src/components/primitives/Segmented.tsx` · used on Product (format, level), Shop filters
 
-**Segmented** — Text choices in a row (format, level, palette, filters). Unselected: Stone. Hover: Ink. Selected: Ink + underline offset 4. Implemented as a radiogroup for arrow-key support.
+**Segmented** — Text choices in a row (format, level, palette, filters). Unselected: Stone. Hover: Ink. Selected: Ink + underline offset 4. 36 px tall on phones (.pill), 32 px on desktop (.tx). Implemented as a radiogroup for arrow-key support.
 
 ```ts
 export interface SegmentedOption<V extends string> {
   value: V;
-  label: string;
+  label: ReactNode;            // text, or responsive text ("+ print" / "Guide + list + print")
   disabled?: boolean;
   /** Small Stone note after the label, e.g. "+$2" for Custom level. */
   note?: string;
@@ -311,6 +311,7 @@ export interface SegmentedProps<V extends string> {
   value: V;
   onChange: (value: V) => void;
   className?: string;
+  gap?: string;                // space between choices, default "gap-x-14" (cn does not merge classes)
 }
 ```
 
@@ -450,7 +451,7 @@ export interface PopoverProps {
 
 `src/components/overlay/Toast.tsx` · used on Add to cart, admin saves
 
-**ToastProvider** — Ink block bottom-right (desktop) or bottom-centre above the tab bar (phone). role=status. Store: 4 s. Admin: 1.6 s. Danger tone: Signal block, role=alert, stays until dismissed.
+**ToastProvider** — Ink block bottom-right (desktop) or bottom-centre above the tab bar (phone; above StickyBuyBar when it shows). role=status. Store: 4 s. Admin: 1.6 s. Danger tone: Signal block, role=alert, stays until dismissed. `show(text, { action: { label: "View", onClick } })` adds one underlined text button ("Added to cart · View").
 
 
 ## Tooltip
@@ -632,21 +633,22 @@ export interface CheckoutStepperProps {
 
 ## GuideConfigurator
 
-`src/components/commerce/GuideConfigurator.tsx` · used on Product, MProduct
+`src/components/commerce/GuideConfigurator.tsx` · used on Product, Product01–15, MProduct
 
-**GuideConfigurator** — Product page right column: Format → Level (Match format or a chosen level = "Custom") → Palette → one-line summary → primary "Add to cart   $19". The Buy button must stay above the fold at 1440×900 and 390×844: details live in the Accordion below, not here. Keep the configuration in the URL (?format=&level=&palette=) so links reproduce it.
+**GuideConfigurator** — Work page choices, as drawn: Format (cm) "suggests Intermediate" → Level "set by format" (Match format | Custom, Custom reveals the three levels) → Palette (44 px buttons with a 22 px three-stripe swatch, ring when selected, name on the right) → What you get (Guide + list | Guide + list + print; "+ print" on phones) → "3 layers   ~3h30   5 colours   Intermediate" → "Add to cart   $19" (desktop only; phones use StickyBuyBar) → "Digital preview. A similar original sells from $600…". Desktop: label and note on one line above the choices; phones: "Format (cm) · suggests Intermediate". The page keeps the configuration in the URL (?format=&level=&palette=&print=1).
 
 ```ts
 export interface GuideConfiguratorProps {
   value: GuideConfig;
   onChange: (next: GuideConfig) => void;
   palettes: Palette[];
+  formats?: FormatKey[];       // formats the work sells (default: all four)
+  printAvailable?: boolean;    // an A3 edition with copies left; false disables "+ print"
   onAdd: () => void;
   adding?: boolean;
-  added?: boolean;
+  added?: boolean;             // "Added   ✓" for 1.6 s (docs/motion.md §5)
 }
 ```
-
 
 ## PriceMorph
 
@@ -657,21 +659,21 @@ export interface GuideConfiguratorProps {
 
 ## ProductGallery
 
-`src/components/commerce/ProductGallery.tsx` · used on Product
+`src/components/commerce/ProductGallery.tsx` · used on Product, MProduct
 
-**ProductGallery** — Large 4:5 crop, no shadow, Mist ground while loading; text thumbnails below ("Preview · Real result · Studio").
+**ProductGallery** — Mist box with a "Digital preview" / "Real result" badge and the views "Preview · Real result" below (desktop adds the caption "Original palette, 60×80" on the right). Desktop: 720 px box; the render's height follows the format (440 / 520 / 580 / 660 px) and its CSS filter the palette, both animating 420 ms. Phone: full-width 358 × 440 crop. Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
 
 ```ts
-export interface GalleryImage {
-  src: string;
-  alt: string;
-  /** "preview" = digital render, "result" = real beginner result, "studio" = Lucas's painted test. */
-  kind: "preview" | "result" | "studio";
-  /** CSS filter used to preview a palette on the digital render (from palettes.preview_filter). */
-  filter?: string;
+export interface ProductGalleryProps {
+  workNumber: string;
+  imageUrl: string;
+  filter: string | null;       // palettes.preview_filter
+  format: FormatKey;
+  caption: string;
+  resultPhotoUrl: string | null;
+  priority?: boolean;
 }
 ```
-
 
 ## ShoppingListItem
 
@@ -693,24 +695,33 @@ export interface ShoppingItem {
 
 `src/components/commerce/StickyBuyBar.tsx` · used on MProduct
 
-**StickyBuyBar** — Phone product page: once the in-page Buy button scrolls out of view, a bar slides up from the bottom (420 ms): title + config on the left, primary price button on the right. Hidden again when the original button is visible. Uses IntersectionObserver on `watch`.
+**StickyBuyBar** — Phone work page (< 1200 px): bar pinned to the bottom, "N°03 · 60×80" / "Guide + list" on the left, primary "Add   $19" filling the rest (padding 12 16 24, Line rule on top). Always shown, as on MProduct; pass `watch` to slide it in (420 ms) only once that element leaves the viewport. While shown it sets `--sticky-bar-h` so toasts sit above it.
 
+```ts
+export interface StickyBuyBarProps {
+  title: string;
+  detail: string;
+  price: string;
+  onAdd: () => void;
+  added?: boolean;
+  watch?: RefObject<HTMLElement | null>;
+}
+```
 
 ## WorkCard
 
-`src/components/commerce/WorkCard.tsx` · used on Shop, Home
+`src/components/commerce/WorkCard.tsx` · used on Shop, MShop, Home, MHome
 
-**WorkCard** — Shop tile: 208 × 260 crop (4:5), no shadow, no image hover. Only the meta line morphs in on hover or keyboard focus. The whole tile is one link. Sold out: image at 60%, "Sold out" replaces the price.
+**WorkCard** — Work tile: 4:5 crop (208 × 260 on desktop), no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
 
 ```ts
 export interface WorkCardProps {
   work: Work;
-  /** On touch screens the meta line is always visible (no hover). */
-  alwaysShowMeta?: boolean;
+  variant?: "shop" | "home";   // default "shop"
+  alwaysShowMeta?: boolean;    // desktop shop card: keep the meta line visible
   priority?: boolean;
 }
 ```
-
 
 ## CanvasDiagram
 

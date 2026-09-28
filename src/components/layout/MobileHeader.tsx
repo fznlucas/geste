@@ -30,7 +30,7 @@ export function MobileHeader({ cartCount, signedIn, onCartClick, locale, onLocal
           <Icon name="cart" />
           <span key={cartCount} aria-hidden="true" className="tabular-nums motion-safe:animate-[fade-in_150ms_var(--ease-standard)]">({cartCount})</span>
         </button>
-        <button type="button" onClick={() => setOpen(true)} aria-expanded={open} className="min-h-44 px-12">
+        <button type="button" onClick={() => setOpen(true)} aria-expanded={open} className="flex min-h-44 min-w-68 items-center justify-center px-12">
           Menu
         </button>
       </div>

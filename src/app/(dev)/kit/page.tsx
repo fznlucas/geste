@@ -7,7 +7,7 @@
 import { useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
-  EditionCounter, ExpressPay, Field, GuideConfigurator, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  EditionCounter, ExpressPay, Field, GuideConfigurator, ProductGallery, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
@@ -66,6 +66,7 @@ function ToastDemo() {
   return (
     <div className="flex gap-10">
       <Button variant="ghost" onClick={() => t.show("Added to cart")}>Show toast</Button>
+      <Button variant="ghost" onClick={() => t.show("Added to cart", { action: { label: "View", onClick: () => {} } })}>Toast with action</Button>
       <Button variant="danger" onClick={() => t.show("Payment declined. Try another card.", { tone: "danger" })}>Show error toast</Button>
     </div>
   );
@@ -153,9 +154,15 @@ export default function KitPage() {
           <div className="grid grid-cols-5 gap-40">
             {WORKS.map((w, i) => <WorkCard key={w.id} work={w} alwaysShowMeta={i === 0} />)}
           </div>
+          <div className="grid grid-cols-5 gap-40">
+            {WORKS.map((w) => <WorkCard key={w.id} work={w} variant="home" />)}
+          </div>
           <div className="grid grid-cols-2 gap-40">
             <State label="Price morph · hidden / shown"><div className="flex w-208 flex-col gap-16"><PriceMorph visible={false} meta="Beginner · 1h" price="from $12" /><PriceMorph visible meta="Beginner · 1h" price="from $12" /></div></State>
             <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} onAdd={() => setAdded(true)} added={added} /></div>
+            <State label="Configurator · no A3 print left (option disabled)"><GuideConfigurator value={{ format: "40x50", level: "match", palette: "warm" }} onChange={() => {}} palettes={PALETTES} printAvailable={false} onAdd={() => {}} /></State>
+            <State label="Product gallery · format and palette follow the configurator above"><ProductGallery workNumber="N°03" imageUrl={asset("mock/work-03.jpg")} filter={{ original: null, warm: "sepia(0.25) saturate(1.25) hue-rotate(-12deg)", cool: "hue-rotate(150deg) saturate(0.9)", earth: "sepia(0.6) saturate(0.8) hue-rotate(-8deg)" }[cfg.palette] ?? null} format={cfg.format} caption={`${cfg.palette} palette, ${cfg.format}`} resultPhotoUrl={null} /></State>
+            <State label="Sticky buy bar · phone only (< 1200 px), pinned to the bottom"><StickyBuyBar title="N°03 · 60×80" detail="Guide + list" price="$19" onAdd={() => {}} /></State>
             <div className="flex flex-col">
               <CartLine item={{ id: "1", kind: "guide", title: "N°03 — Guide", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} href="#" note="+ shopping list" onRemove={() => {}} />
               <CartLine item={{ id: "2", kind: "print", title: "N°07 — Print", detail: "A2 · Cotton paper · Edition 13/30", imageUrl: asset("mock/work-07.jpg"), unitPriceCents: 7500, quantity: 1 }} href="#" note="Signed, with certificate" onRemove={() => {}} onQuantity={() => {}} maxQuantity={3} />

@@ -25,6 +25,7 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
     reserved: row.reservedCount,
     left,
     soldOut: left === 0,
+    nextNumber: left === 0 ? null : row.soldCount + row.reservedCount + 1,
   };
 }
 
