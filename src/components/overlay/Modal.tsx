@@ -2,6 +2,7 @@
 
 import * as D from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
+import { useReturnFocus } from "./useReturnFocus";
 import { cn } from "@/lib/cn";
 
 export interface ModalProps {
@@ -18,11 +19,13 @@ export interface ModalProps {
 
 /** Centred panel on Paper, shadow-modal, fades in and rises 8 px in 240 ms. Used for payment errors and admin confirms. */
 export function Modal({ open, onOpenChange, title, description, children, actions, width = 460 }: ModalProps) {
+  const focus = useReturnFocus();
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
         <D.Overlay className="fixed inset-0 z-modal bg-scrim data-[state=open]:animate-[fade-in_240ms_var(--ease-standard)]" />
         <D.Content
+          {...focus}
           className={cn(
             "fixed left-1/2 top-160 z-modal flex max-w-[calc(100vw-32px)] -translate-x-1/2 flex-col gap-14 bg-bg p-24 shadow-modal outline-none",
             "data-[state=open]:animate-[rise-in_240ms_var(--ease-standard)]",

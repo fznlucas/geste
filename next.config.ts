@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   trailingSlash: true,
   // No image optimisation server on GitHub Pages.
   images: { unoptimized: true },
+  // Keep `next dev` from appending its agent block to CLAUDE.md (the project's instructions live there).
+  agentRules: false,
 };
 
 export default nextConfig;

@@ -61,12 +61,23 @@ export function addToCart(input: CartLineInput): string {
 
 /** Prints only; the priced cart caps the quantity at the copies left. 0 removes the line. */
 export function updateCartLine(id: string, quantity: number) {
-  if (quantity < 1) return removeCartLine(id);
+  if (quantity < 1) {
+    removeCartLine(id);
+    return;
+  }
   cartStore.set((lines) => lines.map((l) => (l.id === id && l.kind === "print" ? { ...l, quantity: Math.floor(quantity) } : l)));
 }
 
-export function removeCartLine(id: string) {
+/** Returns the removed line so the cart can offer "Undo". */
+export function removeCartLine(id: string): StoredCartLine | undefined {
+  const line = cartStore.get().find((l) => l.id === id);
   cartStore.set((lines) => lines.filter((l) => l.id !== id));
+  return line;
+}
+
+/** "Undo" in the empty cart: puts removed lines back (same ids, same order). */
+export function restoreCartLines(removed: StoredCartLine[]) {
+  cartStore.set((lines) => [...lines, ...removed.filter((r) => !lines.some((l) => l.id === r.id))].sort((a, b) => a.addedAt.localeCompare(b.addedAt)));
 }
 
 /** After a successful (mock) payment. */

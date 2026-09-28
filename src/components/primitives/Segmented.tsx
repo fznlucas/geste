@@ -35,8 +35,11 @@ export function Segmented<V extends string>({ label, options, value, onChange, c
       aria-label={label}
       className={cn("flex flex-wrap items-center gap-x-14 gap-y-4", className)}
       onKeyDown={(e) => {
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") (e.preventDefault(), move(1));
-        if (e.key === "ArrowLeft" || e.key === "ArrowUp") (e.preventDefault(), move(-1));
+        const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+        if (dir) {
+          e.preventDefault();
+          move(dir);
+        }
       }}
     >
       {options.map((o) => {

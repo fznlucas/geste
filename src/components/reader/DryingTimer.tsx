@@ -19,7 +19,7 @@ export interface DryingTimerProps {
 export function DryingTimer({ seconds, layerName, onDone, onSkip }: DryingTimerProps) {
   const [left, setLeft] = useState(seconds);
   const [paused, setPaused] = useState(false);
-  const endAt = useRef(Date.now() + seconds * 1000);
+  const endAt = useRef(0); // set when the countdown (re)starts
 
   useEffect(() => {
     if (paused) return;

@@ -35,7 +35,8 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Layout | `SiteHeader` | `src/components/layout/SiteHeader.tsx` | all desktop pages |
 | Layout | `Structure` | `src/components/layout/Structure.tsx` | all pages |
 | Commerce | `CartLine` | `src/components/commerce/CartLine.tsx` | Cart, MCart, Checkout |
-| Commerce | `CartSummary` | `src/components/commerce/CartSummary.tsx` | Cart, Checkout |
+| Commerce | `CartSummary` | `src/components/commerce/CartSummary.tsx` | Checkout |
+| Commerce | `CartPanel` | `src/components/commerce/CartPanel.tsx` | Cart (drawer), MCart (/cart) |
 | Commerce | `CheckoutStepper` | `src/components/commerce/CheckoutStepper.tsx` | Checkout, MCheckout |
 | Commerce | `EditionCounter` | `src/components/commerce/EditionCounter.tsx` | Print |
 | Commerce | `ExpressPay` | `src/components/commerce/ExpressPay.tsx` | Checkout |
@@ -130,6 +131,8 @@ export interface AccordionProps {
 `src/components/primitives/Button.tsx` · used on all CTAs — Product, Checkout, Admin
 
 **LoadingDots** — Three dots pulsing in sequence; replaces the trailing arrow while loading.
+
+**ButtonLink** — A `next/link` that looks like a Button ("Checkout   $68", "Browse works   →"). Same `variant`, `size`, `trailing`, `fullWidth`; takes `href` instead of `onClick`/`loading`.
 
 ```ts
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -374,14 +377,17 @@ export interface TabsProps {
 
 `src/components/overlay/Drawer.tsx` · used on Cart, MMenu
 
-**Drawer** — Slides 100% in from its side over 420 ms (ease-standard); scrim fades to rgba(17,17,17,.24). Escape and scrim click close; focus is trapped and returns to the trigger (Radix Dialog).
+**Drawer** — Slides 100% in from its side over 420 ms (ease-standard); scrim fades to rgba(17,17,17,.24). Escape and scrim click close; focus is trapped, then returns to the element that opened it (`useReturnFocus`, also used by Modal: both open from state, without a Radix Trigger). Header: title left, "Close" text right (underlined on the cart, plain on the menu).
 
 ```ts
 export interface DrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Accessible name. Shown in the header ("Cart (2)") unless `header` replaces it. */
   title: string;
-  /** right = cart (desktop 440 px, phone full width). left/full = phone menu. */
+  /** Visible header content instead of the title (the phone menu shows the logo). */
+  header?: ReactNode;
+  /** right = cart (desktop 440 px, phone full width). full = phone menu. */
   side?: "right" | "full";
   children: ReactNode;
   footer?: ReactNode;
@@ -464,7 +470,9 @@ export interface PopoverProps {
 export interface MobileHeaderProps {
   cartCount: number;
   signedIn: boolean;
-  onCartClick: () => void;
+  onCartClick: () => void;       // the store goes to /cart (board MCart)
+  locale?: "en" | "fr";          // passed to the menu's EN/FR switch
+  onLocaleChange?: (l: "en" | "fr") => void;
 }
 ```
 
@@ -473,14 +481,24 @@ export interface MobileHeaderProps {
 
 `src/components/layout/MobileMenu.tsx` · used on MMenu
 
-**MobileMenu** — Full-screen menu (board MMenu): large 22 px links, then account + help, then EN/FR.
+**MobileMenu** — Full-screen menu (board MMenu): logo + "Close", 28 px links, then Log in (signed out) / My library / Gift cards / Help, and "USD $ · EN FR" pinned at the bottom.
+
+```ts
+export interface MobileMenuProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  signedIn: boolean;
+  locale?: "en" | "fr";
+  onLocaleChange?: (l: "en" | "fr") => void;
+}
+```
 
 
 ## SiteFooter
 
 `src/components/layout/SiteFooter.tsx` · used on all store pages
 
-**SiteFooter** — Desktop: 6-column grid, newsletter spans 2. Phone: stacked. Padding 56 32 28 (phone 64 16 24).
+**SiteFooter** — Desktop: 6-column grid, newsletter spans 2. Phone (< 768 px, board MHome): "Letters from the studio.", 2×2 columns of three merged links, "© 2026 Geste Studio" and "USD $ EN FR". Padding 56 32 28 (phone 64 16 24).
 
 ```ts
 export interface SiteFooterProps {
@@ -496,7 +514,7 @@ export interface SiteFooterProps {
 
 `src/components/layout/SiteHeader.tsx` · used on all desktop pages
 
-**SiteHeader** — Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover), nav sits next to the icons on the right, 24 px apart. Padding 8 × 32.
+**SiteHeader** — Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover), nav (Shop Prints Method Journal About, 24 px apart) sits 28 px from the icons on the right. Cart count cross-fades in 150 ms. Padding 8 × 32.
 
 ```ts
 export interface SiteHeaderProps {
@@ -526,14 +544,46 @@ export interface SiteHeaderProps {
 
 `src/components/commerce/CartLine.tsx` · used on Cart, MCart, Checkout
 
-**CartLine** — Cart row: 56×70 thumb, title + detail (Stone), price right, "Remove" text button. Guides and gift cards have quantity 1 (no stepper); prints can have a stepper up to the edition stock.
+**CartLine** — Cart row (boards Cart, MCart): thumb, title link + price on one line, detail and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a stepper up to the stock. A line that cannot be bought shows its reason in Signal text and a struck price.
+
+```ts
+export interface CartLineProps {
+  item: CartItem;
+  href?: string | null;          // title link: the work page with the same configuration
+  note?: string | null;          // "+ shopping list", "Signed, with certificate" (not on size "lg")
+  issue?: string | null;         // "Sold out, not counted"
+  onRemove: () => void;
+  onQuantity?: (q: number) => void;
+  maxQuantity?: number;
+  size?: "md" | "lg";            // md = drawer, 64×80 thumb · lg = /cart page, 72×90
+  onNavigate?: () => void;       // closes the drawer when the title is followed
+}
+```
+
+
+## CartPanel
+
+`src/components/commerce/CartPanel.tsx` · used on Cart (drawer), MCart (/cart)
+
+**CartPanel** — Cart content shared by the drawer and the /cart page: CartLines, cross-sell panel ("Paint N°07 yourself instead? Guide from $12. See it", drawer only), Subtotal, Shipping ("from $4, next step" / "from $4" / "Free, digital"), Estimated total, "Checkout   $98", reassurance line. Empty: layer-1 CanvasDiagram, "Your cart is empty.", "Start with a Beginner work, about an hour." (drawer), "Browse works →", and "Undo" after the last line was removed.
+
+```ts
+export interface CartPanelProps {
+  cart: PricedCart;              // useCart({ shippingMethod: "mondial_relay" }): cheapest carrier for "from $4"
+  variant: "drawer" | "page";
+  onRemove: (lineId: string) => void;
+  onQuantity: (lineId: string, quantity: number) => void;
+  onUndo?: () => void;
+  onNavigate?: () => void;
+}
+```
 
 
 ## CartSummary
 
 `src/components/commerce/CartSummary.tsx` · used on Cart, Checkout
 
-**CartSummary** — Right-aligned totals block. Hidden entirely on the Confirmation step (validated change).
+**CartSummary** — Right-aligned totals block of the checkout summary. Hidden entirely on the Confirmation step (validated change). The cart drawer and /cart use CartPanel's own totals ("Estimated total"), as drawn on Cart / MCart.
 
 ```ts
 export interface CartTotals {

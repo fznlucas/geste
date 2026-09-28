@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { GESTE_GLYPHS, PEN_STROKES, STUDIO_GLYPHS } from "./logoPaths";
-import { ease, PEN_OVERLAP, prefersReducedMotion } from "@/lib/motion";
+import { ease, penSchedule, prefersReducedMotion } from "@/lib/motion";
 
 export interface LogoProps {
   /** Rendered height in px (cap box). Minimum 12. Header uses 12, footer 12, emails 24. */
@@ -62,12 +62,8 @@ export function Logo({ size = 12, variant = "full", tone = "ink", animateOnHover
   const ink = tone === "ink" ? "var(--color-fg)" : "var(--color-fg-inverse)";
   const grey = tone === "ink" ? "var(--color-fg-muted)" : "var(--color-fg-muted-on-dark)";
 
-  let t = 0;
-  const strokes = PEN_STROKES.map((s) => {
-    const delay = t;
-    t += s.duration - PEN_OVERLAP;
-    return { ...s, delay };
-  });
+  const schedule = penSchedule(PEN_STROKES.map((s) => s.duration));
+  const strokes = PEN_STROKES.map((s, i) => ({ ...s, delay: schedule[i]!.delay }));
 
   return (
     <svg

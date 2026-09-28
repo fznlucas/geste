@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 
 export const MAIN_NAV = [
   { label: "Shop", href: "/shop" },
-  { label: "Print", href: "/prints" },
+  { label: "Prints", href: "/prints" },
   { label: "Method", href: "/method" },
   { label: "Journal", href: "/journal" },
   { label: "About", href: "/about" },
@@ -21,7 +21,7 @@ export interface SiteHeaderProps {
 
 /**
  * Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover),
- * nav sits next to the icons on the right, 24 px apart. Padding 8 × 32.
+ * nav (links 24 px apart) sits 28 px from the icons on the right. Padding 8 × 32.
  */
 export function SiteHeader({ active, cartCount, signedIn, onCartClick }: SiteHeaderProps) {
   return (
@@ -29,7 +29,7 @@ export function SiteHeader({ active, cartCount, signedIn, onCartClick }: SiteHea
       <Link href="/" aria-label="geste.studio, home" className="flex min-h-44 items-center">
         <Logo size={12} animateOnHover />
       </Link>
-      <div className="flex items-center gap-24">
+      <div className="flex items-center gap-28">
         <nav aria-label="Main" className="flex gap-24">
           {MAIN_NAV.map((n) => (
             <Link
@@ -48,7 +48,7 @@ export function SiteHeader({ active, cartCount, signedIn, onCartClick }: SiteHea
           </Link>
           <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} items`} className="flex min-h-44 min-w-44 items-center justify-center gap-5 hover:text-fg-muted">
             <Icon name="cart" />
-            <span aria-hidden="true" className="tabular-nums">({cartCount})</span>
+            <span key={cartCount} aria-hidden="true" className="tabular-nums motion-safe:animate-[fade-in_150ms_var(--ease-standard)]">({cartCount})</span>
           </button>
         </div>
       </div>

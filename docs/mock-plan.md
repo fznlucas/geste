@@ -107,9 +107,9 @@ Each step is one prompt / one commit, like `docs/build-plan.md`, and ends with `
 - M0.2 Mock tables (`src/data`) and data API (`src/lib/api`).
 - M0.3 Browser state: cart + `priceCart`, fake session (customer and staff), reader progress (`src/lib/client`).
 - M0.4 This plan.
+- M1 Store shell: `src/app/(store)/layout.tsx` → `_chrome/StoreChrome.tsx` (headers, footer, cart drawer on `useCart`, toasts, "Reset demo" line, `useCartDrawer()` for pages), `/cart` (MCart), `src/app/not-found.tsx` (NotFound / MNotFound), `CartPanel` + `ButtonLink` in the kit, ESLint flat config. Mock: FR shows a "French is coming soon." toast; the newsletter form succeeds without sending anything.
 
 **Next**
-1. **M1 · Store shell.** `src/app/(store)/layout.tsx` (build-plan 1.1) with the cart drawer on `useCart`, the "Reset demo" link, `not-found.tsx`. Add ESLint's flat config (`eslint.config.mjs` with `eslint-config-next`): `npm run lint` has no config yet.
 2. **M2 · Catalog.** `/`, `/shop`, `/works/[slug]` (+ Product01–15), `/works/[slug]/list`, `/prints`, `/prints/[slug]`, `/gift-cards` (build-plan 1.2–1.4, 2.5, 4.1 without Boxtal).
 3. **M3 · Checkout.** `/checkout` and `/checkout/success`. Payment step: a plain card form styled like the Payment Element (not Stripe's iframe). Outcomes follow the Checkout board's `paymentOutcome` tweak and Stripe's test numbers: `4242 4242 4242 4242` success, `4000 0000 0000 0002` declined (Modal), `4000 0027 6000 3184` 3DS (fake challenge Modal, then success), a sold-out edition in the cart → sold-out message. Express pay buttons run the success path. On success: add `src/lib/client/purchases.ts` (`geste.purchases.v1`) that records the order and one entitlement per guide, signs the buyer in (`signIn({ method: "email_code", email })`), and `clearCart()`. `getLibrary` / `getEntitlement` / `getOrders` merge these local rows on the client.
    - Local entitlement ids are `local-<guideId>` so the reader route can be pre-generated: `/learn/[entitlementId]` `generateStaticParams` = the mock entitlements + `local-<guideId>` for every published guide.

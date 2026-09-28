@@ -1,4 +1,5 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import Link from "next/link";
+import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export type ButtonVariant = "primary" | "ghost" | "text" | "danger";
@@ -55,6 +56,29 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         </span>
       )}
     </button>
+  );
+});
+
+export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
+  href: string;
+  variant?: ButtonVariant;
+  size?: "md" | "sm";
+  trailing?: ReactNode;
+  fullWidth?: boolean;
+}
+
+/** A link that looks like a Button ("Checkout   $68", "Browse works   →"). Same variants and sizes. */
+export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(function ButtonLink(
+  { href, variant = "primary", size = "md", trailing, fullWidth, className, children, ...rest },
+  ref,
+) {
+  return (
+    <Link ref={ref} href={href} className={cn(base, variants[variant], sizes[size][variant], fullWidth && "w-full", className)} {...rest}>
+      <span>{children}</span>
+      {variant === "primary" && trailing !== undefined && (
+        <span aria-hidden="true" className="tabular-nums">{trailing}</span>
+      )}
+    </Link>
   );
 });
 

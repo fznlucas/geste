@@ -10,6 +10,25 @@ const COLS = [
   { title: "Legal", links: [["Legal notice", "/legal/notice"], ["Terms of sale", "/legal/terms"], ["Privacy policy", "/legal/privacy"], ["Cookie settings", "/legal/cookies"], ["Accessibility", "/legal/accessibility"]] },
 ] as const;
 
+/** Phone (< 768 px, board MHome): three links per column, merged labels. */
+const PHONE_COLS = [
+  { title: "Shop", links: [["All works", "/shop"], ["Prints", "/prints"], ["Gift cards", "/gift-cards"]] },
+  { title: "Help", links: [["How it works", "/method"], ["Shipping & returns", "/help#shipping"], ["FAQ & contact", "/help"]] },
+  { title: "Studio", links: [["About", "/about"], ["Journal", "/journal"], ["Instagram", "https://www.instagram.com/"]] },
+  { title: "Legal", links: [["Legal notice", "/legal/notice"], ["Terms & privacy", "/legal/terms"], ["Cookies", "/legal/cookies"]] },
+] as const;
+
+function Column({ title, links, className }: { title: string; links: ReadonlyArray<readonly [string, string]>; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="mb-6 leading-[22px] text-fg-muted">{title}</div>
+      {links.map(([l, h]) => (
+        <Link key={l} href={h} className="block leading-[22px] hover:text-fg-muted">{l}</Link>
+      ))}
+    </div>
+  );
+}
+
 export interface SiteFooterProps {
   locale: "en" | "fr";
   onLocaleChange: (l: "en" | "fr") => void;
@@ -17,15 +36,18 @@ export interface SiteFooterProps {
   subscribe: (email: string) => Promise<void>;
 }
 
-/** Desktop: 6-column grid, newsletter spans 2. Phone: stacked. Padding 56 32 28 (phone 64 16 24). */
+/**
+ * Desktop: 6-column grid, newsletter spans 2. Phone (< 768 px): newsletter, 2×2 short columns,
+ * "© 2026 Geste Studio" and "USD $ EN FR" (board MHome). Padding 56 32 28 (phone 64 16 24).
+ */
 export function SiteFooter({ locale, onLocaleChange, subscribe }: SiteFooterProps) {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   return (
     <footer className="flex flex-col gap-36 px-16 pb-24 pt-64 lg:gap-72 lg:px-32 lg:pb-28 lg:pt-56">
-      <div className="grid grid-cols-2 gap-x-32 gap-y-32 lg:grid-cols-6">
-        <div className="col-span-2 flex max-w-340 flex-col gap-10">
-          <span>Letters from the studio. New works, new methods.</span>
+      <div className="grid grid-cols-2 gap-x-32 gap-y-24 md:gap-y-32 lg:grid-cols-6">
+        <div className="col-span-2 mb-12 flex max-w-340 flex-col gap-10 md:mb-0">
+          <span>Letters from the studio.<span className="hidden md:inline"> New works, new methods.</span></span>
           {done ? (
             <span className="flex min-h-44 items-center text-fg-muted">Thank you. The first letter lands next month.</span>
           ) : (
@@ -43,20 +65,14 @@ export function SiteFooter({ locale, onLocaleChange, subscribe }: SiteFooterProp
             </form>
           )}
         </div>
-        {COLS.map((c) => (
-          <div key={c.title}>
-            <div className="mb-6 leading-[22px] text-fg-muted">{c.title}</div>
-            {c.links.map(([l, h]) => (
-              <Link key={l} href={h} className="block leading-[22px] hover:text-fg-muted">{l}</Link>
-            ))}
-          </div>
-        ))}
+        {COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="hidden md:block" />)}
+        {PHONE_COLS.map((c) => <Column key={c.title} title={c.title} links={c.links} className="md:hidden" />)}
       </div>
       <div className="flex items-center justify-between text-fg-muted">
-        <span>© {new Date().getFullYear()} Geste Studio — Lyon, France</span>
-        <div className="flex items-center gap-14">
+        <span>© {new Date().getFullYear()} Geste Studio<span className="hidden md:inline"> — Lyon, France</span></span>
+        <div className="flex items-center gap-12 md:gap-14">
           <span>USD $</span>
-          <span aria-hidden="true">·</span>
+          <span aria-hidden="true" className="hidden md:inline">·</span>
           {(["en", "fr"] as const).map((l) => (
             <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange(l)} className={locale === l ? "text-fg underline underline-offset-4" : "text-fg"}>
               {l.toUpperCase()}

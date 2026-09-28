@@ -6,12 +6,14 @@
  */
 import { useRef, useState } from "react";
 import {
-  Accordion, BarChart, Button, CanvasDiagram, CartLine, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
+  Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
   EditionCounter, ExpressPay, Field, GuideConfigurator, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
+import { priceCart, type StoredCartLine } from "@/lib/api";
+import { addToCart } from "@/lib/client";
 import { asset } from "@/lib/asset";
 import type { GuideConfig } from "@/lib/pricing";
 
@@ -26,6 +28,17 @@ const PALETTES = [
   { id: "cool", name: "Cool", swatches: ["#2F5FB3", "#A9A3D9", "#F2DC5A"] },
   { id: "earth", name: "Earth", swatches: ["#A0522D", "#6F5A45", "#C9A27E"] },
 ];
+// Cart fixtures (board Cart): N°03 guide + N°07 A2 print; the A3 of N°07 is sold out in the mock.
+const N03 = "00000000-0000-0000-0000-000000000003";
+const CART_LINES: StoredCartLine[] = [
+  { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: N03, format: "60x80", level: "match", palette: "original" },
+  { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-a2", quantity: 1 },
+];
+const CART_FULL = priceCart(CART_LINES, { shippingMethod: "mondial_relay" });
+const CART_GUIDE = priceCart(CART_LINES.slice(0, 1), { shippingMethod: "mondial_relay" });
+const CART_SOLD_OUT = priceCart([...CART_LINES.slice(0, 1), { id: "l3", addedAt: "2026-10-01T10:02:00Z", kind: "print", editionId: "ed-07-a3", quantity: 1 }], { shippingMethod: "mondial_relay" });
+const CART_EMPTY = priceCart([]);
+
 const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
 
 function Board({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -144,8 +157,10 @@ export default function KitPage() {
             <State label="Price morph · hidden / shown"><div className="flex w-208 flex-col gap-16"><PriceMorph visible={false} meta="Beginner · 1h" price="from $12" /><PriceMorph visible meta="Beginner · 1h" price="from $12" /></div></State>
             <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} onAdd={() => setAdded(true)} added={added} /></div>
             <div className="flex flex-col">
-              <CartLine item={{ id: "1", kind: "guide", title: "Guide N°03", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} onRemove={() => {}} />
-              <CartLine item={{ id: "2", kind: "print", title: "Print N°07 · A3", detail: "Limited edition of 50, signed", imageUrl: asset("mock/work-07.jpg"), unitPriceCents: 4500, quantity: 1 }} onRemove={() => {}} onQuantity={() => {}} maxQuantity={3} />
+              <CartLine item={{ id: "1", kind: "guide", title: "N°03 — Guide", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} href="#" note="+ shopping list" onRemove={() => {}} />
+              <CartLine item={{ id: "2", kind: "print", title: "N°07 — Print", detail: "A2 · Cotton paper · Edition 13/30", imageUrl: asset("mock/work-07.jpg"), unitPriceCents: 7500, quantity: 1 }} href="#" note="Signed, with certificate" onRemove={() => {}} onQuantity={() => {}} maxQuantity={3} />
+              <CartLine item={{ id: "3", kind: "print", title: "N°07 — Print", detail: "A3 · Cotton paper · Sold out", imageUrl: asset("mock/work-07.jpg"), unitPriceCents: 4500, quantity: 1 }} issue="Sold out, not counted" onRemove={() => {}} />
+              <CartLine size="lg" item={{ id: "4", kind: "guide", title: "N°03 — Guide", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} href="#" note="+ shopping list" onRemove={() => {}} />
               <div className="pt-16"><CartSummary hasPhysical totals={{ subtotalCents: 6400, shippingCents: null, totalCents: 6400 }} /></div>
             </div>
             <div className="flex flex-col gap-24">
@@ -155,6 +170,20 @@ export default function KitPage() {
               <div className="flex gap-10"><Button variant="ghost" onClick={() => setModal(true)}>Open payment error modal</Button><ToastDemo /></div>
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-40">
+            <State label="Cart panel · drawer, guide + print"><div className="flex min-h-640 w-376 flex-col"><CartPanel variant="drawer" cart={CART_FULL} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+            <State label="Cart panel · drawer, guides only"><div className="flex min-h-640 w-376 flex-col"><CartPanel variant="drawer" cart={CART_GUIDE} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+            <State label="Cart panel · sold-out line"><div className="flex min-h-640 w-376 flex-col"><CartPanel variant="drawer" cart={CART_SOLD_OUT} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+            <State label="Cart panel · empty"><div className="flex min-h-400 w-376 flex-col"><CartPanel variant="drawer" cart={CART_EMPTY} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+            <State label="Cart panel · empty after remove (Undo)"><div className="flex min-h-400 w-376 flex-col"><CartPanel variant="drawer" cart={CART_EMPTY} onRemove={() => {}} onQuantity={() => {}} onUndo={() => {}} /></div></State>
+            <State label="Cart panel · page (phone)"><div className="w-358"><CartPanel variant="page" cart={CART_FULL} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+          </div>
+          <State label="Demo cart (writes the real mock cart, then open the cart icon on any store page)">
+            <div className="flex gap-10">
+              <Button variant="ghost" onClick={() => CART_LINES.forEach(({ id: _id, addedAt: _at, ...input }) => addToCart(input))}>Add N°03 guide + N°07 print to the cart</Button>
+              <ButtonLink href="/cart" variant="ghost">Open /cart</ButtonLink>
+            </div>
+          </State>
           <Modal open={modal} onOpenChange={setModal} title="Payment declined" description="Your bank refused the payment. No money was taken." actions={<><Button variant="ghost" className="flex-1" onClick={() => setModal(false)}>Use another card</Button><Button className="flex-[2]" trailing="→" onClick={() => setModal(false)}>Try again</Button></>} />
         </Board>
 

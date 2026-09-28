@@ -38,6 +38,7 @@ export * from "./commerce/GuideConfigurator";
 export * from "./commerce/StickyBuyBar";
 export * from "./commerce/CartLine";
 export * from "./commerce/CartSummary";
+export * from "./commerce/CartPanel";
 export * from "./commerce/CheckoutStepper";
 export * from "./commerce/ExpressPay";
 export * from "./commerce/ShoppingListItem";

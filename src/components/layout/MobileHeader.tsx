@@ -10,10 +10,12 @@ export interface MobileHeaderProps {
   cartCount: number;
   signedIn: boolean;
   onCartClick: () => void;
+  locale?: "en" | "fr";
+  onLocaleChange?: (l: "en" | "fr") => void;
 }
 
 /** Phone header (< 1200 px): logo left, account, cart (n), "Menu" text button. Padding 4 4 4 16. */
-export function MobileHeader({ cartCount, signedIn, onCartClick }: MobileHeaderProps) {
+export function MobileHeader({ cartCount, signedIn, onCartClick, locale, onLocaleChange }: MobileHeaderProps) {
   const [open, setOpen] = useState(false);
   return (
     <header className="flex items-center justify-between py-4 pl-16 pr-4">
@@ -26,13 +28,13 @@ export function MobileHeader({ cartCount, signedIn, onCartClick }: MobileHeaderP
         </Link>
         <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} items`} className="flex min-h-44 min-w-44 items-center justify-center gap-5">
           <Icon name="cart" />
-          <span aria-hidden="true">({cartCount})</span>
+          <span key={cartCount} aria-hidden="true" className="tabular-nums motion-safe:animate-[fade-in_150ms_var(--ease-standard)]">({cartCount})</span>
         </button>
         <button type="button" onClick={() => setOpen(true)} aria-expanded={open} className="min-h-44 px-12">
           Menu
         </button>
       </div>
-      <MobileMenu open={open} onOpenChange={setOpen} signedIn={signedIn} />
+      <MobileMenu open={open} onOpenChange={setOpen} signedIn={signedIn} locale={locale} onLocaleChange={onLocaleChange} />
     </header>
   );
 }

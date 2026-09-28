@@ -4,7 +4,7 @@
 
 - **Boards:** Cart (drawer over the page), MCart (full screen).
 - **Content:** "Cart (2)" + Close · CartLine per item ("N°03 — Guide · $19 · 60×80 · Intermediate · Original · + shopping list · Remove"; "N°07 — Print · $45 · A3 · Cotton paper · Edition 12/50 · Signed, with certificate · Remove") · cross-sell line ("Paint N°07 yourself instead? Guide from $12. See it") · Subtotal · Shipping "from $4, next step" · Estimated total · primary "Checkout   $68" · "Guides unlock instantly in your library. Prints ship in 3–5 days."
-- **Empty:** "Your cart is empty. Browse the shop."
+- **Empty:** layer-1 diagram · "Your cart is empty." · "Start with a Beginner work, about an hour." · "Browse works →" · "Undo" after removing the last line (board Cart).
 - **Acceptance:** opening moves focus into the drawer; Escape closes and returns focus; totals match the checkout.
 
 ## Checkout — `/checkout`
