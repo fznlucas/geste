@@ -1,0 +1,121 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Growth
+/
+Finance
+Search
+Demo data
+Alerts · 6
+Revenue · Sept
+$4,212
+VAT incl.
+Gross margin
+$3,105
+74%
+Costs · Sept
+$612
+see below
+Net result
+$2,493
+before tax & social charges
+Next payout
+$1,284
+Stripe · Oct 3
+Profit & loss · September
+Export for accountant (CSV)
+Line
+Amount
+Share
+Guides
+$2,318
+55%
+Prints
+$1,244
+30%
+Gift cards sold
+$332
+8%
+Affiliate commissions (shopping lists)
+$318
+7%
+Revenue
+$4,212
+100%
+Print production (paper, ink, tubes)
+−$286
+Shipping labels
+−$121
+Payment fees (Stripe, PayPal)
+−$139
+Gross margin
+$3,105
+74%
+GPU (AI pipeline)
+−$38
+Software (store, Claude, email)
+−$96
+Ads
+−$0
+Materials for studio tests
+−$478
+Net result
+$2,493
+59%
+VAT collected · Q3
+France
+20%
+$1,402
+Belgium · OSS
+21%
+$96
+Switzerland
+n/a
+—
+Germany · OSS
+19%
+$41
+Digital sales to EU consumers follow the buyer’s country rate (OSS). Check with your accountant.
+Turnover threshold · 2026
+$18,420 of [threshold for your status]
+Micro-enterprise and VAT thresholds: enter the figures your accountant confirms.
+Payouts
+Oct 3
+$1,284
+Scheduled
+Sep 26
+$1,019
+Paid
+Sep 19
+$642
+Paid

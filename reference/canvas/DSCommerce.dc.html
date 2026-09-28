@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geste dev — commerce & reader</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF8;color:#111111;font-family:'JetBrains Mono',monospace}
+a{color:#111111;text-decoration:none}a:hover{color:#6F6A64}
+.icon-btn{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:44px;font-size:12px;color:#111111}
+.icon-btn:hover{color:#6F6A64}
+.icon-btn:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.foot a{display:block;line-height:22px}
+.news{all:unset;box-sizing:border-box;width:100%;font-size:12px;padding:10px 0;border-bottom:1px solid #D8D3CC;font-family:'JetBrains Mono',monospace}
+.news::placeholder{color:#6F6A64}
+.sub{all:unset;cursor:pointer;font-size:12px;min-height:44px;display:flex;align-items:center}
+.sub:hover{color:#6F6A64}
+.tx{all:unset;cursor:pointer;font-size:12px;min-height:32px;display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace}
+.tx:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.work{display:flex;flex-direction:column;gap:12px;width:208px;color:#111111}
+.work:hover{color:#111111}
+.work:focus-visible{outline:1px solid #111111;outline-offset:8px}
+.frame{display:block;width:208px;height:260px;overflow:hidden}
+.frame img{display:block;width:208px;height:260px;object-fit:cover}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;min-height:48px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;background:#111111;color:#FAFAF8;font-size:12px;font-family:'JetBrains Mono',monospace}
+.btn:hover{background:#2E2B28}
+.btn:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.ghost{all:unset;cursor:pointer;box-sizing:border-box;min-height:44px;padding:0 14px;display:flex;justify-content:center;align-items:center;border:1px solid #111111;font-size:12px;font-family:'JetBrains Mono',monospace}
+.ghost:hover{background:#F1EEEA}
+.ghost:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.field{all:unset;box-sizing:border-box;width:100%;min-height:44px;padding:0 12px;border:1px solid #D8D3CC;background:#FFFFFF;font-size:12px;font-family:'JetBrains Mono',monospace}
+.field::placeholder{color:#6F6A64}
+.field:focus{border-color:#111111}
+.lab{display:block;color:#6F6A64;margin-bottom:6px}
+.cap{color:#6F6A64}
+.h2{font-size:22px;line-height:30px;font-weight:500;letter-spacing:-0.02em;margin:0}
+.grid-st{display:grid;column-gap:24px;row-gap:20px;align-items:center}
+.pill{display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border:1px solid #D8D3CC}
+.tok{display:flex;flex-direction:column;gap:8px}
+code{font-family:'JetBrains Mono',monospace;font-size:12px}
+
+</style>
+</helmet>
+<div style="width: 1440px; height: 1340px; box-sizing: border-box; padding: 64px 80px; display: flex; flex-direction: column; gap: 48px; background: #FAFAF8; font-size: 12px; line-height: 20px; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: flex-end"><div style="display: flex; flex-direction: column; gap: 8px"><span class="cap">Dev · 03</span><h1 style="margin: 0; font-size: 28px; line-height: 1.2; font-weight: 500; letter-spacing: -0.02em">Commerce & reader components</h1></div><span class="cap" style="max-width: 520px; text-align: right">src/components/commerce and src/components/reader. Canvas boards remain the layout reference; these are the reusable parts.</span></div>
+<div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 40px; row-gap: 40px">
+<div style="grid-column: span 6; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">WorkCard + PriceMorph</h2><span class="cap">rest · hover/focus · sold out</span></div><div style="display: flex; gap: 24px"><div style="display: flex; flex-direction: column; gap: 12px; width: 180px"><span style="display: block; width: 180px; height: 225px; overflow: hidden; opacity: 1"><img src="../../public/mock/work-01.jpg" alt="" style="display: block; width: 180px; height: 225px; object-fit: cover; flex-shrink: 0"></span><span style="display: flex; justify-content: space-between; height: 14px; line-height: 14px; opacity: 0; filter: blur(4px); letter-spacing: 0.25em; transform: translateY(3px)"><span class="cap">Beginner · 1h30</span><span>from $13</span></span></div><div style="display: flex; flex-direction: column; gap: 12px; width: 180px"><span style="display: block; width: 180px; height: 225px; overflow: hidden; opacity: 1"><img src="../../public/mock/work-03.jpg" alt="" style="display: block; width: 180px; height: 225px; object-fit: cover; flex-shrink: 0"></span><span style="display: flex; justify-content: space-between; height: 14px; line-height: 14px; opacity: 1; filter: blur(0px); letter-spacing: 0em; transform: translateY(0px)"><span class="cap">Intermediate · 3h30</span><span>from $19</span></span></div><div style="display: flex; flex-direction: column; gap: 12px; width: 180px"><span style="display: block; width: 180px; height: 225px; overflow: hidden; opacity: .6"><img src="../../public/mock/work-05.jpg" alt="" style="display: block; width: 180px; height: 225px; object-fit: cover; flex-shrink: 0"></span><span style="display: flex; justify-content: space-between; height: 14px; line-height: 14px; opacity: 1; filter: blur(0px); letter-spacing: 0em; transform: translateY(0px)"><span class="cap">Beginner · 1h30</span><span>Sold out</span></span></div></div><span class="cap">Image 208 × 260 in the shop (4:5, shown smaller here), no shadow, never moves. Meta: opacity 0→1, blur 4→0, tracking .25→0 em, y 3→0 · 380/440 ms.</span></div>
+<div style="grid-column: span 6; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">GuideConfigurator</h2><span class="cap">Product right column</span></div>
+<div style="display: grid; grid-template-columns: 112px 1fr; row-gap: 16px; column-gap: 12px">
+<span class="cap">Format (cm)<br>suggests Intermediate</span><span style="display: flex; gap: 14px"><span style="color: #6F6A64; ">30×40</span><span style="color: #6F6A64; ">40×50</span><span style="text-decoration: underline; text-underline-offset: 4px; color: #111111; ">60×80</span><span style="color: #6F6A64; ">80×100</span></span>
+<span class="cap">Level<br>set by format</span><span style="display: flex; gap: 14px"><span style="text-decoration: underline; text-underline-offset: 4px; color: #111111; ">Match format</span><span style="color: #6F6A64; ">Custom</span></span>
+<span class="cap">Palette</span><span style="display: flex; gap: 8px"><span style="display: inline-flex; gap: 6px; align-items: center; outline: 1px solid #111111; padding: 6px"><span style="display: flex"><span style="width: 12px; height: 12px; background: #22A6C9"></span><span style="width: 12px; height: 12px; background: #F2B632"></span><span style="width: 12px; height: 12px; background: #E8862E"></span></span>Original</span><span style="display: inline-flex; gap: 6px; align-items: center; padding: 6px; color: #6F6A64"><span style="display: flex"><span style="width: 12px; height: 12px; background: #E8735A"></span><span style="width: 12px; height: 12px; background: #D9A441"></span><span style="width: 12px; height: 12px; background: #F0A596"></span></span>Warm</span></span>
+<span class="cap">What you get</span><span style="display: flex; gap: 14px"><span style="text-decoration: underline; text-underline-offset: 4px; color: #111111; ">Guide + list</span><span style="color: #6F6A64; ">Guide + list + print +$45</span></span>
+</div><span class="cap">3 layers · ~3h30 · 5 colours · Intermediate</span><span class="btn" style="background: #111111; ">Add to cart<span>$19</span></span><span class="cap">Price = pricing.ts (server recomputes). Buy button above the fold at 1440 × 900 and 390 × 844.</span></div>
+<div style="grid-column: span 6; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">CartLine + CartSummary</h2><span class="cap"></span></div><div style="display: grid; grid-template-columns: 56px 1fr auto; column-gap: 12px; border-bottom: 1px solid #E4DFD8; padding: 16px 0"><img src="../../public/mock/work-03.jpg" alt="" style="display: block; width: 56px; height: 70px; object-fit: cover; flex-shrink: 0"><span style="display: flex; flex-direction: column"><span>N°03 — Guide</span><span class="cap">60×80 · Intermediate · Original</span><span style="margin-top: 8px; color: #6F6A64; text-decoration: underline; text-underline-offset: 3px">Remove</span></span><span>$19</span></div><div style="display: grid; grid-template-columns: 1fr auto; row-gap: 6px"><span class="cap">Subtotal</span><span>$64</span><span class="cap">Shipping</span><span>Calculated at next step</span><span style="font-weight: 500">Total</span><span style="font-weight: 500">$64</span></div></div>
+<div style="grid-column: span 6; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">CheckoutStepper</h2><span class="cap">done · error · current · upcoming</span></div><span style="display: flex; gap: 8px; align-items: center">01 Contact<span style="width: 24px; height: 1px; background: #E4DFD8"></span><span style="color: #B3261E; display: inline-flex; gap: 6px; align-items: center"><span style="width: 6px; height: 6px; border-radius: 3px; background: #B3261E"></span>02 Shipping</span><span style="width: 24px; height: 1px; background: #E4DFD8"></span><span style="text-decoration: underline; text-underline-offset: 4px">03 Payment</span><span style="width: 24px; height: 1px; background: #E4DFD8"></span><span class="cap">04 Confirmation</span></span><span class="cap">Completed steps are buttons (edit). Upcoming are not clickable. After confirmation nothing is clickable.</span>
+<div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">EditionCounter</h2><span class="cap"></span></div><div style="display: flex; justify-content: space-between"><span class="cap">Edition of 50 · A3</span><span style="color: #B3261E">5 of 50 left</span></div><span style="display: block; height: 8px; background: #F1EEEA; position: relative"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 90%; background: #B3261E; border-radius: 0 3px 3px 0"></span></span></div>
+<div style="grid-column: span 12; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #111111; padding-top: 16px"><h2 class="h2">StepProgress · StepCard · PlateSwatch · DryingTimer</h2><span class="cap">Guide reader</span></div><div style="display: flex; align-items: center; width: 100%"><span style="flex: 1; height: 4px; background: #111111; margin-left: 0px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 6px"></span><span style="flex: 1; height: 4px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 6px; background: #111111; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 6px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span><span style="flex: 1; height: 4px; background: #E4DFD8; margin-left: 2px"></span></div>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 40px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 16px"><span class="cap">Layer 02 · Gestures — step c · 8/15</span><span style="font-size: 22px; line-height: 30px; font-weight: 500; letter-spacing: -0.02em">Top right: fill a large block with ultramarine, then drag night down in two vertical strokes over it.</span></div>
+<div style="display: flex; flex-direction: column; gap: 12px"><span class="cap"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="stroke: #6F6A64; stroke-width: 1.1; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 4"><path d="M10.6 1.4L6 6"></path><path d="M6 6C4.2 5.6 2.8 6.6 2.7 8.2C2.6 9.4 2 10.2 1.2 10.7C3.8 11.2 6.4 10 6.2 7.6Z"></path></svg> 50 mm · 25 mm · round n°6</span><span class="cap">On the plate</span><div style="display: flex; flex-wrap: wrap; gap: 6px 12px"><span style="display: inline-flex; gap: 6px; align-items: center"><span style="width: 14px; height: 14px; background: #22A6C9; outline: 1px solid #D8D3CC; outline-offset: -1px"></span>Turquoise</span><span style="display: inline-flex; gap: 6px; align-items: center"><span style="width: 14px; height: 14px; background: #8FD0E2; outline: 1px solid #D8D3CC; outline-offset: -1px"></span>Sky</span><span style="display: inline-flex; gap: 6px; align-items: center"><span style="width: 14px; height: 14px; background: #3FA58A; outline: 1px solid #D8D3CC; outline-offset: -1px"></span>Sea green</span><span style="display: inline-flex; gap: 6px; align-items: center"><span style="width: 14px; height: 14px; background: #2B4DA8; outline: 1px solid #D8D3CC; outline-offset: -1px"></span>Ultramarine</span><span style="display: inline-flex; gap: 6px; align-items: center"><span style="width: 14px; height: 14px; background: #22294A; outline: 1px solid #D8D3CC; outline-offset: -1px"></span>Night</span></div><span style="background: #F1EEEA; padding: 16px">The dark line is the only moment to go slowly. Rest your little finger on the canvas edge.</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 16px"><span class="cap">Let layer 02 dry</span><span style="font-size: 96px; line-height: 96px; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">44:59</span><span style="display: flex; gap: 10px"><span class="ghost" style="min-width: 140px">Pause</span><span style="display: flex; align-items: center">Skip, it’s dry</span></span></div>
+</div><span class="cap">Segments: done Ink 4 px · current Ink 6 px · upcoming Line 4 px · 2 px gaps, 6 px between layers · each segment is a 44 px button.</span></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1340}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = {}; }
+
+renderVals() { const st = this.state; return {}; }
+}
+</script>
+</body>
+</html>

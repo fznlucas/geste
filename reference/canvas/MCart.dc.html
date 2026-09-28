@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geste — cart, mobile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF8;color:#111111;font-family:'JetBrains Mono',monospace}
+a{color:#111111;text-decoration:none}a:hover{color:#6F6A64}
+.icon-btn{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:44px;font-size:12px;color:#111111}
+.icon-btn:hover{color:#6F6A64}
+.icon-btn:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.foot a{display:block;line-height:22px}
+.news{all:unset;box-sizing:border-box;width:100%;font-size:12px;padding:10px 0;border-bottom:1px solid #D8D3CC;font-family:'JetBrains Mono',monospace}
+.news::placeholder{color:#6F6A64}
+.sub{all:unset;cursor:pointer;font-size:12px;min-height:44px;display:flex;align-items:center}
+.sub:hover{color:#6F6A64}
+.tx{all:unset;cursor:pointer;font-size:12px;min-height:32px;display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace}
+.tx:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.work{display:flex;flex-direction:column;gap:12px;width:208px;color:#111111}
+.work:hover{color:#111111}
+.work:focus-visible{outline:1px solid #111111;outline-offset:8px}
+.frame{display:block;width:208px;height:260px;overflow:hidden}
+.frame img{display:block;width:208px;height:260px;object-fit:cover}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;min-height:48px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;background:#111111;color:#FAFAF8;font-size:12px;font-family:'JetBrains Mono',monospace}
+.btn:hover{background:#2E2B28}
+.btn:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.ghost{all:unset;cursor:pointer;box-sizing:border-box;min-height:44px;padding:0 14px;display:flex;justify-content:center;align-items:center;border:1px solid #111111;font-size:12px;font-family:'JetBrains Mono',monospace}
+.ghost:hover{background:#F1EEEA}
+.ghost:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.field{all:unset;box-sizing:border-box;width:100%;min-height:44px;padding:0 12px;border:1px solid #D8D3CC;background:#FFFFFF;font-size:12px;font-family:'JetBrains Mono',monospace}
+.field::placeholder{color:#6F6A64}
+.field:focus{border-color:#111111}
+.lab{display:block;color:#6F6A64;margin-bottom:6px}
+.acc{all:unset;cursor:pointer;box-sizing:border-box;width:100%;min-height:48px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-family:'JetBrains Mono',monospace}
+.card{display:flex;flex-direction:column;gap:8px;color:#111111}
+.card:hover{color:#111111}
+.pill{all:unset;cursor:pointer;min-height:36px;display:inline-flex;align-items:center;font-size:12px;font-family:'JetBrains Mono',monospace}
+.big a{display:block;font-size:28px;line-height:1.5;letter-spacing:-0.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FAFAF8; font-size: 12px; line-height: 20px; position: relative; overflow: hidden">
+<header style="display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 4px 16px">
+<a href="MHome.dc.html" aria-label="geste.studio, home" style="min-height: 44px; display: flex; align-items: center"><svg width="83.8" height="12" viewBox="0 -800 6980 1000" aria-hidden="true" style="display: block; overflow: visible"><defs><mask id="gd6" maskUnits="userSpaceOnUse" x="-200" y="-1000" width="7380" height="1400"><rect x="-200" y="-1000" width="7380" height="1400" style="fill: #000000"></rect><path d="M400,440 C380,500 330,513 260,513 C170,513 120,470 120,390 L120,200 C120,120 170,80 250,80 C330,80 390,120 400,190" transform="translate(0,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M461,560 L461,20 C461,-80 420,-135 330,-135 L150,-135" transform="translate(0,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M150,286 L470,286 L470,340 C470,450 400,516 300,516 C190,516 125,445 125,340 L125,210 C125,100 195,34 300,34 C390,34 440,80 460,140" transform="translate(580,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M460,440 C440,490 390,513 300,513 L280,513 C200,513 147,470 147,410 C147,345 190,322 280,310 L330,302 C420,289 477,260 477,190 C477,100 410,37 310,37 L280,37 C190,37 140,80 125,140" transform="translate(1160,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M255,705 L255,160 C255,80 290,50 360,50 L510,50" transform="translate(1740,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M50,502 L522,502" transform="translate(1740,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path><path d="M150,286 L470,286 L470,340 C470,450 400,516 300,516 C190,516 125,445 125,340 L125,210 C125,100 195,34 300,34 C390,34 440,80 460,140" transform="translate(2320,0) scale(1,-1)" pathLength="1" style="fill: none; stroke: #FFFFFF; stroke-width: 150; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 0; transition: none"></path></mask></defs><g mask="url(#gd6)" style="fill: #111111"><path d="M156 180V87H325Q367 87 387.5 67.0Q408 47 408 8V-47L410 -149H408Q403 -100 370 -70Q330 -34 263 -34Q178 -34 129.0 -90.0Q80 -146 80 -241V-353Q80 -448 129.0 -504.0Q178 -560 263 -560Q330 -560 370 -524Q402 -493 408 -445H409L408 -550H515V10Q515 89 465.0 134.5Q415 180 326 180ZM298 -127Q349 -127 378.5 -158.5Q408 -190 408 -246V-347Q408 -403 378.5 -434.5Q349 -466 298 -466Q245 -466 216.5 -435.5Q188 -405 188 -347V-246Q188 -189 216.5 -158.0Q245 -127 298 -127Z"></path><path d="M880 10Q813 10 762.5 -16.5Q712 -43 685.0 -91.0Q658 -139 658 -203V-347Q658 -412 685.0 -459.5Q712 -507 762.5 -533.5Q813 -560 880 -560Q948 -560 998.0 -533.5Q1048 -507 1075.0 -459.5Q1102 -412 1102 -347V-249H762V-203Q762 -142 792.5 -110.0Q823 -78 881 -78Q928 -78 957.0 -94.5Q986 -111 993 -143H1100Q1088 -73 1028.0 -31.5Q968 10 880 10ZM998 -323V-348Q998 -408 968.0 -441.0Q938 -474 880 -474Q823 -474 792.5 -441.0Q762 -408 762 -347V-322Z"></path><path d="M1441 9Q1382 9 1337.5 -10.0Q1293 -29 1267.5 -62.5Q1242 -96 1238 -142H1346Q1350 -115 1375.0 -98.5Q1400 -82 1441 -82H1484Q1533 -82 1558.0 -102.0Q1583 -122 1583 -155Q1583 -187 1560.5 -205.5Q1538 -224 1494 -230L1423 -241Q1335 -255 1293.5 -291.5Q1252 -328 1252 -400Q1252 -476 1301.5 -517.5Q1351 -559 1448 -559H1486Q1572 -559 1623.5 -519.5Q1675 -480 1682 -414H1574Q1570 -438 1547.5 -453.0Q1525 -468 1486 -468H1448Q1401 -468 1379.5 -450.5Q1358 -433 1358 -399Q1358 -369 1377.0 -354.0Q1396 -339 1436 -333L1509 -321Q1602 -308 1645.5 -269.5Q1689 -231 1689 -158Q1689 -79 1637.5 -35.0Q1586 9 1484 9Z"></path><path d="M2100 0Q2025 0 1983.0 -41.0Q1941 -82 1941 -155V-452H1789V-550H1941V-705H2049V-550H2264V-452H2049V-155Q2049 -98 2104 -98H2254V0Z"></path><path d="M2620 10Q2553 10 2502.5 -16.5Q2452 -43 2425.0 -91.0Q2398 -139 2398 -203V-347Q2398 -412 2425.0 -459.5Q2452 -507 2502.5 -533.5Q2553 -560 2620 -560Q2688 -560 2738.0 -533.5Q2788 -507 2815.0 -459.5Q2842 -412 2842 -347V-249H2502V-203Q2502 -142 2532.5 -110.0Q2563 -78 2621 -78Q2668 -78 2697.0 -94.5Q2726 -111 2733 -143H2840Q2828 -73 2768.0 -31.5Q2708 10 2620 10ZM2738 -323V-348Q2738 -408 2708.0 -441.0Q2678 -474 2620 -474Q2563 -474 2532.5 -441.0Q2502 -408 2502 -347V-322Z"></path></g><g style="fill: #6F6A64"><path d="M3200 10Q3160 10 3136.0 -13.5Q3112 -37 3112 -77Q3112 -118 3136.0 -142.5Q3160 -167 3200 -167Q3241 -167 3264.5 -142.5Q3288 -118 3288 -77Q3288 -37 3264.5 -13.5Q3241 10 3200 10Z"></path><path d="M3761 9Q3702 9 3657.5 -10.0Q3613 -29 3587.5 -62.5Q3562 -96 3558 -142H3666Q3670 -115 3695.0 -98.5Q3720 -82 3761 -82H3804Q3853 -82 3878.0 -102.0Q3903 -122 3903 -155Q3903 -187 3880.5 -205.5Q3858 -224 3814 -230L3743 -241Q3655 -255 3613.5 -291.5Q3572 -328 3572 -400Q3572 -476 3621.5 -517.5Q3671 -559 3768 -559H3806Q3892 -559 3943.5 -519.5Q3995 -480 4002 -414H3894Q3890 -438 3867.5 -453.0Q3845 -468 3806 -468H3768Q3721 -468 3699.5 -450.5Q3678 -433 3678 -399Q3678 -369 3697.0 -354.0Q3716 -339 3756 -333L3829 -321Q3922 -308 3965.5 -269.5Q4009 -231 4009 -158Q4009 -79 3957.5 -35.0Q3906 9 3804 9Z"></path><path d="M4420 0Q4345 0 4303.0 -41.0Q4261 -82 4261 -155V-452H4109V-550H4261V-705H4369V-550H4584V-452H4369V-155Q4369 -98 4424 -98H4574V0Z"></path><path d="M4939 10Q4840 10 4781.0 -47.5Q4722 -105 4722 -204V-550H4830V-204Q4830 -147 4859.0 -115.5Q4888 -84 4939 -84Q4991 -84 5020.5 -115.5Q5050 -147 5050 -204V-550H5158V-204Q5158 -105 5098.5 -47.5Q5039 10 4939 10Z"></path><path d="M5481 10Q5398 10 5348.0 -46.0Q5298 -102 5298 -197V-352Q5298 -448 5348.0 -504.0Q5398 -560 5481 -560Q5549 -560 5589 -523Q5621 -493 5627 -445H5631L5628 -573V-730H5736V0H5629V-105H5627Q5621 -57 5589 -28Q5549 10 5481 10ZM5518 -84Q5569 -84 5598.5 -115.5Q5628 -147 5628 -203V-347Q5628 -403 5598.5 -434.5Q5569 -466 5518 -466Q5465 -466 5435.0 -435.5Q5405 -405 5405 -347V-203Q5405 -145 5435.0 -114.5Q5465 -84 5518 -84Z"></path><path d="M5881 0V-98H6074V-452H5906V-550H6179V-98H6356V0ZM6116 -645Q6081 -645 6060.0 -663.5Q6039 -682 6039 -713Q6039 -745 6060.0 -763.5Q6081 -782 6116 -782Q6151 -782 6172.0 -763.5Q6193 -745 6193 -713Q6193 -682 6172.0 -663.5Q6151 -645 6116 -645Z"></path><path d="M6680 9Q6612 9 6562.0 -17.0Q6512 -43 6485.0 -91.0Q6458 -139 6458 -204V-346Q6458 -412 6485.0 -459.5Q6512 -507 6562.0 -533.0Q6612 -559 6680 -559Q6748 -559 6798.0 -533.0Q6848 -507 6875.0 -459.5Q6902 -412 6902 -346V-204Q6902 -139 6875.0 -91.0Q6848 -43 6798.0 -17.0Q6748 9 6680 9ZM6680 -86Q6735 -86 6765.0 -116.5Q6795 -147 6795 -204V-346Q6795 -404 6765.0 -434.0Q6735 -464 6680 -464Q6626 -464 6595.5 -434.0Q6565 -404 6565 -346V-204Q6565 -147 6595.5 -116.5Q6626 -86 6680 -86Z"></path></g></svg></a>
+<div style="display: flex; align-items: center">
+<a href="MLogin.dc.html" class="icon-btn" aria-label="Account"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 1.1; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 4"><rect x="4.1" y="0.9" width="3.8" height="4.6" rx="1.9"></rect><path d="M2.2 11.1v-1.3c0-1.3 1-2.3 2.3-2.3h3c1.3 0 2.3 1 2.3 2.3v1.3"></path></svg></a>
+<a href="MCart.dc.html" class="icon-btn" aria-label="Cart, {{ count }} items"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="stroke: currentColor; stroke-width: 1.1; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 4"><path d="M0.8 1.4h1.4l1.3 6.2h5.9l1.3-4.4H2.7"></path><circle cx="4.3" cy="10.1" r="0.8"></circle><circle cx="8.8" cy="10.1" r="0.8"></circle></svg><span>({{ count }})</span></a>
+<a href="MMenu.dc.html" class="icon-btn" style="padding: 0 12px">Menu</a>
+</div>
+</header><main style="flex-grow: 1; padding: 16px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h1 style="margin: 0; font-size: 28px; line-height: 1.2; font-weight: 500; letter-spacing: -0.02em">Cart ({{ count }})</h1><a href="MShop.dc.html" style="text-decoration: underline; text-underline-offset: 3px">Keep browsing</a></div>
+<sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 80px 0; text-align: center"><svg width="90" height="120" viewBox="0 0 600 800" role="img" aria-label="Diagram of the canvas after layer 1" style="display: block"><rect x="0" y="0" width="600" height="800" style="fill: #FFFFFF; stroke: #111111; stroke-width: 2"></rect><rect x="24" y="24" width="552" height="752" style="fill: #F3C9A6; opacity: 0.90"></rect><path d="M60 260 Q180 220 300 280" style="fill: none; stroke: #F0A83A; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M80 340 Q160 305 260 355" style="fill: none; stroke: #F2B632; stroke-width: 50; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M300 130 Q360 105 430 150" style="fill: none; stroke: #E8862E; stroke-width: 60; stroke-linecap: round; stroke-linejoin: round; opacity: 0.90"></path><path d="M60 80 L200 145" style="fill: none; stroke: #3FA58A; stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85"></path><path d="M95 60 L240 170" style="fill: none; stroke: #3FA58A; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; opacity: 0.80"></path><path d="M150 60 L270 120" style="fill: none; stroke: #3FA58A; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; opacity: 0.80"></path></svg><span>Your cart is empty.</span><a href="MShop.dc.html" class="btn" style="color: #FAFAF8; min-width: 240px"><span>Browse works</span><span>→</span></a><button type="button" class="tx" onClick="{{ restore }}" style="text-decoration: underline; text-underline-offset: 3px">Undo</button></div></sc-if>
+<sc-if value="{{ full }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 18px">
+<div style="border-top: 1px solid #E4DFD8"><sc-for list="{{ items }}" as="it" hint-placeholder-count="2">
+<div style="display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #E4DFD8"><img src="{{ it.src }}" alt="" style="display: block; width: 72px; height: 90px; object-fit: cover"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><div style="display: flex; justify-content: space-between"><a href="{{ it.href }}" style="text-decoration: underline; text-underline-offset: 3px">{{ it.name }}</a><span>${{ it.price }}</span></div><span style="color: #6F6A64">{{ it.l1 }}</span><button type="button" class="tx" onClick="{{ it.remove }}" style="color: #6F6A64; text-decoration: underline; text-underline-offset: 3px">Remove</button></div></div>
+</sc-for></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; justify-content: space-between"><span style="color: #6F6A64">Subtotal</span><span>${{ sub }}</span></div><div style="display: flex; justify-content: space-between"><span style="color: #6F6A64">Shipping</span><span>{{ shipTxt }}</span></div><div style="display: flex; justify-content: space-between; font-weight: 500; padding-top: 8px; border-top: 1px solid #E4DFD8"><span>Estimated total</span><span>${{ total }}</span></div></div>
+<a href="MCheckout.dc.html" class="btn" style="color: #FAFAF8"><span>Checkout</span><span>${{ total }}</span></a>
+<span style="color: #6F6A64">Guides unlock instantly. Prints ship in 3–5 days.</span>
+</div></sc-if>
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview": {"width": 390, "height": 844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = Object.assign({ count: 2, subscribed: false, lang: 'en' }, { gone: [] });
+}
+
+renderVals() {
+const st = this.state;
+const C = [["g", "../../public/mock/work-03.jpg", "N°03 — Guide", "60×80 · Intermediate · Original", "+ shopping list", 19], ["p", "../../public/mock/work-07.jpg", "N°07 — Print", "A3 · Cotton paper · Edition 12/50", "Signed, with certificate", 45]]; const left = C.filter((c) => st.gone.indexOf(c[0]) < 0); const sub = left.reduce((a, c) => a + c[5], 0); const hasPrint = left.some((c) => c[0] === 'p');
+return Object.assign({ count: st.count }, { subscribed: !!st.subscribed, notSubscribed: !st.subscribed, subscribe: () => this.setState({ subscribed: true }), enDeco: st.lang === 'fr' ? 'none' : 'underline', frDeco: st.lang === 'fr' ? 'underline' : 'none', setEN: () => this.setState({ lang: 'en' }), setFR: () => this.setState({ lang: 'fr' }) }, { count: left.length, empty: !left.length, full: !!left.length, items: left.map((c) => ({ src: c[1], name: c[2], l1: c[3], price: c[5], href: c[0] === 'p' ? 'MPrint.dc.html' : 'MProduct.dc.html', remove: () => this.setState({ gone: st.gone.concat([c[0]]) }) })), sub: sub, shipTxt: hasPrint ? 'from $4' : 'Free, digital', total: sub + (hasPrint ? 4 : 0), restore: () => this.setState({ gone: [] }) });
+}
+}
+</script>
+</body>
+</html>

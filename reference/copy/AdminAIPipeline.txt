@@ -1,0 +1,104 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Catalog
+/
+AI pipeline
+Search
+Demo data
+Alerts · 6
+New generation
+Style reference
+Gestural abstraction (studio LoRA v2)
+Colour field
+Drips & veils
+Format
+60×80
+30×40
+40×50
+80×100
+Medium
+Acrylic
+Gouache
+Palette = your real tubes
+Original (turquoise, Payne’s grey, yellow, orange)
+Warm
+Cool
+Earth
+Max strokes
+Layers
+Candidates
+Generate 8 candidates
+≈ $1.40 GPU
+GPU this month: $38.20 of $80 budget
+Running
+Job 118
+Gestural · coral & blue · 60×80
+Generating target
+Job 117
+Colour field · earth · 40×50
+Decomposing into strokes
+Job 116
+Gestural · green · 30×40
+Rendering with pigment sim
+To validate · 5
+Similarity = how close the stroke render is to the target. Approve only what you would paint yourself.
+C-114-a
+92%
+84 strokes · 3 layers
+Beginner-friendly
+Approve
+✕
+C-114-b
+88%
+131 strokes · 3 layers
+Too many strokes for level
+Approve
+✕
+C-115-a
+95%
+96 strokes · 3 layers
+Best score
+Approve
+✕
+C-115-b
+81%
+72 strokes · 2 layers
+Low similarity
+Approve
+✕
+C-115-c
+90%
+58 strokes · 2 layers
+Approve
+✕

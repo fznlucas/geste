@@ -1,0 +1,51 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Studio
+/
+Settings & team
+Search
+Demo data
+Alerts · 6
+Store
+Shipping
+Payments & tax
+Team & roles
+Security
+Integrations
+Store name
+Domain
+Currency
+Languages
+Support email
+Legal entity

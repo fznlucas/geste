@@ -1,0 +1,887 @@
+# Components
+
+Every component lives in `src/components/<layer>/<Name>.tsx`, is exported from `@/components`, and is shown in every state at `/kit` (`src/app/(dev)/kit/page.tsx`). Props below are extracted from the code; the code is the reference.
+
+Rules: components own their colour, type and spacing; pages pass only layout classes (`className` for margins and grid placement). New variants are added here first, then drawn on the canvas board "Dev — design system".
+
+| Layer | Component | File | Canvas boards |
+| --- | --- | --- | --- |
+| Brand | `Icon` | `src/components/brand/Icon.tsx` | BrandIcons |
+| Brand | `Logo` | `src/components/brand/Logo.tsx` | BrandLogo, every header |
+| Primitives | `Accordion` | `src/components/primitives/Accordion.tsx` | Product details, Help |
+| Primitives | `Badge` | `src/components/primitives/Badge.tsx` | Admin sidebar |
+| Primitives | `Button` | `src/components/primitives/Button.tsx` | all CTAs — Product, Checkout, Admin |
+| Primitives | `Checkbox` | `src/components/primitives/Checkbox.tsx` | Checkout, Admin |
+| Primitives | `Field` | `src/components/primitives/Field.tsx` | Checkout, Login, Register, Settings |
+| Primitives | `IconButton` | `src/components/primitives/IconButton.tsx` | headers |
+| Primitives | `Input` | `src/components/primitives/Input.tsx` | Checkout, Admin |
+| Primitives | `OtpInput` | `src/components/primitives/OtpInput.tsx` | Login (code), AdminLogin |
+| Primitives | `PasswordInput` | `src/components/primitives/PasswordInput.tsx` | Login, Register, Settings |
+| Primitives | `Pill` | `src/components/primitives/Pill.tsx` | Admin filters |
+| Primitives | `ProgressBar` | `src/components/primitives/ProgressBar.tsx` | Account library, AdminEditions |
+| Primitives | `Segmented` | `src/components/primitives/Segmented.tsx` | Product (format, level), Shop filters |
+| Primitives | `StatusChip` | `src/components/primitives/StatusChip.tsx` | Orders, Admin |
+| Primitives | `Switch` | `src/components/primitives/Switch.tsx` | Settings, AdminMAlerts |
+| Primitives | `Tabs` | `src/components/primitives/Tabs.tsx` | Help, Account, Admin |
+| Overlays | `Drawer` | `src/components/overlay/Drawer.tsx` | Cart, MMenu |
+| Overlays | `Menu` | `src/components/overlay/Menu.tsx` | Account shortcuts |
+| Overlays | `Modal` | `src/components/overlay/Modal.tsx` | Checkout errors, AdminOrderDetail refund |
+| Overlays | `Popover` | `src/components/overlay/Popover.tsx` | Admin alerts |
+| Overlays | `Toast` | `src/components/overlay/Toast.tsx` | Add to cart, admin saves |
+| Overlays | `Tooltip` | `src/components/overlay/Tooltip.tsx` | Admin charts |
+| Layout | `MobileHeader` | `src/components/layout/MobileHeader.tsx` | all phone pages |
+| Layout | `MobileMenu` | `src/components/layout/MobileMenu.tsx` | MMenu |
+| Layout | `SiteFooter` | `src/components/layout/SiteFooter.tsx` | all store pages |
+| Layout | `SiteHeader` | `src/components/layout/SiteHeader.tsx` | all desktop pages |
+| Layout | `Structure` | `src/components/layout/Structure.tsx` | all pages |
+| Commerce | `CartLine` | `src/components/commerce/CartLine.tsx` | Cart, MCart, Checkout |
+| Commerce | `CartSummary` | `src/components/commerce/CartSummary.tsx` | Cart, Checkout |
+| Commerce | `CheckoutStepper` | `src/components/commerce/CheckoutStepper.tsx` | Checkout, MCheckout |
+| Commerce | `EditionCounter` | `src/components/commerce/EditionCounter.tsx` | Print |
+| Commerce | `ExpressPay` | `src/components/commerce/ExpressPay.tsx` | Checkout |
+| Commerce | `GuideConfigurator` | `src/components/commerce/GuideConfigurator.tsx` | Product, MProduct |
+| Commerce | `PriceMorph` | `src/components/commerce/PriceMorph.tsx` | Shop, Home |
+| Commerce | `ProductGallery` | `src/components/commerce/ProductGallery.tsx` | Product |
+| Commerce | `ShoppingListItem` | `src/components/commerce/ShoppingListItem.tsx` | ShoppingList |
+| Commerce | `StickyBuyBar` | `src/components/commerce/StickyBuyBar.tsx` | MProduct |
+| Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
+| Guide reader | `CanvasDiagram` | `src/components/reader/CanvasDiagram.tsx` | GuideReader, Guide01–08, AdminGuideEditor |
+| Guide reader | `DryingTimer` | `src/components/reader/DryingTimer.tsx` | GuideReader timer, AppTimer |
+| Guide reader | `PlateSwatch` | `src/components/reader/PlateSwatch.tsx` | GuideReader, AppStep |
+| Guide reader | `StepCard` | `src/components/reader/StepCard.tsx` | GuideReader, AppStep |
+| Guide reader | `StepProgress` | `src/components/reader/StepProgress.tsx` | GuideReader, AppStep |
+| Admin | `AdminShell` | `src/components/admin/AdminShell.tsx` | every Admin board |
+| Admin | `BarChart` | `src/components/admin/BarChart.tsx` | AdminDashboard |
+| Admin | `DataTable` | `src/components/admin/DataTable.tsx` | AdminOrders, AdminCustomers |
+| Admin | `HBar` | `src/components/admin/HBar.tsx` | AdminAnalytics, AdminDashboard |
+| Admin | `KanbanBoard` | `src/components/admin/KanbanBoard.tsx` | AdminFulfilment |
+| Admin | `KpiTile` | `src/components/admin/KpiTile.tsx` | AdminDashboard, AdminFinance |
+| Admin | `PermissionMatrix` | `src/components/admin/PermissionMatrix.tsx` | AdminSettings |
+| Admin | `Timeline` | `src/components/admin/Timeline.tsx` | AdminOrderDetail |
+
+## Icon
+
+`src/components/brand/Icon.tsx` · used on BrandIcons
+
+```ts
+export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
+  name: IconName;
+  size?: 12 | 16 | 24 | 48;
+  /** Accessible name. Omit when the icon sits next to visible text (it is then aria-hidden). */
+  label?: string;
+}
+```
+
+
+## Logo
+
+`src/components/brand/Logo.tsx` · used on BrandLogo, every header
+
+**Logo** — The wordmark is typed, never redrawn: filled glyphs of JetBrains Mono 500. The pencil animation reveals "geste" through a mask of 7 centre-line strokes (stroke-dashoffset 1 -> 0 on pathLength=1). ".studio" never moves.
+
+```ts
+export interface LogoProps {
+  /** Rendered height in px (cap box). Minimum 12. Header uses 12, footer 12, emails 24. */
+  size?: number;
+  /** "full" = geste.studio, "short" = geste (avatars, stamps, small spaces). */
+  variant?: "full" | "short";
+  /** "ink" on light grounds, "paper" on Ink. */
+  tone?: "ink" | "paper";
+  /** Draw the letters stroke by stroke on hover/focus of the closest link or button. Desktop only. */
+  animateOnHover?: boolean;
+  className?: string;
+}
+```
+
+
+## Accordion
+
+`src/components/primitives/Accordion.tsx` · used on Product details, Help
+
+**Accordion** — Rows of 44 px with a Line rule; plus → minus; panel height animates 240 ms (off under reduced motion).
+
+```ts
+export interface AccordionItem {
+  value: string;
+  title: string;
+  content: ReactNode;
+}
+```
+
+```ts
+export interface AccordionProps {
+  items: AccordionItem[];
+  /** Product page: "single" so the Buy button stays above the fold. FAQ: "multiple". */
+  type?: "single" | "multiple";
+  defaultValue?: string[];
+}
+```
+
+
+## Badge
+
+`src/components/primitives/Badge.tsx` · used on Admin sidebar
+
+**Badge** — Count in a 1 px box (admin sidebar). Inverts with its row when the row is active.
+
+
+## Button
+
+`src/components/primitives/Button.tsx` · used on all CTAs — Product, Checkout, Admin
+
+**LoadingDots** — Three dots pulsing in sequence; replaces the trailing arrow while loading.
+
+```ts
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  /** md = 48 px primary / 44 px ghost. sm = 32 px dense (admin). */
+  size?: "md" | "sm";
+  /** Right-hand content on primary buttons: an arrow "→", a price "$19", "+". Label stays left. */
+  trailing?: ReactNode;
+  loading?: boolean;
+  fullWidth?: boolean;
+}
+```
+
+
+## Checkbox
+
+`src/components/primitives/Checkbox.tsx` · used on Checkout, Admin
+
+**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the 44 px hit area.
+
+```ts
+export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
+  label: ReactNode;
+  invalid?: boolean;
+}
+```
+
+
+## Field
+
+`src/components/primitives/Field.tsx` · used on Checkout, Login, Register, Settings
+
+**Field** — Label (Stone, 6 px above) + control + hint or error (Signal) below. Wires ids and aria for you.
+
+```ts
+export interface FieldProps {
+  label: string;
+  /** Visually hide the label (it stays for screen readers). Use only when context makes it obvious. */
+  hideLabel?: boolean;
+  hint?: ReactNode;
+  /** Error message: turns the control's border Signal and is announced. */
+  error?: string;
+  /** Exactly one control: Input, Select, Textarea, OtpInput, PasswordInput. */
+  children: ReactElement<{ id?: string; "aria-invalid"?: boolean; "aria-describedby"?: string; invalid?: boolean }>;
+  className?: string;
+}
+```
+
+
+## IconButton
+
+`src/components/primitives/IconButton.tsx` · used on headers
+
+**IconButton** — 44×44 hit area, icon 12 px, optional count in the same 12 px mono. Hover: Stone.
+
+```ts
+export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: IconName;
+  /** Required accessible name, e.g. "Cart, 2 items". */
+  label: string;
+  /** Optional visible count next to the icon (cart). */
+  count?: number;
+}
+```
+
+
+## Input
+
+`src/components/primitives/Input.tsx` · used on Checkout, Admin
+
+**fieldClass** — White field, 1 px #D8D3CC border, 44 px, 12 px padding. Focus: Ink border. Error: Signal border.
+
+**Select** — Native select for accessibility and mobile pickers; custom chevron drawn with the icon grid.
+
+```ts
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  invalid?: boolean;
+}
+```
+
+```ts
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  invalid?: boolean;
+}
+```
+
+```ts
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  invalid?: boolean;
+}
+```
+
+
+## OtpInput
+
+`src/components/primitives/OtpInput.tsx` · used on Login (code), AdminLogin
+
+**OtpInput** — 6 boxes, 44 px, digits only, paste fills all, backspace goes back. autocomplete=one-time-code on the first box.
+
+```ts
+export interface OtpInputProps {
+  length?: number;
+  value: string;
+  onChange: (value: string) => void;
+  onComplete?: (value: string) => void;
+  invalid?: boolean;
+  id?: string;
+  "aria-describedby"?: string;
+}
+```
+
+
+## PasswordInput
+
+`src/components/primitives/PasswordInput.tsx` · used on Login, Register, Settings
+
+```ts
+export interface PasswordInputProps extends Omit<InputProps, "type"> {
+  /** Show the 4-segment strength meter under the field (register, reset). */
+  showStrength?: boolean;
+}
+```
+
+
+## Pill
+
+`src/components/primitives/Pill.tsx` · used on Admin filters
+
+**Pill** — Dense 32 px filter/range button for the admin. Border #D8D3CC, Ink when selected.
+
+```ts
+export interface PillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  selected?: boolean;
+}
+```
+
+
+## ProgressBar
+
+`src/components/primitives/ProgressBar.tsx` · used on Account library, AdminEditions
+
+**ProgressBar** — 8 px Mist track, Ink fill, 3 px rounded data end. Used for guide progress, editions, budgets.
+
+```ts
+export interface ProgressBarProps {
+  value: number;
+  max?: number;
+  label: string;
+  /** Mark the bar as needing attention (e.g. edition almost sold out): Signal fill. */
+  tone?: "default" | "danger";
+  className?: string;
+}
+```
+
+
+## Segmented
+
+`src/components/primitives/Segmented.tsx` · used on Product (format, level), Shop filters
+
+**Segmented** — Text choices in a row (format, level, palette, filters). Unselected: Stone. Hover: Ink. Selected: Ink + underline offset 4. Implemented as a radiogroup for arrow-key support.
+
+```ts
+export interface SegmentedOption<V extends string> {
+  value: V;
+  label: string;
+  disabled?: boolean;
+  /** Small Stone note after the label, e.g. "+$2" for Custom level. */
+  note?: string;
+}
+```
+
+```ts
+export interface SegmentedProps<V extends string> {
+  label: string;
+  options: SegmentedOption<V>[];
+  value: V;
+  onChange: (value: V) => void;
+  className?: string;
+}
+```
+
+
+## StatusChip
+
+`src/components/primitives/StatusChip.tsx` · used on Orders, Admin
+
+**StatusChip** — Dot + word. Never colour alone. done = filled Ink dot · todo = hollow dot · issue = Signal dot and Signal word · off = Line-grey dot, Stone word.
+
+```ts
+export interface StatusChipProps {
+  state: StatusState;
+  label: string;
+  className?: string;
+}
+```
+
+
+## Switch
+
+`src/components/primitives/Switch.tsx` · used on Settings, AdminMAlerts
+
+**Switch** — Row switch used in settings and admin notifications: label left, 28×16 track right. No colour but Ink.
+
+```ts
+export interface SwitchProps {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+  className?: string;
+}
+```
+
+
+## Tabs
+
+`src/components/primitives/Tabs.tsx` · used on Help, Account, Admin
+
+```ts
+export interface TabItem {
+  value: string;
+  label: string;
+  content: ReactNode;
+  count?: number;
+}
+```
+
+```ts
+export interface TabsProps {
+  items: TabItem[];
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (v: string) => void;
+  /** "underline" (store, admin) draws a 2 px Ink bar under the active tab over a 1 px Line rule. */
+  className?: string;
+  label: string;
+}
+```
+
+
+## Drawer
+
+`src/components/overlay/Drawer.tsx` · used on Cart, MMenu
+
+**Drawer** — Slides 100% in from its side over 420 ms (ease-standard); scrim fades to rgba(17,17,17,.24). Escape and scrim click close; focus is trapped and returns to the trigger (Radix Dialog).
+
+```ts
+export interface DrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  /** right = cart (desktop 440 px, phone full width). left/full = phone menu. */
+  side?: "right" | "full";
+  children: ReactNode;
+  footer?: ReactNode;
+}
+```
+
+
+## Menu
+
+`src/components/overlay/Menu.tsx` · used on Account shortcuts
+
+```ts
+export interface MenuItem {
+  label: string;
+  onSelect?: () => void;
+  href?: string;
+  danger?: boolean;
+}
+```
+
+
+## Modal
+
+`src/components/overlay/Modal.tsx` · used on Checkout errors, AdminOrderDetail refund
+
+**Modal** — Centred panel on Paper, shadow-modal, fades in and rises 8 px in 240 ms. Used for payment errors and admin confirms.
+
+```ts
+export interface ModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  /** danger = destructive confirm (refund, delete): title stays Ink, confirm button uses Signal fill. */
+  tone?: "default" | "danger";
+  children?: ReactNode;
+  actions: ReactNode;
+  width?: 400 | 460 | 560;
+}
+```
+
+
+## Popover
+
+`src/components/overlay/Popover.tsx` · used on Admin alerts
+
+**Popover** — White panel, shadow-pop, no border, 8 px from its trigger. Admin alerts, account shortcuts.
+
+```ts
+export interface PopoverProps {
+  trigger: ReactNode;
+  children: ReactNode;
+  align?: "start" | "center" | "end";
+  width?: number;
+}
+```
+
+
+## Toast
+
+`src/components/overlay/Toast.tsx` · used on Add to cart, admin saves
+
+**ToastProvider** — Ink block bottom-right (desktop) or bottom-centre above the tab bar (phone). role=status. Store: 4 s. Admin: 1.6 s. Danger tone: Signal block, role=alert, stays until dismissed.
+
+
+## Tooltip
+
+`src/components/overlay/Tooltip.tsx` · used on Admin charts
+
+**Tooltip** — Ink box, Paper text, 3×8 padding, no arrow. Charts and icon-only controls. Delay 200 ms.
+
+
+## MobileHeader
+
+`src/components/layout/MobileHeader.tsx` · used on all phone pages
+
+**MobileHeader** — Phone header (< 1200 px): logo left, account, cart (n), "Menu" text button. Padding 4 4 4 16.
+
+```ts
+export interface MobileHeaderProps {
+  cartCount: number;
+  signedIn: boolean;
+  onCartClick: () => void;
+}
+```
+
+
+## MobileMenu
+
+`src/components/layout/MobileMenu.tsx` · used on MMenu
+
+**MobileMenu** — Full-screen menu (board MMenu): large 22 px links, then account + help, then EN/FR.
+
+
+## SiteFooter
+
+`src/components/layout/SiteFooter.tsx` · used on all store pages
+
+**SiteFooter** — Desktop: 6-column grid, newsletter spans 2. Phone: stacked. Padding 56 32 28 (phone 64 16 24).
+
+```ts
+export interface SiteFooterProps {
+  locale: "en" | "fr";
+  onLocaleChange: (l: "en" | "fr") => void;
+  /** Server action that adds the email to newsletter_subscribers (double opt-in). */
+  subscribe: (email: string) => Promise<void>;
+}
+```
+
+
+## SiteHeader
+
+`src/components/layout/SiteHeader.tsx` · used on all desktop pages
+
+**SiteHeader** — Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover), nav sits next to the icons on the right, 24 px apart. Padding 8 × 32.
+
+```ts
+export interface SiteHeaderProps {
+  /** Current section, underlined + aria-current. */
+  active?: (typeof MAIN_NAV)[number]["label"];
+  cartCount: number;
+  signedIn: boolean;
+  onCartClick: () => void;
+}
+```
+
+
+## Structure
+
+`src/components/layout/Structure.tsx` · used on all pages
+
+**Container** — Max 1200 px content column, 16 px phone gutter, 32 px desktop padding.
+
+**Section** — Vertical rhythm between page sections: 48 phone, 72 desktop.
+
+**PageTitle** — Page title: 28 px (phone 22 px), weight 500, tracking -2%, optional Stone lead on the right (desktop).
+
+**Grid** — 12-column desktop grid, 8 on tablet, 1 on phone. Children set their own col-span.
+
+
+## CartLine
+
+`src/components/commerce/CartLine.tsx` · used on Cart, MCart, Checkout
+
+**CartLine** — Cart row: 56×70 thumb, title + detail (Stone), price right, "Remove" text button. Guides and gift cards have quantity 1 (no stepper); prints can have a stepper up to the edition stock.
+
+
+## CartSummary
+
+`src/components/commerce/CartSummary.tsx` · used on Cart, Checkout
+
+**CartSummary** — Right-aligned totals block. Hidden entirely on the Confirmation step (validated change).
+
+```ts
+export interface CartTotals {
+  subtotalCents: number;
+  discountCents?: number;
+  discountLabel?: string;
+  /** null = not computed yet (no address) → shows "Calculated at next step". 0 = "Free" (guides only). */
+  shippingCents: number | null;
+  taxIncludedCents?: number;
+  totalCents: number;
+}
+```
+
+
+## CheckoutStepper
+
+`src/components/commerce/CheckoutStepper.tsx` · used on Checkout, MCheckout
+
+**CheckoutStepper** — "01 Contact — 02 Shipping — 03 Payment — 04 Confirmation". Completed steps are clickable (go back and edit), upcoming steps are not. Current: Ink + underline. Error: Signal text and dot. After confirmation, no step is clickable.
+
+```ts
+export interface CheckoutStepperProps {
+  steps: CheckoutStep[]; // shipping is dropped when the cart has no print
+  current: CheckoutStep;
+  completed: CheckoutStep[];
+  /** Steps with a validation error show a red dot and "needs attention". */
+  errors?: CheckoutStep[];
+  onGo: (s: CheckoutStep) => void;
+}
+```
+
+
+## EditionCounter
+
+`src/components/commerce/EditionCounter.tsx` · used on Print
+
+**EditionCounter** — "12 of 50 left" with a thin bar; ≤ 5 left turns the words Signal (urgency, stated honestly).
+
+
+## ExpressPay
+
+`src/components/commerce/ExpressPay.tsx` · used on Checkout
+
+**ExpressPay** — Top of checkout step 1. One sentence explains what express pay does (validated after user confusion): "One tap: your wallet fills in contact, address and payment". Buttons are the real Stripe Express Checkout Element (Apple Pay, Google Pay, PayPal) mounted in `children`; this component only frames them and draws the "or fill in step by step" divider.
+
+
+## GuideConfigurator
+
+`src/components/commerce/GuideConfigurator.tsx` · used on Product, MProduct
+
+**GuideConfigurator** — Product page right column: Format → Level (Match format or a chosen level = "Custom") → Palette → one-line summary → primary "Add to cart   $19". The Buy button must stay above the fold at 1440×900 and 390×844: details live in the Accordion below, not here. Keep the configuration in the URL (?format=&level=&palette=) so links reproduce it.
+
+```ts
+export interface GuideConfiguratorProps {
+  value: GuideConfig;
+  onChange: (next: GuideConfig) => void;
+  palettes: Palette[];
+  onAdd: () => void;
+  adding?: boolean;
+  added?: boolean;
+}
+```
+
+
+## PriceMorph
+
+`src/components/commerce/PriceMorph.tsx` · used on Shop, Home
+
+**PriceMorph** — The meta line under a work: "Intermediate · 3h30" left (Stone), "from $12" right (Ink). Hidden: opacity 0, blur 4 px, tracking .25em, 3 px down. Shown: all to 0. 380/440 ms standard ease. Reduced motion: switches instantly (durations are 0 via CSS vars).
+
+
+## ProductGallery
+
+`src/components/commerce/ProductGallery.tsx` · used on Product
+
+**ProductGallery** — Large 4:5 crop, no shadow, Mist ground while loading; text thumbnails below ("Preview · Real result · Studio").
+
+```ts
+export interface GalleryImage {
+  src: string;
+  alt: string;
+  /** "preview" = digital render, "result" = real beginner result, "studio" = Lucas's painted test. */
+  kind: "preview" | "result" | "studio";
+  /** CSS filter used to preview a palette on the digital render (from palettes.preview_filter). */
+  filter?: string;
+}
+```
+
+
+## ShoppingListItem
+
+`src/components/commerce/ShoppingListItem.tsx` · used on ShoppingList
+
+**ShoppingListItem** — One material with a standard and a budget option. Links open the partner store in a new tab with the affiliate ref, and fire `affiliate_click`. Disclosure sentence sits once above the list.
+
+```ts
+export interface ShoppingItem {
+  name: string; // "Turquoise"
+  quantity: string; // "60 ml" (scaled to the format)
+  standard: { label: string; priceUsd: number; url: string };
+  budget: { label: string; priceUsd: number; url: string };
+}
+```
+
+
+## StickyBuyBar
+
+`src/components/commerce/StickyBuyBar.tsx` · used on MProduct
+
+**StickyBuyBar** — Phone product page: once the in-page Buy button scrolls out of view, a bar slides up from the bottom (420 ms): title + config on the left, primary price button on the right. Hidden again when the original button is visible. Uses IntersectionObserver on `watch`.
+
+
+## WorkCard
+
+`src/components/commerce/WorkCard.tsx` · used on Shop, Home
+
+**WorkCard** — Shop tile: 208 × 260 crop (4:5), no shadow, no image hover. Only the meta line morphs in on hover or keyboard focus. The whole tile is one link. Sold out: image at 60%, "Sold out" replaces the price.
+
+```ts
+export interface WorkCardProps {
+  work: Work;
+  /** On touch screens the meta line is always visible (no hover). */
+  alwaysShowMeta?: boolean;
+  priority?: boolean;
+}
+```
+
+
+## CanvasDiagram
+
+`src/components/reader/CanvasDiagram.tsx` · used on GuideReader, Guide01–08, AdminGuideEditor
+
+**CanvasDiagram** — The plan of the canvas, drawn in a 600×800 viewBox (3:4 like 60×80 / 30×40) on white with a 2 px Ink frame. Same component in the reader, the PDF (server-rendered to SVG) and the admin guide editor.
+
+```ts
+export interface DiagramStroke {
+  layer: number;
+  kind: "rect" | "path";
+  d?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  color: string; // paint colour: content, not a UI token
+  width?: number;
+  opacity: number;
+}
+```
+
+```ts
+export interface CanvasDiagramProps {
+  strokes: DiagramStroke[];
+  /** Draw layers 1..upTo. */
+  upTo: number;
+  /** Layer being painted: full strength. Earlier layers fade to 30% so the new strokes read. */
+  current?: number;
+  width?: number;
+  className?: string;
+}
+```
+
+
+## DryingTimer
+
+`src/components/reader/DryingTimer.tsx` · used on GuideReader timer, AppTimer
+
+**DryingTimer** — Full-width drying view: "Let layer 02 dry" · 96 px digits (tabular) · Pause/Resume ghost · "Skip, it's dry" text. Counts down every second with no animation. Keeps time with Date.now() so a locked phone stays right. At zero: one optional soft sound + a notification if the PWA has permission (asked on first timer, never before).
+
+```ts
+export interface DryingTimerProps {
+  seconds: number;
+  layerName: string;
+  onDone?: () => void;
+  onSkip: () => void;
+}
+```
+
+
+## PlateSwatch
+
+`src/components/reader/PlateSwatch.tsx` · used on GuideReader, AppStep
+
+**PlateSwatch** — 14 px square of paint with a 1 px #D8D3CC inset outline (so white paint shows) + the colour name.
+
+
+## StepCard
+
+`src/components/reader/StepCard.tsx` · used on GuideReader, AppStep
+
+**StepCard** — Right column of the reader (desktop) / body of AppStep (phone). "Layer 02 · Gestures — Step c": Stone. Instruction: 22 px desktop, 14 px phone, max 34 ch. Then brush, plate, and the tip in a Mist panel. The instruction is the only thing that must be read.
+
+
+## StepProgress
+
+`src/components/reader/StepProgress.tsx` · used on GuideReader, AppStep
+
+**StepProgress** — 15 segments in one row, 2 px gaps, grouped by layer (6 px gap between layers). Done: Ink. Current: Ink, taller (6 px vs 4 px). Upcoming: Line. Every segment is a 44 px-tall button.
+
+```ts
+export interface StepProgressProps {
+  /** Step ids in order, e.g. ["1a","1b",…,"3e"]. */
+  steps: string[];
+  current: number; // index
+  onGo: (index: number) => void;
+}
+```
+
+
+## AdminShell
+
+`src/components/admin/AdminShell.tsx` · used on every Admin board
+
+**AdminShell** — 232 px sidebar (grouped nav with counts, active row inverted to Ink) + top bar (breadcrumb, 20 px title, search, alerts, page actions) + main (24 32 40 padding, 24 px gaps). Items the role cannot use are not rendered.
+
+```ts
+export interface NavItem {
+  label: string;
+  href: string;
+  count?: number;
+  roles: StaffRole[];
+}
+```
+
+```ts
+export interface AdminShellProps {
+  role: StaffRole;
+  userName: string;
+  currentHref: string;
+  counts: Partial<Record<string, number>>; // keyed by href
+  title: string;
+  breadcrumbs: Array<{ label: string; href: string }>;
+  actions?: ReactNode;
+  alerts?: ReactNode; // <Popover> with the alerts list
+  search?: ReactNode;
+  children: ReactNode;
+}
+```
+
+
+## BarChart
+
+`src/components/admin/BarChart.tsx` · used on AdminDashboard
+
+**BarChart** — Single-series vertical bars (dataviz rules): one axis, Stone bars, the hovered bar turns Ink, 2 px gap, 3 px rounded data end, baseline 1 px Ink, tooltip above the hovered bar. Hit area = full column height. A visually hidden table carries the same values for screen readers.
+
+```ts
+export interface BarDatum {
+  label: string; // "Sep 22"
+  value: number;
+  /** Tooltip text, e.g. "Sep 22 · $310 · 14 orders". */
+  tip: string;
+}
+```
+
+
+## DataTable
+
+`src/components/admin/DataTable.tsx` · used on AdminOrders, AdminCustomers
+
+**DataTable** — Admin table in a white box: 36 px header row (Stone, Ink bottom rule), 44 px rows (Line rule), hover #F4F1ED. Loading: 6 Mist skeleton rows. Empty: one sentence + one action, centred. Built on CSS grid with role=table semantics so column widths match the canvas exactly.
+
+```ts
+export interface Column<T> {
+  key: string;
+  header: string;
+  /** CSS grid track, e.g. "90px" or "1.4fr". */
+  width: string;
+  cell: (row: T) => ReactNode;
+  align?: "left" | "right";
+}
+```
+
+```ts
+export interface DataTableProps<T> {
+  rows: T[];
+  columns: Column<T>[];
+  rowKey: (row: T) => string;
+  /** Whole-row link (orders → order detail). Cells with their own links stop propagation. */
+  rowHref?: (row: T) => string;
+  selectable?: boolean;
+  selected?: Set<string>;
+  onSelectedChange?: (s: Set<string>) => void;
+  /** Ink bar shown above the table when ≥ 1 row is selected: "{n} selected" + actions + Clear. */
+  bulkActions?: ReactNode;
+  empty?: ReactNode;
+  loading?: boolean;
+  caption: string;
+}
+```
+
+
+## HBar
+
+`src/components/admin/HBar.tsx` · used on AdminAnalytics, AdminDashboard
+
+**HBar** — Horizontal bars for rankings and funnels: 170 px label · 10 px Mist track with Ink fill, 3 px data end · value right.
+
+
+## KanbanBoard
+
+`src/components/admin/KanbanBoard.tsx` · used on AdminFulfilment
+
+**KanbanBoard** — Fulfilment board: 4 columns on #F4F1ED, white cards. Moving is by buttons (← and "Next step →"), not drag, so it works on a phone and with a keyboard. onMove is a server action that updates print_copies.status.
+
+```ts
+export interface KanbanCard {
+  id: string; // order number
+  title: string; // "N°07 · A3 · 12/50"
+  subtitle: string; // "Camille Martin · Lyon"
+  imageUrl: string;
+  href: string;
+}
+```
+
+```ts
+export interface KanbanColumn {
+  key: string;
+  title: string; // "To print"
+  nextLabel?: string; // "Printed & signed"
+  cards: KanbanCard[];
+}
+```
+
+
+## KpiTile
+
+`src/components/admin/KpiTile.tsx` · used on AdminDashboard, AdminFinance
+
+**KpiTile** — White box, 20 px padding: label (Stone) · 28 px value · delta or context (Stone). The whole tile links to its module.
+
+
+## PermissionMatrix
+
+`src/components/admin/PermissionMatrix.tsx` · used on AdminSettings
+
+**PermissionMatrix** — Read-only matrix shown in Settings › Team. The source of truth for RLS is supabase (has_role); keep both in sync.
+
+
+## Timeline
+
+`src/components/admin/Timeline.tsx` · used on AdminOrderDetail
+
+**Timeline** — Order timeline: 120 px time (Stone) + event, 36 px rows; an internal note input at the bottom (never sent to the customer).
+
+```ts
+export interface TimelineEvent {
+  at: string; // "Oct 1, 14:02"
+  text: string;
+  kind?: "system" | "note";
+}
+```

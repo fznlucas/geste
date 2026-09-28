@@ -1,0 +1,59 @@
+// Geste component library — import from "@/components".
+export * from "./brand/Logo";
+export * from "./brand/Icon";
+
+export * from "./primitives/Button";
+export * from "./primitives/IconButton";
+export * from "./primitives/Field";
+export * from "./primitives/Input";
+export * from "./primitives/OtpInput";
+export * from "./primitives/PasswordInput";
+export * from "./primitives/Checkbox";
+export * from "./primitives/Switch";
+export * from "./primitives/Segmented";
+export * from "./primitives/Tabs";
+export * from "./primitives/Accordion";
+export * from "./primitives/Pill";
+export * from "./primitives/StatusChip";
+export * from "./primitives/Badge";
+export * from "./primitives/ProgressBar";
+
+export * from "./overlay/Drawer";
+export * from "./overlay/Modal";
+export * from "./overlay/Popover";
+export * from "./overlay/Menu";
+export * from "./overlay/Tooltip";
+export * from "./overlay/Toast";
+
+export * from "./layout/SiteHeader";
+export * from "./layout/MobileHeader";
+export * from "./layout/MobileMenu";
+export * from "./layout/SiteFooter";
+export * from "./layout/Structure";
+
+export * from "./commerce/PriceMorph";
+export * from "./commerce/WorkCard";
+export * from "./commerce/ProductGallery";
+export * from "./commerce/GuideConfigurator";
+export * from "./commerce/StickyBuyBar";
+export * from "./commerce/CartLine";
+export * from "./commerce/CartSummary";
+export * from "./commerce/CheckoutStepper";
+export * from "./commerce/ExpressPay";
+export * from "./commerce/ShoppingListItem";
+export * from "./commerce/EditionCounter";
+
+export * from "./reader/CanvasDiagram";
+export * from "./reader/StepProgress";
+export * from "./reader/StepCard";
+export * from "./reader/PlateSwatch";
+export * from "./reader/DryingTimer";
+
+export * from "./admin/AdminShell";
+export * from "./admin/DataTable";
+export * from "./admin/KpiTile";
+export * from "./admin/BarChart";
+export * from "./admin/HBar";
+export * from "./admin/KanbanBoard";
+export * from "./admin/Timeline";
+export * from "./admin/PermissionMatrix";

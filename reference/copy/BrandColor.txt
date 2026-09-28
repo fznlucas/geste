@@ -1,0 +1,43 @@
+Brand · 02
+Colour
+The interface stays colourless so the paintings carry all the colour. Seven tokens, no accent.
+Paper
+#FAFAF8
+Background of everything
+Ink
+#111111
+Text, buttons, lines that matter
+Stone
+#6F6A64
+Secondary text · 5.1:1 on Paper
+Line
+#E4DFD8
+Dividers, empty progress
+Mist
+#F1EEEA
+Panels, tips, image grounds
+Sand
+#EDEAE5
+Print mats, packaging tissue
+Signal
+#B3261E
+Errors only · 6.3:1 on Paper
+Contrast rules
+Paper
+Mist
+Sand
+Ink
+18.1 ✓
+16.3 ✓
+15.7 ✓
+Stone
+5.1 ✓
+4.6 ✓
+4.5 ✕
+Signal
+6.3 ✓
+5.7 ✓
+5.5 ✓
+Stone text never sits on Sand. Paper on Ink for dark surfaces only.
+The colour comes from the work
+Artworks are the only saturated colour on a page. Never tint UI with a painting’s colours, never put text on top of an artwork, except the small “Digital preview” label on Paper.

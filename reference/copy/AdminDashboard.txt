@@ -1,0 +1,124 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Overview
+/
+Good morning, Lucas
+Search
+Demo data
+Alerts · 6
+New work
++
+Revenue · 30 d
+$4,212
++38% vs Aug
+Orders · 30 d
+187
++41%
+Avg. order
+$22.5
+−2%
+Conversion
+2.8%
++0.6 pt
+Guides finished
+61%
+of guides started
+Affiliate · 30 d
+$318
+shopping lists
+Revenue per day, September
+7 d
+30 d
+90 d
+Sep 1
+Sep 22 · TikTok “first canvas” ep. 04 posted
+Sep 30
+To do today
+3 prints to pack and ship
+→
+2 support messages
+→
+4 reviews to moderate
+→
+5 AI works to validate
+→
+N°07 A3 edition: 5 left
+→
+October newsletter draft
+→
+Latest orders
+All orders
+Order
+Customer
+Items
+Total
+Status
+#GS-2041
+Camille Martin
+Guide N°03 · Print N°07
+$70
+Print to ship
+#GS-2040
+Hugo Petit
+Guide N°01
+$12
+Delivered
+#GS-2039
+Léa Dubois
+Gift card $50
+$50
+Sent
+#GS-2038
+Inès Moreau
+Guide N°08 · Print N°01
+$75
+Printed
+#GS-2037
+Tom Laurent
+Guide N°02
+$12
+Delivered
+Top works · 30 d
+Catalog
+N°03
+62
+N°01
+48
+N°07
+31
+N°02
+22
+N°05
+14
+Guides sold. Bar length relative to N°03.

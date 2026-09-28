@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geste icon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500&amp;family=JetBrains+Mono:wght@400&amp;display=swap">
+<style>
+body{margin:0;background:#F5F1EC;color:#1C1A18;font-family:'Familjen Grotesk',sans-serif}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #F5F1EC">
+<div style="display: flex; flex-direction: column; justify-content: space-between; padding: 72px 80px; background: #ECE6DF">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6B635B">Geste — Icon exploration 01</div>
+<div style="display: flex; justify-content: center">
+<dc-import name="Mark" size="440" detail="full" lifted="true" hint-size="440px,367px"></dc-import>
+</div>
+<div style="font-size: 18px; line-height: 1.5; color: #4A443E; max-width: 520px">A small canvas, painted in three layers: blue and yellow underneath, coral and red gestures, pink and beige veils on top.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 56px; padding: 72px 80px">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B635B">FULL DETAIL — site header, packaging, cards</div>
+<div style="display: flex; gap: 28px; align-items: flex-end">
+<dc-import name="Mark" size="200" detail="full" hint-size="200px,167px"></dc-import>
+<dc-import name="Mark" size="120" detail="full" hint-size="120px,100px"></dc-import>
+<dc-import name="Mark" size="72" detail="full" hint-size="72px,60px"></dc-import>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B635B">SIMPLIFIED — favicon, app icon, social avatar</div>
+<div style="display: flex; gap: 28px; align-items: flex-end">
+<dc-import name="Mark" size="96" detail="simple" hint-size="96px,80px"></dc-import>
+<dc-import name="Mark" size="48" detail="simple" hint-size="48px,40px"></dc-import>
+<dc-import name="Mark" size="32" detail="simple" hint-size="32px,27px"></dc-import>
+<dc-import name="Mark" size="19" detail="simple" hint-size="19px,16px"></dc-import>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B635B">ON DARK</div>
+<div style="display: flex; gap: 28px; align-items: center; padding: 32px; background: #1C1A18; border-radius: 6px">
+<dc-import name="Mark" size="120" detail="full" hint-size="120px,100px"></dc-import>
+<dc-import name="Mark" size="48" detail="simple" hint-size="48px,40px"></dc-import>
+<div style="font-size: 56px; font-weight: 500; letter-spacing: -0.04em; color: #F5F1EC">geste</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Catalog
+/
+Works
+Search
+Demo data
+Alerts · 6
+New work
++
+Generate with AI
+All
+Live
+Drafts
+Needs test
+Grid
+List
+N°01
+Live
+40×50 · Beginner · 48 sold
+Tested ✓
+N°02
+Live
+30×40 · Beginner · 22 sold
+Tested ✓
+N°03
+Live
+60×80 · Intermediate · 62 sold
+Tested ✓
+N°04
+Live
+60×80 · Intermediate · 11 sold
+Tested ✓
+N°05
+Live
+40×50 · Beginner · 14 sold
+Tested ✓
+N°06
+Live
+60×80 · Intermediate · 8 sold
+Not painted
+N°07
+Live
+30×40 · Beginner · 31 sold
+Tested ✓
+N°08
+Live
+80×100 · Advanced · 9 sold
+Tested ✓
+N°09
+Draft
+30×40 · Beginner · 0 sold
+Not painted
+N°10
+Scheduled · Oct 6
+40×50 · Beginner · 0 sold
+Tested ✓

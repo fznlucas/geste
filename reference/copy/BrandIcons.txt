@@ -1,0 +1,29 @@
+Brand · 04
+Icons
+Drawn on a 12 px grid with the stroke of JetBrains Mono at 12 px: 1.1 px, flat ends, sharp corners, round only where the letters are round.
+account
+cart
+close
+menu
+arrow right
+arrow left
+check
+plus
+minus
+search
+show
+lock
+play
+pause
+timer
+print
+download
+external
+brush
+palette
+Size
+12 px next to 12 px text, 16 px maximum. Icons never get bigger than the text they sit with.
+Use
+Only where a word would be clumsy: cart, account, close, play. Otherwise, write the word.
+Touch
+Every icon button has a 44 × 44 px hit area and an accessible label.

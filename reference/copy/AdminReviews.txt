@@ -1,0 +1,71 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Customers
+/
+Reviews & results
+Search
+Demo data
+Alerts · 6
+To moderate
+Published
+Hidden
+Approved results appear on product pages under “Real results”.
+Hugo Petit · N°01
+★★★★★
+“Done in an afternoon with my daughter. Clear steps.”
+Approve
+Feature
+Hide
+Reply privately
+Emma Roux · N°05
+★★★★☆
+“Layer 2 was tricky, the mud page saved me.”
+Approve
+Feature
+Hide
+Reply privately
+Chloé Garnier · N°03
+★★★★★
+“I did not believe I could paint this.”
+Approve
+Feature
+Hide
+Reply privately
+Tom Laurent · N°02
+★★☆☆☆
+“Shopping list link was broken for the canvas.”
+Approve
+Feature
+Hide
+Reply privately

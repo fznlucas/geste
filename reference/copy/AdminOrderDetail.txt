@@ -1,0 +1,96 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Orders
+/
+Order #GS-2041
+Search
+Demo data
+Alerts · 6
+Print to ship · paid Oct 1, 14:02
+Stripe · pi_3Px…9aQ · 3D Secure ✓
+Item
+Fulfilment
+Price
+Guide N°03 · 60×80 · Intermediate · Original
+Library access · shopping list · 2 of 3 prints left
+Delivered
+$19
+Print N°07 · A3 · edition 12/50
+Certificate #C-07-012 · cotton rag 308 g
+To ship
+$45
+Shipping · Colissimo
+$6
+VAT included (FR 20%)
+$11.67
+Total paid
+$70
+Ship the print
+Carrier
+Colissimo — home
+Mondial Relay
+Chronopost
+Tracking number
+Parcel
+Tube 60 cm · 0.4 kg
+Tube 80 cm · 0.6 kg
+Create shipping label
+Generate certificate
+Mark as shipped and notify
+→
+Marking as shipped emails the customer with the tracking link.
+Timeline
+Oct 1, 14:02
+Order paid · $70 · Card ···4242
+Oct 1, 14:02
+Guide N°03 unlocked, receipt emailed
+Oct 2, 10:30
+Print N°07 12/50 printed and signed
+Internal note
+Add
+Customer
+Camille Martin
+camille.martin@mail.com
++33 6 12 34 56 78
+3rd order · $124 lifetime
+Ship to
+12 rue Mercière
+69002 Lyon, France
+Actions
+Resend library access
+Resend receipt
+Invoice PDF
+Refund…
+Risk
+Low · 3DS passed, known customer

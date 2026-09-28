@@ -1,0 +1,20 @@
+(2)
+Menu
+Contact
+Shipping
+Payment
+Done
+Show order summary
+$64
+Express checkout
+Apple Pay
+Google Pay
+PayPal
+Contact
+Log in
+Email
+First name
+Last name
+Also create a password — optional
+Continue to shipping
+→

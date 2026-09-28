@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geste app — step</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF8;color:#111111;font-family:'JetBrains Mono',monospace}
+a{color:#111111;text-decoration:none}a:hover{color:#6F6A64}
+.icon-btn{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:44px;font-size:12px;color:#111111}
+.icon-btn:hover{color:#6F6A64}
+.icon-btn:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.foot a{display:block;line-height:22px}
+.news{all:unset;box-sizing:border-box;width:100%;font-size:12px;padding:10px 0;border-bottom:1px solid #D8D3CC;font-family:'JetBrains Mono',monospace}
+.news::placeholder{color:#6F6A64}
+.sub{all:unset;cursor:pointer;font-size:12px;min-height:44px;display:flex;align-items:center}
+.sub:hover{color:#6F6A64}
+.tx{all:unset;cursor:pointer;font-size:12px;min-height:32px;display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace}
+.tx:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.work{display:flex;flex-direction:column;gap:12px;width:208px;color:#111111}
+.work:hover{color:#111111}
+.work:focus-visible{outline:1px solid #111111;outline-offset:8px}
+.frame{display:block;width:208px;height:260px;overflow:hidden}
+.frame img{display:block;width:208px;height:260px;object-fit:cover}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;min-height:48px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;background:#111111;color:#FAFAF8;font-size:12px;font-family:'JetBrains Mono',monospace}
+.btn:hover{background:#2E2B28}
+.btn:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.ghost{all:unset;cursor:pointer;box-sizing:border-box;min-height:44px;padding:0 14px;display:flex;justify-content:center;align-items:center;border:1px solid #111111;font-size:12px;font-family:'JetBrains Mono',monospace}
+.ghost:hover{background:#F1EEEA}
+.ghost:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.field{all:unset;box-sizing:border-box;width:100%;min-height:44px;padding:0 12px;border:1px solid #D8D3CC;background:#FFFFFF;font-size:12px;font-family:'JetBrains Mono',monospace}
+.field::placeholder{color:#6F6A64}
+.field:focus{border-color:#111111}
+.lab{display:block;color:#6F6A64;margin-bottom:6px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FAFAF8; font-size: 12px; line-height: 20px; position: relative; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8px 16px 0"><a href="MAccount.dc.html" style="min-height: 44px; display: flex; align-items: center">← N°03</a><span style="color: #6F6A64">Layer 2 · Gestures</span></div>
+<div style="display: flex; gap: 4px; padding: 8px 16px 0">
+<sc-for list="{{ dots }}" as="d" hint-placeholder-count="5"><span style="flex-grow: 1; height: 2px; background: {{ d.c }}"></span></sc-for>
+</div>
+<div style="padding: 16px 16px 0; display: flex; justify-content: center"><svg width="270" height="360" viewBox="0 0 600 800" role="img" aria-label="Diagram of the canvas after layer 2" style="display: block"><rect x="0" y="0" width="600" height="800" style="fill: #FFFFFF; stroke: #111111; stroke-width: 2"></rect><rect x="24" y="24" width="552" height="752" style="fill: #F3C9A6; opacity: 0.27"></rect><path d="M60 260 Q180 220 300 280" style="fill: none; stroke: #F0A83A; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; opacity: 0.28"></path><path d="M80 340 Q160 305 260 355" style="fill: none; stroke: #F2B632; stroke-width: 50; stroke-linecap: round; stroke-linejoin: round; opacity: 0.28"></path><path d="M300 130 Q360 105 430 150" style="fill: none; stroke: #E8862E; stroke-width: 60; stroke-linecap: round; stroke-linejoin: round; opacity: 0.27"></path><path d="M60 80 L200 145" style="fill: none; stroke: #3FA58A; stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; opacity: 0.26"></path><path d="M95 60 L240 170" style="fill: none; stroke: #3FA58A; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; opacity: 0.24"></path><path d="M150 60 L270 120" style="fill: none; stroke: #3FA58A; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; opacity: 0.24"></path><path d="M60 480 L300 440" style="fill: none; stroke: #22A6C9; stroke-width: 60; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M50 545 L320 505" style="fill: none; stroke: #8FD0E2; stroke-width: 50; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M70 605 L280 565" style="fill: none; stroke: #22A6C9; stroke-width: 55; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M60 665 L300 705" style="fill: none; stroke: #3FA58A; stroke-width: 40; stroke-linecap: round; stroke-linejoin: round; opacity: 0.90"></path><path d="M100 470 L180 625" style="fill: none; stroke: #8FD0E2; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; opacity: 0.90"></path><path d="M160 460 L240 640" style="fill: none; stroke: #8FD0E2; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; opacity: 0.90"></path><path d="M380 70 L560 70" style="fill: none; stroke: #2B4DA8; stroke-width: 110; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92"></path><path d="M400 170 L560 205" style="fill: none; stroke: #2B4DA8; stroke-width: 80; stroke-linecap: round; stroke-linejoin: round; opacity: 0.90"></path><path d="M390 70 L410 330" style="fill: none; stroke: #22294A; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M440 90 L475 300" style="fill: none; stroke: #22294A; stroke-width: 36; stroke-linecap: round; stroke-linejoin: round; opacity: 0.95"></path><path d="M44 330 L44 250 Q60 190 200 182 Q320 175 400 232" style="fill: none; stroke: #1F2433; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; opacity: 1.00"></path></svg></div>
+<div style="padding: 20px 16px 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between"><span style="font-weight: 500">Step {{ letter }} of e</span><span style="color: #6F6A64">{{ brush }}</span></div>
+<p style="margin: 0; font-size: 14px; line-height: 22px">{{ text }}</p>
+</div>
+<div style="position: absolute; left: 16px; right: 16px; bottom: 24px; display: flex; gap: 10px">
+<button type="button" class="ghost" onClick="{{ prev }}" aria-label="Previous step" style="min-width: 88px">Back</button>
+<button type="button" class="btn" onClick="{{ next }}" style="flex-grow: 1"><span>{{ nextLabel }}</span><span>→</span></button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { i: 2 }; }
+renderVals() {
+const S = [["a", "Bottom left: four wide horizontal strokes, alternating turquoise and sky. Push, do not paint twice.", "50 mm flat"], ["b", "With the 25 mm brush, cross them with short diagonal strokes of sky. Like quick hatching.", "25 mm flat"], ["c", "Top right: fill a large block with ultramarine, then drag night down in two vertical strokes.", "50 mm flat"], ["d", "Load the round brush with night. In one breath, draw the long line from the left edge across the top.", "Round n\u00b06"], ["e", "Step back two metres. If it feels balanced, stop here and let it dry.", "\u2014"]];
+const i = this.state.i;
+return {
+dots: S.map((s, k) => ({ c: k <= i ? '#111111' : '#E4DFD8' })),
+letter: S[i][0], text: S[i][1], brush: S[i][2],
+nextLabel: i === S.length - 1 ? 'Start drying timer' : 'Next step',
+prev: () => this.setState({ i: Math.max(0, i - 1) }),
+next: () => this.setState({ i: Math.min(S.length - 1, i + 1) })
+};
+}
+}
+</script>
+</body>
+</html>

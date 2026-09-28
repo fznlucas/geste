@@ -1,0 +1,27 @@
+Brand · 03
+Typography
+One family, JetBrains Mono, two weights: 400 and 500. Monospace makes numbers, prices and times line up — the studio’s voice is precise.
+96px · 400
+24:12
+Timers, big numbers
+40px · 500
+Paint it yourself.
+Hero statement, once per page
+28px · 500
+Before you start
+Page and guide titles
+22px · 400
+Push, do not paint twice.
+Guide steps, the reading voice
+14px · 400
+Why colours turn grey-brown, and three habits.
+Long reading, articles
+12px · 400
+Beginner · 1h30 · from $12
+Everything else: UI, labels, prices, nav
+Line height
+20px for 12px text · 1.6 for reading · 1.2 for titles
+Case
+Sentence case everywhere. No uppercase labels, no letter-spaced headings.
+Emphasis
+Weight 500 or Ink vs Stone. Never italic, never underline except links.

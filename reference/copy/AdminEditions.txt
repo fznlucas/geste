@@ -1,0 +1,113 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Sales
+/
+Print editions
+Search
+Demo data
+Alerts · 6
+Work
+Size
+Sold / edition
+Reserved
+Left
+Price
+Actions
+N°07
+A3
+45/50
+5
+0
+$45
+Close edition
+Edit
+N°07
+A2
+12/30
+0
+18
+$75
+Close edition
+Edit
+N°01
+A3
+18/50
+1
+31
+$45
+Close edition
+Edit
+N°01
+A2
+9/30
+1
+20
+$75
+Close edition
+Edit
+N°08
+50×70
+21/25
+0
+4
+$95
+Close edition
+Edit
+N°05
+A3
+9/50
+0
+41
+$45
+Close edition
+Edit
+N°02
+A3
+17/50
+0
+33
+$45
+Close edition
+Edit
+Editions are numbered in order of payment. A refund with “back in stock” frees the number for the next buyer. Closing an edition hides the size from the store.
+Certificate log
+#C-07-012
+N°07 A3 12/50 · Camille Martin
+Oct 2
+#C-01-009
+N°01 A2 9/50 · Inès Moreau
+Oct 1
+#C-08-021
+N°08 50×70 21/25 · Jules Fabre
+Sep 29

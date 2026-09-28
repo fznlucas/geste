@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Geste app — drying timer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF8;color:#111111;font-family:'JetBrains Mono',monospace}
+a{color:#111111;text-decoration:none}a:hover{color:#6F6A64}
+.icon-btn{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:44px;font-size:12px;color:#111111}
+.icon-btn:hover{color:#6F6A64}
+.icon-btn:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.foot a{display:block;line-height:22px}
+.news{all:unset;box-sizing:border-box;width:100%;font-size:12px;padding:10px 0;border-bottom:1px solid #D8D3CC;font-family:'JetBrains Mono',monospace}
+.news::placeholder{color:#6F6A64}
+.sub{all:unset;cursor:pointer;font-size:12px;min-height:44px;display:flex;align-items:center}
+.sub:hover{color:#6F6A64}
+.tx{all:unset;cursor:pointer;font-size:12px;min-height:32px;display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace}
+.tx:focus-visible{outline:1px solid #111111;outline-offset:2px}
+.work{display:flex;flex-direction:column;gap:12px;width:208px;color:#111111}
+.work:hover{color:#111111}
+.work:focus-visible{outline:1px solid #111111;outline-offset:8px}
+.frame{display:block;width:208px;height:260px;overflow:hidden}
+.frame img{display:block;width:208px;height:260px;object-fit:cover}
+.btn{all:unset;cursor:pointer;box-sizing:border-box;min-height:48px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;background:#111111;color:#FAFAF8;font-size:12px;font-family:'JetBrains Mono',monospace}
+.btn:hover{background:#2E2B28}
+.btn:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.ghost{all:unset;cursor:pointer;box-sizing:border-box;min-height:44px;padding:0 14px;display:flex;justify-content:center;align-items:center;border:1px solid #111111;font-size:12px;font-family:'JetBrains Mono',monospace}
+.ghost:hover{background:#F1EEEA}
+.ghost:focus-visible{outline:1px solid #111111;outline-offset:3px}
+.field{all:unset;box-sizing:border-box;width:100%;min-height:44px;padding:0 12px;border:1px solid #D8D3CC;background:#FFFFFF;font-size:12px;font-family:'JetBrains Mono',monospace}
+.field::placeholder{color:#6F6A64}
+.field:focus{border-color:#111111}
+.lab{display:block;color:#6F6A64;margin-bottom:6px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FAFAF8; font-size: 12px; line-height: 20px; position: relative; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 8px 16px 0"><a href="AppStep.dc.html" style="min-height: 44px; display: flex; align-items: center">← Layer 2</a><span style="color: #6F6A64">Drying</span></div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 0 32px; text-align: center">
+<span style="color: #6F6A64">Layer 2 is drying</span>
+<span style="font-size: 64px; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums">{{ clock }}</span>
+<span style="width: 200px; height: 2px; background: #E4DFD8; position: relative; margin-top: 8px"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ pct }}%; background: #111111"></span></span>
+<p style="margin: 16px 0 0; color: #6F6A64">Touch test: if the canvas feels cool, it is still wet. Wash your brushes meanwhile.</p>
+</div>
+<div style="padding: 0 16px 24px; display: flex; flex-direction: column; gap: 10px">
+<button type="button" class="ghost" onClick="{{ toggle }}">{{ toggleLabel }}</button>
+<a href="AppStep.dc.html" class="btn" style="color: #FAFAF8"><span>It is dry, go to layer 3</span><span>→</span></a>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { left: 1452, running: false }; this.iv = null; }
+componentWillUnmount() { if (this.iv) clearInterval(this.iv); }
+toggle() {
+if (this.state.running) { clearInterval(this.iv); this.iv = null; this.setState({ running: false }); return; }
+this.iv = setInterval(() => { const l = Math.max(0, this.state.left - 1); this.setState({ left: l }); if (!l) { clearInterval(this.iv); this.iv = null; this.setState({ running: false }); } }, 1000);
+this.setState({ running: true });
+}
+renderVals() {
+const l = this.state.left;
+const mm = String(Math.floor(l / 60)).padStart(2, '0'), ss = String(l % 60).padStart(2, '0');
+return { clock: mm + ':' + ss, pct: Math.round((1 - l / 2700) * 100), toggle: () => this.toggle(), toggleLabel: this.state.running ? 'Pause' : 'Start timer' };
+}
+}
+</script>
+</body>
+</html>

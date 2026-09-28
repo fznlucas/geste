@@ -1,0 +1,201 @@
+"use client";
+
+/**
+ * /kit — living style guide. Every component in every state, side by side with the canvas board
+ * "Dev — design system". Not linked from the store; remove from production with `notFound()` if needed.
+ */
+import { useRef, useState } from "react";
+import {
+  Accordion, BarChart, Button, CanvasDiagram, CartLine, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
+  EditionCounter, ExpressPay, Field, GuideConfigurator, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
+  StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
+} from "@/components";
+import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
+import { asset } from "@/lib/asset";
+import type { GuideConfig } from "@/lib/pricing";
+
+const WORKS = [1, 2, 3, 4, 5].map((n) => ({
+  id: `w${n}`, number: `N°0${n}`, slug: `n0${n}`, imageUrl: asset(`mock/work-0${n}.jpg`), imageAlt: `N°0${n}`,
+  fromPriceCents: [1200, 1200, 1900, 1700, 1300][n - 1]!, defaultFormat: "40x50" as const,
+  levelLabel: ["Beginner", "Beginner", "Intermediate", "Intermediate", "Beginner"][n - 1]!, duration: ["1h30", "1h", "3h30", "2h30", "1h30"][n - 1]!, soldOut: n === 5,
+}));
+const PALETTES = [
+  { id: "original", name: "Original", swatches: ["#22A6C9", "#F2B632", "#E8862E"] },
+  { id: "warm", name: "Warm", swatches: ["#E8735A", "#D9A441", "#F0A596"] },
+  { id: "cool", name: "Cool", swatches: ["#2F5FB3", "#A9A3D9", "#F2DC5A"] },
+  { id: "earth", name: "Earth", swatches: ["#A0522D", "#6F5A45", "#C9A27E"] },
+];
+const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
+
+function Board({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-24 border-t border-fg py-40">
+      <div className="flex items-baseline gap-16">
+        <span className="text-fg-muted">{n}</span>
+        <h2 className="text-lg">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+function State({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-10">
+      <span className="text-fg-muted">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function ToastDemo() {
+  const t = useToast();
+  return (
+    <div className="flex gap-10">
+      <Button variant="ghost" onClick={() => t.show("Added to cart")}>Show toast</Button>
+      <Button variant="danger" onClick={() => t.show("Payment declined. Try another card.", { tone: "danger" })}>Show error toast</Button>
+    </div>
+  );
+}
+
+export default function KitPage() {
+  const [seg, setSeg] = useState("beginner");
+  const [otp, setOtp] = useState("4812");
+  const [pw, setPw] = useState("Paint-it-2026");
+  const [sw, setSw] = useState(true);
+  const [cfg, setCfg] = useState<GuideConfig>({ format: "60x80", level: "match", palette: "original" });
+  const [added, setAdded] = useState(false);
+  const [step, setStep] = useState(7);
+  const [modal, setModal] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set(["#GS-2041"]));
+  const buy = useRef<HTMLDivElement>(null);
+  const layer = N03_LAYERS[Math.floor(step / 5)]!;
+
+  return (
+    <ToastProvider>
+      <main className="mx-auto flex max-w-1264 flex-col px-32 pb-80 pt-40">
+        <div className="flex items-end justify-between pb-40">
+          <div className="flex flex-col gap-8">
+            <Logo size={24} animateOnHover />
+            <h1 className="text-xl">Component kit</h1>
+          </div>
+          <p className="max-w-460 text-right text-fg-muted">Every component, every state. Hover the logo to see the pencil. Source: src/components.</p>
+        </div>
+
+        <Board n="01" title="Brand">
+          <div className="flex flex-wrap items-center gap-40">
+            <Logo size={40} />
+            <Logo size={40} variant="short" />
+            <span className="bg-fg p-24"><Logo size={24} tone="paper" /></span>
+          </div>
+          <div className="grid grid-cols-10 gap-16">
+            {ICON_NAMES.map((n) => (
+              <div key={n} className="flex flex-col gap-8">
+                <span className="flex h-72 items-center justify-center bg-surface-muted"><Icon name={n} size={24} /></span>
+                <span className="text-fg-muted">{n}</span>
+              </div>
+            ))}
+          </div>
+        </Board>
+
+        <Board n="02" title="Buttons">
+          <div className="grid grid-cols-4 gap-24">
+            <State label="Primary"><Button trailing="→">Add to cart</Button></State>
+            <State label="Primary · price"><Button trailing="$19">Add to cart</Button></State>
+            <State label="Primary · loading"><Button loading>Paying</Button></State>
+            <State label="Primary · disabled"><Button trailing="→" disabled>Continue</Button></State>
+            <State label="Ghost"><Button variant="ghost">Preview</Button></State>
+            <State label="Danger"><Button variant="danger">Refund…</Button></State>
+            <State label="Text"><Button variant="text">Forgot password?</Button></State>
+            <State label="Dense (admin)"><div className="flex gap-6"><Pill>7 d</Pill><Pill selected>30 d</Pill><Pill>90 d</Pill></div></State>
+          </div>
+        </Board>
+
+        <Board n="03" title="Fields">
+          <div className="grid grid-cols-3 gap-24">
+            <Field label="Email — where your guides are sent"><Input type="email" placeholder="you@example.com" /></Field>
+            <Field label="Postcode" error="Check your postcode"><Input defaultValue="690" /></Field>
+            <Field label="Card name" hint="As printed on the card"><Input disabled defaultValue="Disabled" /></Field>
+            <Field label="Country"><Select defaultValue="FR"><option value="FR">France</option><option value="BE">Belgium</option></Select></Field>
+            <Field label="Password"><PasswordInput showStrength value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
+            <Field label="Code from your email"><OtpInput value={otp} onChange={setOtp} /></Field>
+            <Field label="Message"><Textarea placeholder="Tell us what happened" /></Field>
+            <div className="flex flex-col"><Checkbox label="Send me letters from the studio" defaultChecked /><Checkbox label="I accept the terms" invalid /></div>
+            <Switch label="New order notifications" checked={sw} onCheckedChange={setSw} />
+          </div>
+        </Board>
+
+        <Board n="04" title="Choice, tabs, accordion, status">
+          <div className="grid grid-cols-2 gap-40">
+            <State label="Segmented"><Segmented label="Level" value={seg} onChange={setSeg} options={[{ value: "beginner", label: "Beginner" }, { value: "intermediate", label: "Intermediate" }, { value: "advanced", label: "Advanced", note: "+$4" }, { value: "x", label: "Sold out", disabled: true }]} /></State>
+            <State label="Status chips"><div className="flex gap-16"><StatusChip state="done" label="Delivered" /><StatusChip state="todo" label="Printed" /><StatusChip state="issue" label="To ship" /><StatusChip state="off" label="Off" /></div></State>
+            <Tabs label="Help topics" items={[{ value: "a", label: "Orders", content: <p className="text-fg-muted">Tab panel content.</p> }, { value: "b", label: "Guides", count: 12, content: <p>Guides</p> }, { value: "c", label: "Prints", content: <p>Prints</p> }]} />
+            <Accordion items={[{ value: "a", title: "What’s in the guide", content: "15 steps, 3 layers, a drying timer and a printable PDF." }, { value: "b", title: "Materials", content: "Shopping list with standard and budget options." }]} defaultValue={["a"]} />
+            <State label="Progress"><ProgressBar value={55} label="Guide progress" /></State>
+            <EditionCounter left={5} total={50} size="A3" />
+          </div>
+        </Board>
+
+        <Board n="05" title="Commerce">
+          <div className="grid grid-cols-5 gap-40">
+            {WORKS.map((w, i) => <WorkCard key={w.id} work={w} alwaysShowMeta={i === 0} />)}
+          </div>
+          <div className="grid grid-cols-2 gap-40">
+            <State label="Price morph · hidden / shown"><div className="flex w-208 flex-col gap-16"><PriceMorph visible={false} meta="Beginner · 1h" price="from $12" /><PriceMorph visible meta="Beginner · 1h" price="from $12" /></div></State>
+            <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} onAdd={() => setAdded(true)} added={added} /></div>
+            <div className="flex flex-col">
+              <CartLine item={{ id: "1", kind: "guide", title: "Guide N°03", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} onRemove={() => {}} />
+              <CartLine item={{ id: "2", kind: "print", title: "Print N°07 · A3", detail: "Limited edition of 50, signed", imageUrl: asset("mock/work-07.jpg"), unitPriceCents: 4500, quantity: 1 }} onRemove={() => {}} onQuantity={() => {}} maxQuantity={3} />
+              <div className="pt-16"><CartSummary hasPhysical totals={{ subtotalCents: 6400, shippingCents: null, totalCents: 6400 }} /></div>
+            </div>
+            <div className="flex flex-col gap-24">
+              <CheckoutStepper steps={["contact", "shipping", "payment", "confirmation"]} current="payment" completed={["contact", "shipping"]} errors={["shipping"]} onGo={() => {}} />
+              <ExpressPay><div className="grid grid-cols-3 gap-8">{["Apple Pay", "Google Pay", "PayPal"].map((x) => <span key={x} className="flex min-h-44 items-center justify-center bg-fg text-fg-inverse">{x}</span>)}</div></ExpressPay>
+              <ShoppingListItem choice="budget" item={{ name: "Turquoise", quantity: "60 ml", standard: { label: "Artist range", priceUsd: 7, url: "https://example.com" }, budget: { label: "Student range", priceUsd: 4, url: "https://example.com" } }} />
+              <div className="flex gap-10"><Button variant="ghost" onClick={() => setModal(true)}>Open payment error modal</Button><ToastDemo /></div>
+            </div>
+          </div>
+          <Modal open={modal} onOpenChange={setModal} title="Payment declined" description="Your bank refused the payment. No money was taken." actions={<><Button variant="ghost" className="flex-1" onClick={() => setModal(false)}>Use another card</Button><Button className="flex-[2]" trailing="→" onClick={() => setModal(false)}>Try again</Button></>} />
+        </Board>
+
+        <Board n="06" title="Guide reader">
+          <StepProgress steps={STEP_IDS} current={step} onGo={setStep} />
+          <div className="grid grid-cols-2 gap-40">
+            <div className="flex justify-center bg-surface-muted p-24"><CanvasDiagram strokes={N03_STROKES} upTo={Math.floor(step / 5) + 1} current={Math.floor(step / 5) + 1} width={360} /></div>
+            <div className="flex flex-col gap-24">
+              <StepCard index={step} total={15} step={{ id: STEP_IDS[step]!, layer: Math.floor(step / 5) + 1, layerName: layer.t, text: layer.steps[step % 5]!, brush: layer.brush, plate: layer.plate.map(([hex, name]) => ({ hex, name })), tip: layer.tip }} />
+              <div className="flex gap-10"><Button variant="ghost" className="flex-1" onClick={() => setStep(Math.max(0, step - 1))}>Back</Button><Button className="flex-[2]" trailing="→" onClick={() => setStep(Math.min(14, step + 1))}>Next</Button></div>
+            </div>
+          </div>
+          <DryingTimer seconds={2700} layerName="layer 02" onSkip={() => {}} />
+        </Board>
+
+        <Board n="07" title="Admin">
+          <div className="grid grid-cols-4 gap-12">
+            <KpiTile label="Revenue · 30 d" value="$4,212" context="+38% vs Aug" href="#" />
+            <KpiTile label="Orders · 30 d" value="187" context="+41%" href="#" />
+            <KpiTile label="Conversion" value="2.8%" context="+0.6 pt" href="#" />
+            <KpiTile label="Guides finished" value="61%" context="of guides started" href="#" />
+          </div>
+          <BarChart caption="Revenue per day, September" data={Array.from({ length: 30 }, (_, i) => { const v = i === 21 ? 310 : Math.round(70 + i * 1.8 + ((i * 37) % 40)); return { label: `Sep ${i + 1}`, value: v, tip: `Sep ${i + 1} · $${v}` }; })} />
+          <HBar rows={[{ label: "Visits", value: 6680 }, { label: "Viewed a work", value: 3410 }, { label: "Added to cart", value: 402 }, { label: "Paid", value: 187 }]} />
+          <DataTable
+            caption="Orders"
+            selectable
+            selected={sel}
+            onSelectedChange={setSel}
+            bulkActions={<Button size="sm" variant="ghost" className="border-fg-inverse text-fg-inverse">Mark as shipped</Button>}
+            rowKey={(r) => r.id}
+            rows={[{ id: "#GS-2041", c: "Camille Martin", t: "$70", s: "issue" as const, l: "To ship" }, { id: "#GS-2040", c: "Hugo Petit", t: "$12", s: "done" as const, l: "Delivered" }, { id: "#GS-2038", c: "Inès Moreau", t: "$100", s: "todo" as const, l: "Printed" }]}
+            columns={[{ key: "id", header: "Order", width: "100px", cell: (r) => r.id }, { key: "c", header: "Customer", width: "1fr", cell: (r) => r.c }, { key: "t", header: "Total", width: "80px", cell: (r) => r.t }, { key: "s", header: "Status", width: "140px", cell: (r) => <StatusChip state={r.s} label={r.l} /> }]}
+          />
+          <KanbanBoard onMove={() => {}} columns={[{ key: "print", title: "To print", nextLabel: "Printed & signed", cards: [{ id: "#GS-2041", title: "N°07 · A3 · 12/50", subtitle: "Camille Martin · Lyon", imageUrl: asset("mock/work-07.jpg"), href: "#" }] }, { key: "signed", title: "Printed & signed", cards: [] }, { key: "packed", title: "Packed", cards: [] }, { key: "shipped", title: "Shipped", cards: [] }]} />
+          <div className="grid grid-cols-2 gap-40">
+            <Timeline events={[{ at: "Oct 1, 14:02", text: "Order paid · $70" }, { at: "Oct 2, 10:30", text: "Print N°07 12/50 printed and signed" }, { at: "Note", text: "Customer asked for gift wrap", kind: "note" }]} onAddNote={async () => {}} />
+            <PermissionMatrix />
+          </div>
+        </Board>
+      </main>
+    </ToastProvider>
+  );
+}

@@ -1,0 +1,20 @@
+Brand · 01
+Logo
+JetBrains Mono 500, tracking −2%. The wordmark is typed, never redrawn. On hover it is drawn stroke by stroke, like a pencil.
+Primary · geste.studio · header, emails, packaging
+Short · geste · social avatars, stamps, small spaces
+Clear space = height of the “g” on every side · min. 12 px high
+Pencil animation
+01 · hover
+02 · g
+03 · e
+04 · s
+05 · t
+06 · e — done
+7 strokes, 1.4 s total, ease in-out, each stroke overlaps the previous by 20 ms. Only “geste” draws; “.studio” stays still. Triggered on hover, never on loop.
+geste.studio
+✕ No other typeface
+✕ No colour on the wordmark
+✕ No stretching
+GESTE.STUDIO
+✕ No uppercase, no bold

@@ -1,0 +1,127 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Sales
+/
+Orders
+Search
+Demo data
+Alerts · 6
+Export CSV
+All
+To ship
+Issues
+Done
+All types
+Guides
+Prints
+Gift cards
+Order
+Date
+Customer
+Items
+Total
+Status
+#GS-2041
+Oct 1
+Camille Martin
+Guide N°03 · Print N°07 A3
+$70
+To ship
+#GS-2040
+Oct 1
+Hugo Petit
+Guide N°01
+$12
+Delivered
+#GS-2039
+Sep 30
+Léa Dubois
+Gift card $50
+$50
+Delivered
+#GS-2038
+Sep 30
+Inès Moreau
+Guide N°08 · Print N°01 A2
+$100
+Printed
+#GS-2037
+Sep 30
+Tom Laurent
+Guide N°02
+$12
+Delivered
+#GS-2036
+Sep 29
+Sarah Cohen
+Print N°07 A3
+$49
+To ship
+#GS-2035
+Sep 29
+Yanis Benali
+Guide N°04
+$19
+Refund asked
+#GS-2034
+Sep 28
+Emma Roux
+Guide N°05 · Guide N°09
+$25
+Delivered
+#GS-2033
+Sep 28
+Jules Fabre
+Print N°08 50×70
+$101
+Shipped
+#GS-2032
+Sep 27
+Chloé Garnier
+Guide N°03
+$19
+Delivered
+#GS-2031
+Sep 27
+Nina Keller
+Print N°01 A3
+$57
+To ship
+#GS-2030
+Sep 26
+Paul Girard
+Guide N°13
+$25
+Refunded
+12 orders shown · 187 this month

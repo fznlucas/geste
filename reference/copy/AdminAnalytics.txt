@@ -1,0 +1,106 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Growth
+/
+Analytics
+Search
+Demo data
+Alerts · 6
+7 days
+30 days
+90 days
+Year
+Store + app · all devices
+Funnel · last 30 days
+Visits
+6680
+Viewed a work
+3410
+Added to cart
+402
+Started checkout
+251
+Paid
+187
+Biggest leak: work → cart (11.8%). Test the sticky bar and real-result photos.
+Where buyers come from
+TikTok
+92 orders
+Instagram
+41 orders
+Direct
+27 orders
+Google
+16 orders
+Newsletter
+11 orders
+Guide completion · N°03 · % of buyers reaching each step
+Where people stop is where the guide needs work
+100%
+84%
+71%
+61%
+1a
+b
+c
+d
+e
+2a
+b
+c
+d
+e
+3a
+b
+c
+d
+e
+Drops at 2a (−6 pts) and 2e (−7 pts) · 2a is the first big gesture; 2e is the long drying wait. Edit these steps
+Devices
+Phone
+71%
+Desktop
+24%
+Tablet
+5%
+Level mix sold
+Beginner
+58%
+Intermediate
+31%
+Advanced
+11%
+Repeat purchase
+24%
+of first-time buyers bought a 2nd guide within 60 days

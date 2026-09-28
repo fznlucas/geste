@@ -1,0 +1,74 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Sales
+/
+Fulfilment · prints
+Search
+Demo data
+Alerts · 6
+Print lab: in-house printer · next pickup by Colissimo today 16:00
+Edition stock
+To print
+3
+#GS-2041
+N°07 · A3 · 12/50
+Camille Martin · Lyon
+Printed & signed
+→
+#GS-2036
+N°07 · A3 · 13/50
+Sarah Cohen · Paris
+Printed & signed
+→
+#GS-2031
+N°01 · A3 · 4/50
+Nina Keller · Genève
+Printed & signed
+→
+Printed & signed
+1
+#GS-2038
+N°01 · A2 · 9/50
+Inès Moreau · Nantes
+←
+Packed
+→
+Packed
+0
+Shipped
+1
+#GS-2033
+N°08 · 50×70 · 21/50
+Jules Fabre · Lille
+←

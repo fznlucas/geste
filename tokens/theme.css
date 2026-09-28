@@ -1,0 +1,93 @@
+/* Tailwind CSS v4 theme — import after tailwindcss:  @import "tailwindcss"; @import "../tokens/tokens.css"; @import "../tokens/theme.css"; */
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-surface-sunk: var(--color-surface-sunk);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-fg-inverse: var(--color-fg-inverse);
+  --color-fg-muted-on-dark: var(--color-fg-muted-on-dark);
+  --color-border: var(--color-border);
+  --color-border-field: var(--color-border-field);
+  --color-border-dashed: var(--color-border-dashed);
+  --color-action-hover: var(--color-action-hover);
+  --color-danger: var(--color-danger);
+  --color-scrim: var(--color-scrim);
+  --font-*: initial;
+  --font-mono: var(--font-mono);
+  --font-sans: var(--font-mono);
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-xs--line-height: 20px;
+  --text-sm: 14px;
+  --text-sm--line-height: 22px;
+  --text-md: 22px;
+  --text-md--line-height: 30px;
+  --text-lg: 28px;
+  --text-lg--line-height: 34px;
+  --text-xl: 40px;
+  --text-xl--line-height: 46px;
+  --text-2xl: 96px;
+  --text-2xl--line-height: 96px;
+  --text-admin-title: 20px;
+  --text-admin-title--line-height: 24px;
+  --radius-*: initial;
+  --radius-bar: 3px;
+  --shadow-*: initial;
+  --shadow-pop: var(--shadow-pop);
+  --shadow-modal: var(--shadow-modal);
+  --spacing: 1px; /* p-12 = 12px, gap-24 = 24px: spacing utilities read in px */
+  --breakpoint-*: initial;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1200px;
+  --ease-standard: var(--ease-standard);
+  --ease-pen: var(--ease-pen);
+}
+
+@layer base {
+  html { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var(--leading-xs); color: var(--color-fg); background: var(--color-bg); -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: var(--color-bg); }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3 { font-weight: 500; letter-spacing: var(--tracking-heading); margin: 0; }
+  :focus-visible { outline: 1px solid var(--color-fg); outline-offset: 2px; }
+  ::selection { background: var(--color-fg); color: var(--color-fg-inverse); }
+}
+/* Line heights, named sizes and the one admin exception */
+@theme {
+  --leading-xs: 20px;
+  --leading-sm: 22px;
+  --leading-md: 30px;
+  --leading-lg: 34px;
+  --text-admin-title: 20px;
+  --text-admin-title--line-height: 24px;
+}
+
+/* Semantic z-index and motion utilities */
+@utility z-sticky { z-index: var(--z-sticky); }
+@utility z-popover { z-index: var(--z-popover); }
+@utility z-drawer { z-index: var(--z-drawer); }
+@utility z-modal { z-index: var(--z-modal); }
+@utility z-toast { z-index: var(--z-toast); }
+@utility duration-fast { transition-duration: var(--dur-fast); }
+@utility duration-base { transition-duration: var(--dur-base); }
+@utility duration-step { transition-duration: var(--dur-step); }
+@utility duration-morph { transition-duration: var(--dur-morph); }
+@utility duration-panel { transition-duration: var(--dur-panel); }
+@utility ease-standard { transition-timing-function: var(--ease-standard); }
+@utility ease-pen { transition-timing-function: var(--ease-pen); }
+
+/* Keyframes used by overlays and accordions (Radix exposes --radix-accordion-content-height) */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slide-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slide-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes expand { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+@keyframes collapse { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0ms !important; transition-duration: 0ms !important; }
+}

@@ -1,0 +1,150 @@
+admin
+Overview
+Dashboard
+Sales
+Orders
+3
+Fulfilment
+3
+Print editions
+1
+Catalog
+Works
+Guide editor
+AI pipeline
+5
+Customers
+Customers
+Support inbox
+2
+Reviews & results
+4
+Growth
+Analytics
+Finance
+Marketing
+Content
+Studio
+Settings & team
+View the store
+↗
+Lucas · Owner
+2FA on
+Log out
+Customers
+/
+Customers
+Search
+Demo data
+Alerts · 6
+Export CSV
+All
+Repeat buyers
+Newsletter
+Abroad
+14 customers
+Name
+Email
+Orders
+Spent
+Last order
+Newsletter
+Country
+Camille Martin
+camille.martin@mail.com
+3
+$124
+Oct 1
+Yes
+FR
+Hugo Petit
+hugo.petit@mail.com
+1
+$38
+Sep 21
+No
+CH
+Léa Dubois
+lea.dubois@mail.com
+3
+$24
+Sep 28
+Yes
+FR
+Inès Moreau
+ines.moreau@mail.com
+1
+$12
+Sep 28
+No
+BE
+Tom Laurent
+tom.laurent@mail.com
+3
+$24
+Oct 1
+Yes
+CH
+Sarah Cohen
+sarah.cohen@mail.com
+1
+$124
+Sep 28
+Yes
+CH
+Yanis Benali
+yanis.benali@mail.com
+3
+$12
+Oct 1
+No
+BE
+Emma Roux
+emma.roux@mail.com
+2
+$57
+Sep 21
+No
+FR
+Jules Fabre
+jules.fabre@mail.com
+1
+$24
+Sep 21
+Yes
+FR
+Chloé Garnier
+chloe.garnier@mail.com
+2
+$70
+Sep 21
+No
+CH
+Nina Keller
+nina.keller@mail.com
+2
+$12
+Sep 21
+No
+FR
+Paul Girard
+paul.girard@mail.com
+1
+$38
+Oct 1
+Yes
+BE
+Maya Lopez
+maya.lopez@mail.com
+1
+$70
+Sep 30
+No
+CH
+Adam Faure
+adam.faure@mail.com
+3
+$12
+Sep 30
+No
+CH

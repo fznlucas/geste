@@ -1,0 +1,71 @@
+/* Geste design tokens — generated from tokens/tokens.json. Do not use raw hex in components. */
+:root {
+  --color-bg: #FAFAF8; /* Paper — page background */
+  --color-surface: #FFFFFF; /* Inputs, admin cards */
+  --color-surface-muted: #F1EEEA; /* Mist — panels, tips, image grounds, ghost hover */
+  --color-surface-sunk: #EDEAE5; /* Sand — print mats, packaging */
+  --color-surface-hover: #F4F1ED; /* Table row hover, kanban column */
+  --color-fg: #111111; /* Ink — text, primary buttons */
+  --color-fg-muted: #6F6A64; /* Stone — secondary text, 5.1:1 on Paper, never on Sand */
+  --color-fg-inverse: #FAFAF8; /* Text on Ink */
+  --color-fg-muted-on-dark: #A9A39C; /* Stone equivalent on Ink */
+  --color-border: #E4DFD8; /* Line — dividers, empty progress */
+  --color-border-field: #D8D3CC; /* Input and pill borders */
+  --color-border-dashed: #BDB6AD; /* Upload zones, guides */
+  --color-action-hover: #2E2B28; /* Primary button hover */
+  --color-danger: #B3261E; /* Signal — errors, destructive, urgent; 6.3:1 on Paper */
+  --color-scrim: rgba(17, 17, 17, 0.24);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-xs: 12px; --leading-xs: 20px; --weight-xs: 400;
+  --text-sm: 14px; --leading-sm: 22px; --weight-sm: 400;
+  --text-md: 22px; --leading-md: 30px; --weight-md: 500;
+  --text-lg: 28px; --leading-lg: 34px; --weight-lg: 500;
+  --text-xl: 40px; --leading-xl: 46px; --weight-xl: 500;
+  --text-2xl: 96px; --leading-2xl: 96px; --weight-2xl: 500;
+  --text-admin-title: 20px; --leading-admin-title: 24px; --weight-admin-title: 500;
+  --tracking-heading: -0.02em;
+  --space-0: 0px;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-56: 56px;
+  --space-64: 64px;
+  --space-72: 72px;
+  --space-80: 80px;
+  --radius-bar: 3px;
+  --shadow-pop: 0 16px 40px rgba(17,17,17,0.16);
+  --shadow-modal: 0 20px 48px rgba(17,17,17,0.18);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-pen: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+  --dur-step: 320ms;
+  --dur-morph: 380ms;
+  --dur-morph-tracking: 440ms;
+  --dur-panel: 420ms;
+  --toast-admin: 1600ms;
+  --toast-store: 4000ms;
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-popover: 20;
+  --z-drawer: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --hit: 44px;
+  --hit-primary: 48px;
+  --hit-dense: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-step: 0ms; --dur-morph: 0ms; --dur-morph-tracking: 0ms; --dur-panel: 0ms; }
+}
