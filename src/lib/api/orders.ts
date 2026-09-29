@@ -3,12 +3,13 @@ import { asset } from "@/lib/asset";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING } from "@/lib/pricing";
 import { customers } from "@/data/customers";
-import { printCopies, printEditions } from "@/data/editions";
-import { orders, refunds, shipments } from "@/data/orders";
+import { printEditions } from "@/data/editions";
+import { refunds, shipments } from "@/data/orders";
 import { supportThreads } from "@/data/support";
 import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
+import { allOrders, allPrintCopies } from "./local";
 import { mapThread } from "./support";
 import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrdersQuery, OrdersTab } from "./types";
 
@@ -42,13 +43,16 @@ const TABS: Record<Exclude<OrdersTab, "all">, OrderDisplayStatus[]> = {
 export function mapOrder(row: OrderRow): Order {
   const customer = customers.find((c) => c.id === row.userId)!;
   const shipment = shipments.find((s) => s.orderId === row.id);
+  const copies = allPrintCopies();
   const items = row.items.map((i) => {
     const work = works.find((w) => w.id === i.workId);
+    const itemCopies = copies.filter((c) => c.orderItemId === i.id).sort((a, b) => a.number - b.number);
     return {
       id: i.id,
       kind: i.kind,
       workId: i.workId,
       workSlug: work?.slug ?? null,
+      workNumber: work?.number ?? null,
       guideId: i.guideId,
       editionId: i.editionId,
       config: i.config,
@@ -58,7 +62,12 @@ export function mapOrder(row: OrderRow): Order {
       unitPriceCents: i.unitPriceCents,
       quantity: i.quantity,
       fulfilment: i.fulfilment,
-      certificateNo: printCopies.find((c) => c.orderItemId === i.id)?.certificateNo ?? null,
+      certificateNo: itemCopies[0]?.certificateNo ?? null,
+      copyNumbers: itemCopies.map((c) => c.number),
+      edition: (() => {
+        const e = printEditions.find((x) => x.id === i.editionId);
+        return e ? { size: e.size, editionSize: e.editionSize } : null;
+      })(),
     };
   });
   const summary = items
@@ -100,7 +109,7 @@ function timeline(order: Order): OrderEvent[] {
   else events.push({ at: order.paidAt, label: "Receipt emailed" });
   for (const item of order.items.filter((i) => i.kind === "gift_card")) events.push({ at: order.paidAt, label: `${item.title} emailed` });
   for (const item of order.items.filter((i) => i.kind === "print")) {
-    const copy = printCopies.find((c) => c.orderItemId === item.id);
+    const copy = allPrintCopies().find((c) => c.orderItemId === item.id);
     const edition = printEditions.find((e) => e.id === item.editionId);
     if (copy?.printedAt && edition) events.push({ at: copy.printedAt, label: `${item.title} ${copy.number}/${edition.editionSize} printed and signed` });
   }
@@ -120,7 +129,7 @@ const normalizeNumber = (n: string) => n.replace(/^#/, "").replace(/^(GS-)?/i, "
 export async function getOrders(query: OrdersQuery = {}): Promise<Order[]> {
   const search = query.search?.trim().toLowerCase();
   return clone(
-    orders
+    allOrders()
       .filter((o) => !query.customerId || o.userId === query.customerId)
       .filter((o) => !query.kind || o.items.some((i) => i.kind === query.kind))
       .map(mapOrder)
@@ -132,10 +141,10 @@ export async function getOrders(query: OrdersQuery = {}): Promise<Order[]> {
 
 /** Accepts "GS-2041", "#GS-2041" or "2041". */
 export async function getOrder(number: string): Promise<OrderDetail | null> {
-  const row = orders.find((o) => o.number === normalizeNumber(number));
+  const row = allOrders().find((o) => o.number === normalizeNumber(number));
   if (!row) return null;
   const order = mapOrder(row);
-  const history = orders.filter((o) => o.userId === row.userId && o.createdAt <= row.createdAt && o.status !== "refunded");
+  const history = allOrders().filter((o) => o.userId === row.userId && o.createdAt <= row.createdAt && o.status !== "refunded");
   return clone({
     ...order,
     timeline: timeline(order),

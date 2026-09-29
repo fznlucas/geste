@@ -17,6 +17,7 @@ export * from "./primitives/Pill";
 export * from "./primitives/StatusChip";
 export * from "./primitives/Badge";
 export * from "./primitives/ProgressBar";
+export * from "./primitives/RadioRows";
 
 export * from "./overlay/Drawer";
 export * from "./overlay/Modal";
@@ -42,6 +43,7 @@ export * from "./commerce/CartSummary";
 export * from "./commerce/CartPanel";
 export * from "./commerce/CheckoutStepper";
 export * from "./commerce/ExpressPay";
+export * from "./commerce/OrderSummary";
 export * from "./commerce/ShoppingListItem";
 export * from "./commerce/EditionCounter";
 export * from "./commerce/ShoppingListTable";

@@ -15,7 +15,7 @@
 - **Step 02 Shipping** (skipped when the cart has no print): address (country select first), carrier options with price and delay, "Continue to payment →".
 - **Step 03 Payment:** Stripe Payment Element; withdrawal-waiver checkbox when a guide is in the cart; "Pay $64 →".
 - **Step 04 Confirmation:** summary column disappears; "Thank you, Camille." · guide ready → "Open your guide" · print → "We'll email the tracking link" · receipt sent to {email}. Steps are no longer clickable.
-- **Errors:** field errors inline in Signal; steps with errors show a Signal dot in the stepper; declined → Modal; sold-out edition → message with the next number or refund.
+- **Errors:** field errors inline in Signal; going forward with errors opens the "Step 0N · … is incomplete" Modal (phone: inline block) and the step's bar and label turn Signal (" — incomplete"); declined card and failed 3D Secure → inline Signal block in the payment step ("Try again →", "Use another method"); sold-out edition → "Edition 12/50 of N°07 just sold out … We reserved 13/50" with "Take 13/50 and pay →" / "Back to cart" (docs/decisions.md "Checkout (M3)").
 - **Server:** `createPaymentIntent` recomputes everything; the client never sends prices.
 - **Events:** `begin_checkout`, `checkout_step`, (server) `purchase`.
 - **Acceptance:** guest can pay without an account; completed steps are clickable; every outcome of the tweak is reproducible with Stripe test cards (4000 0000 0000 0002 declined, 4000 0027 6000 3184 3DS); a double click on Pay cannot create two charges.

@@ -1,11 +1,10 @@
 /** Customers (admin) with their order stats. */
 import { customers } from "@/data/customers";
-import { entitlements } from "@/data/entitlements";
-import { orders } from "@/data/orders";
 import { reviews } from "@/data/reviews";
 import type { ProfileRow } from "@/data/types";
 import { clone } from "./clone";
 import { mapLibraryItem } from "./library";
+import { allEntitlements, allOrders } from "./local";
 import { mapOrder } from "./orders";
 import { mapReview } from "./reviews";
 import type { CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
@@ -14,7 +13,7 @@ import type { CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
 const HOME_COUNTRY = "FR";
 
 function mapCustomer(row: ProfileRow): CustomerSummary {
-  const paid = orders.filter((o) => o.userId === row.id && o.status !== "refunded" && o.status !== "cancelled" && o.status !== "pending");
+  const paid = allOrders().filter((o) => o.userId === row.id && o.status !== "refunded" && o.status !== "cancelled" && o.status !== "pending");
   return {
     id: row.id,
     fullName: row.fullName,
@@ -56,8 +55,8 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
     ...mapCustomer(row),
     phone: row.phone,
     address: row.defaultAddress,
-    orders: orders.filter((o) => o.userId === id).map(mapOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    library: entitlements.filter((e) => e.userId === id).map(mapLibraryItem),
+    orders: allOrders().filter((o) => o.userId === id).map(mapOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    library: allEntitlements().filter((e) => e.userId === id).map(mapLibraryItem),
     reviews: reviews.filter((r) => r.userId === id).map(mapReview),
   });
 }

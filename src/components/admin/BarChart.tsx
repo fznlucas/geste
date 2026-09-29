@@ -21,7 +21,7 @@ export function BarChart({ data, height = 240, caption, format = (v: number) => 
     <figure className="m-0">
       <div className="relative flex gap-2 border-b border-fg pt-28" style={{ height }} onMouseLeave={() => setHover(null)}>
         {data.map((d, i) => (
-          <div key={d.label} className="flex h-full flex-1 cursor-pointer items-end" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={d.tip}>
+          <div key={d.label} className="flex h-full flex-1 cursor-pointer items-end" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} role="img" aria-label={d.tip}>
             <span className="block w-full rounded-t-bar" style={{ height: `${(d.value / max) * 100}%`, background: hover === i ? "var(--color-fg)" : "var(--color-fg-muted)" }} />
           </div>
         ))}

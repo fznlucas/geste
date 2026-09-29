@@ -6,7 +6,7 @@
  */
 import { useRef, useState } from "react";
 import {
-  Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer,
+  Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
   ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
@@ -38,6 +38,9 @@ const CART_FULL = priceCart(CART_LINES, { shippingMethod: "mondial_relay" });
 const CART_GUIDE = priceCart(CART_LINES.slice(0, 1), { shippingMethod: "mondial_relay" });
 const CART_SOLD_OUT = priceCart([...CART_LINES.slice(0, 1), { id: "l3", addedAt: "2026-10-01T10:02:00Z", kind: "print", editionId: "ed-12-a3", quantity: 1 }], { shippingMethod: "mondial_relay" });
 const CART_EMPTY = priceCart([]);
+const summaryLines = (cart: typeof CART_FULL) =>
+  cart.lines.map((l) => ({ id: l.id, title: l.title, detail: l.shortDetail, note: l.kind === "guide" ? l.note : null, receiptTitle: l.receiptTitle, imageUrl: l.imageUrl, priceCents: l.unitPriceCents * l.quantity, issue: l.unavailable ? "Sold out, not counted" : null }));
+const summaryTotals = (cart: typeof CART_FULL, shipping: number | null | undefined) => ({ subtotalCents: cart.totals.subtotalCents, shippingCents: shipping, totalCents: cart.totals.subtotalCents + (shipping ?? 0), vatCents: Math.round((cart.totals.subtotalCents + (shipping ?? 0)) / 6) });
 
 // Shopping list fixture (board ShoppingList, 60×80): three of the ten lines.
 const LIST: ShoppingListLine[] = [
@@ -88,6 +91,8 @@ export default function KitPage() {
   const [added, setAdded] = useState(false);
   const [step, setStep] = useState(7);
   const [modal, setModal] = useState(false);
+  const [incomplete, setIncomplete] = useState(false);
+  const [ship, setShip] = useState("home");
   const [sel, setSel] = useState<Set<string>>(new Set(["#GS-2041"]));
   const buy = useRef<HTMLDivElement>(null);
   const layer = N03_LAYERS[Math.floor(step / 5)]!;
@@ -141,7 +146,7 @@ export default function KitPage() {
             <Field label="Password"><PasswordInput showStrength value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
             <Field label="Code from your email"><OtpInput value={otp} onChange={setOtp} /></Field>
             <Field label="Message"><Textarea placeholder="Tell us what happened" /></Field>
-            <div className="flex flex-col"><Checkbox label="Send me letters from the studio" defaultChecked /><Checkbox label="I accept the terms" invalid /></div>
+            <div className="flex flex-col"><Checkbox label="Send me letters from the studio" defaultChecked /><Checkbox label="I accept the terms" invalid /><Checkbox layout="inline" label="Inline (checkout): Also create a password — optional" /><Checkbox layout="inline" disabled label="Inline, disabled" /></div>
             <Switch label="New order notifications" checked={sw} onCheckedChange={setSw} />
           </div>
         </Board>
@@ -178,8 +183,13 @@ export default function KitPage() {
               <div className="pt-16"><CartSummary hasPhysical totals={{ subtotalCents: 6400, shippingCents: null, totalCents: 6400 }} /></div>
             </div>
             <div className="flex flex-col gap-24">
-              <CheckoutStepper steps={["contact", "shipping", "payment", "confirmation"]} current="payment" completed={["contact", "shipping"]} errors={["shipping"]} onGo={() => {}} />
-              <ExpressPay><div className="grid grid-cols-3 gap-8">{["Apple Pay", "Google Pay", "PayPal"].map((x) => <span key={x} className="flex min-h-44 items-center justify-center bg-fg text-fg-inverse">{x}</span>)}</div></ExpressPay>
+              <State label="Checkout stepper · on payment, shipping incomplete (desktop)"><CheckoutStepper steps={["contact", "shipping", "payment", "confirmation"]} current="payment" clickable={["contact", "shipping", "payment"]} errors={["shipping"]} onGo={() => {}} /></State>
+              <State label="Checkout stepper · confirmed, nothing clickable (desktop)"><CheckoutStepper steps={["contact", "shipping", "payment", "confirmation"]} current="confirmation" clickable={[]} onGo={() => {}} /></State>
+              <State label="Checkout stepper · guides only, phone"><div className="w-358"><CheckoutStepper variant="phone" steps={["contact", "payment", "confirmation"]} current="contact" clickable={["contact", "payment"]} onGo={() => {}} /></div></State>
+              <State label="Express pay · desktop"><div className="flex flex-col gap-20"><ExpressPay onPay={() => {}} /></div></State>
+              <State label="Express pay · phone, Apple Pay processing"><div className="flex w-358 flex-col gap-14"><ExpressPay variant="phone" busy="apple_pay" onPay={() => {}} /></div></State>
+              <State label="Radio rows · delivery (Klarna-style disabled row last)"><RadioRows name="kit-ship" label="Delivery method" value={ship} onChange={setShip} options={[{ value: "home", label: "Colissimo, home", sub: "3–5 working days", aside: "$6" }, { value: "relay", label: "Mondial Relay, pickup point", sub: "4–6 working days", aside: "$4" }, { value: "express", label: "Chronopost express", sub: "Next working day", aside: "$14", disabled: true }]} /></State>
+              <div className="flex gap-10"><Button variant="ghost" onClick={() => setIncomplete(true)}>Open incomplete-step modal</Button></div>
               <ShoppingListItem choice="budget" item={{ name: "Turquoise", quantity: "60 ml", standard: { label: "Artist range", priceUsd: 7, url: "https://example.com" }, budget: { label: "Student range", priceUsd: 4, url: "https://example.com" } }} />
               <div className="flex gap-10"><Button variant="ghost" onClick={() => setModal(true)}>Open payment error modal</Button><ToastDemo /></div>
             </div>
@@ -191,11 +201,16 @@ export default function KitPage() {
             <State label="Cart panel · empty"><div className="flex min-h-400 w-376 flex-col"><CartPanel variant="drawer" cart={CART_EMPTY} onRemove={() => {}} onQuantity={() => {}} /></div></State>
             <State label="Cart panel · empty after remove (Undo)"><div className="flex min-h-400 w-376 flex-col"><CartPanel variant="drawer" cart={CART_EMPTY} onRemove={() => {}} onQuantity={() => {}} onUndo={() => {}} /></div></State>
             <State label="Cart panel · page (phone)"><div className="w-358"><CartPanel variant="page" cart={CART_FULL} onRemove={() => {}} onQuantity={() => {}} /></div></State>
+            <State label="Order summary · checkout step 01 (shipping next step)"><div className="w-374"><OrderSummary lines={summaryLines(CART_FULL)} totals={summaryTotals(CART_FULL, null)} onApplyCode={async () => false} /></div></State>
+            <State label="Order summary · carrier chosen, sold-out line"><div className="w-374"><OrderSummary lines={summaryLines(CART_SOLD_OUT)} totals={summaryTotals(CART_SOLD_OUT, undefined)} onApplyCode={async () => false} /></div></State>
+            <State label="Order summary · phone toggle (tap to open)"><div className="w-358"><OrderSummaryToggle lines={summaryLines(CART_FULL)} totals={summaryTotals(CART_FULL, 600)} /></div></State>
           </div>
           <State label="Demo cart (writes the real mock cart, then open the cart icon on any store page)">
             <div className="flex gap-10">
               <Button variant="ghost" onClick={() => CART_LINES.forEach(({ id: _id, addedAt: _at, ...input }) => addToCart(input))}>Add N°03 guide + N°07 print to the cart</Button>
+              <Button variant="ghost" onClick={() => addToCart({ kind: "print", editionId: "ed-12-a3", quantity: 1 })}>Add N°12 A3 (sold out)</Button>
               <ButtonLink href="/cart" variant="ghost">Open /cart</ButtonLink>
+              <ButtonLink href="/checkout?paymentOutcome=soldout" variant="ghost">Checkout, number taken at payment</ButtonLink>
             </div>
           </State>
           <div className="grid grid-cols-2 gap-40">
@@ -209,6 +224,9 @@ export default function KitPage() {
             <State label="Article card · journal"><ArticleCard href="#" imageUrl={asset("mock/work-09.jpg")} title="How to avoid mud: three rules" category="Method" date="Sept 24" excerpt="Why colours turn grey-brown, and the three habits that keep them clean." /></State>
             <State label="Article card · keep reading"><ArticleCard href="#" imageUrl={asset("mock/work-10.jpg")} title="First canvas, first signature" excerpt="Five first-time painters, the same guide, five different paintings." variant="keep" /></State>
           </div>
+          <Modal open={incomplete} onOpenChange={setIncomplete} tone="alert" width={440} title="Step 01 · Contact is incomplete" actions={<Button fullWidth trailing="→" onClick={() => setIncomplete(false)}>OK, let me fix it</Button>}>
+            <ul className="flex flex-col gap-4">{["Enter your email", "Enter your first name"].map((t) => <li key={t} className="grid grid-cols-[16px_1fr]"><span aria-hidden="true" className="text-danger">—</span><span>{t}</span></li>)}</ul>
+          </Modal>
           <Modal open={modal} onOpenChange={setModal} title="Payment declined" description="Your bank refused the payment. No money was taken." actions={<><Button variant="ghost" className="flex-1" onClick={() => setModal(false)}>Use another card</Button><Button className="flex-[2]" trailing="→" onClick={() => setModal(false)}>Try again</Button></>} />
         </Board>
 

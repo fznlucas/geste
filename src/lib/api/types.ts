@@ -25,6 +25,8 @@ export interface Swatch {
 export interface Address {
   name: string;
   line1: string;
+  /** "Apartment, building, floor — optional" (Checkout). */
+  line2?: string;
   postalCode: string;
   city: string;
   country: string; // ISO 3166-1 alpha-2
@@ -212,6 +214,12 @@ export type CartLineInput =
 export type StoredCartLine = CartLineInput & { id: string; addedAt: string };
 
 export interface PricedCartLine extends CartItem {
+  /** Checkout summary: "60×80 · Intermediate", "A3 · Edition 12/50". */
+  shortDetail: string;
+  /** Receipt and phone summary: "N°03 — Guide, 60×80", "N°07 — Print A3, 12/50". */
+  receiptTitle: string;
+  /** Prints: the edition and the first number this line gets. */
+  edition?: { id: string; size: string; editionSize: number; firstNumber: number; left: number };
   /** Second line under the detail: "+ shopping list", "Signed, with certificate". */
   note: string | null;
   /** Where the title links (the work page with the same config), null when unknown. */
@@ -254,6 +262,8 @@ export interface OrderItem {
   kind: ItemKind;
   workId: string | null;
   workSlug: string | null;
+  /** "N°03" */
+  workNumber: string | null;
   guideId: string | null;
   editionId: string | null;
   config: { format?: FormatKey; level?: LevelKey; palette?: PaletteKey };
@@ -264,6 +274,10 @@ export interface OrderItem {
   quantity: number;
   fulfilment: FulfilmentStatus;
   certificateNo: string | null;
+  /** Prints: the numbered copies of this line (12 in 12/50), lowest first. */
+  copyNumbers: number[];
+  /** Prints: "A3", 50. */
+  edition: { size: string; editionSize: number } | null;
 }
 
 export interface Refund {

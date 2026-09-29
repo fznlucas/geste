@@ -9,6 +9,7 @@ import { FORMATS, LEVELS, SHIPPING, guidePriceCents, resolveLevel, type Shipping
 import { printEditions } from "@/data/editions";
 import { includedVatCents } from "@/data/tax";
 import { palettes, workFormats, works } from "@/data/works";
+import { localSoldCount } from "./local";
 import { minGuidePriceCents } from "./works";
 import type { CartLineInput, CartTotals, PricedCart, PricedCartLine, StoredCartLine } from "./types";
 
@@ -16,6 +17,11 @@ import type { CartLineInput, CartTotals, PricedCart, PricedCartLine, StoredCartL
 export const GIFT_CARD_PRESETS = [1500, 3000, 5000, 10000, 15000] as const;
 export const GIFT_CARD_MIN = 1000;
 export const GIFT_CARD_MAX = 50000;
+
+/** Copies sold so far: the mock count plus the copies bought in this browser. */
+function soldCount(edition: { id: string; soldCount: number }) {
+  return edition.soldCount + localSoldCount(edition.id);
+}
 
 /** Number the next buyer of an edition gets ("Edition 12/50"). */
 function nextEditionNumber(sold: number, reserved: number) {
@@ -32,6 +38,8 @@ function priceLine(line: StoredCartLine): PricedCartLine {
       kind: "gift_card",
       title: "Gift card",
       detail: line.recipientName ? `For ${line.recipientName} · sent by email` : "Sent by email",
+      shortDetail: line.recipientName ? `For ${line.recipientName}` : "Sent by email",
+      receiptTitle: `Gift card${line.recipientName ? ` for ${line.recipientName}` : ""}`,
       note: null,
       imageUrl: undefined,
       href: "/gift-cards",
@@ -45,17 +53,23 @@ function priceLine(line: StoredCartLine): PricedCartLine {
     const edition = printEditions.find((e) => e.id === line.editionId);
     const work = edition && works.find((w) => w.id === edition.workId && w.status === "live");
     if (!edition || !work) {
-      return { ...base, kind: "print", title: "Print", detail: "", note: null, href: null, unitPriceCents: 0, maxQuantity: 0, unavailable: "unknown" };
+      return { ...base, kind: "print", title: "Print", detail: "", shortDetail: "", receiptTitle: "Print", note: null, href: null, unitPriceCents: 0, maxQuantity: 0, unavailable: "unknown" };
     }
-    const left = Math.max(0, edition.editionSize - edition.soldCount - edition.reservedCount);
+    const sold = soldCount(edition);
+    const left = Math.max(0, edition.editionSize - sold - edition.reservedCount);
     const quantity = Math.max(1, Math.min(line.quantity, left));
-    const first = nextEditionNumber(edition.soldCount, edition.reservedCount);
-    const numbers = left === 0 ? "Sold out" : quantity > 1 ? `Editions ${first}–${first + quantity - 1}/${edition.editionSize}` : `Edition ${first}/${edition.editionSize}`;
+    const first = nextEditionNumber(sold, edition.reservedCount);
+    const range = quantity > 1 ? `${first}–${first + quantity - 1}` : `${first}`;
+    const numbers = left === 0 ? "Sold out" : `${quantity > 1 ? "Editions" : "Edition"} ${range}/${edition.editionSize}`;
     return {
       ...base,
       kind: "print",
       title: `${work.number} — Print`,
       detail: `${edition.size} · Cotton paper · ${numbers}`,
+      // Checkout board: "A3 · Edition 12/50" in the summary, "N°07 — Print A3, 12/50" on the receipt.
+      shortDetail: `${edition.size} · ${numbers}`,
+      receiptTitle: `${work.number} — Print ${edition.size}${left === 0 ? "" : `, ${range}/${edition.editionSize}`}`,
+      edition: { id: edition.id, size: edition.size, editionSize: edition.editionSize, firstNumber: first, left },
       note: "Signed, with certificate",
       imageUrl: asset(work.previewPath),
       href: `/prints/${work.slug}`,
@@ -70,7 +84,8 @@ function priceLine(line: StoredCartLine): PricedCartLine {
   const format = work && workFormats.find((f) => f.workId === work.id && f.format === line.format && f.active);
   const palette = work && palettes.find((p) => p.workId === work.id && p.key === line.palette && p.active);
   if (!work || !format || !palette) {
-    return { ...base, kind: "guide", title: work ? `${work.number} — Guide` : "Guide", detail: "", note: null, href: null, unitPriceCents: 0, maxQuantity: 1, unavailable: "unknown" };
+    const title = work ? `${work.number} — Guide` : "Guide";
+    return { ...base, kind: "guide", title, detail: "", shortDetail: "", receiptTitle: title, note: null, href: null, unitPriceCents: 0, maxQuantity: 1, unavailable: "unknown" };
   }
   const config = { format: line.format, level: line.level, palette: line.palette };
   const level = resolveLevel(config);
@@ -80,6 +95,9 @@ function priceLine(line: StoredCartLine): PricedCartLine {
     kind: "guide",
     title: `${work.number} — Guide`,
     detail: `${FORMATS[line.format].label} · ${LEVELS[level].label} · ${palette.name}`,
+    // Checkout board: "60×80 · Intermediate" in the summary, "N°03 — Guide, 60×80" on the receipt.
+    shortDetail: `${FORMATS[line.format].label} · ${LEVELS[level].label}`,
+    receiptTitle: `${work.number} — Guide, ${FORMATS[line.format].label}`,
     note: "+ shopping list",
     imageUrl: asset(work.previewPath),
     href: `/works/${work.slug}?${query}`,

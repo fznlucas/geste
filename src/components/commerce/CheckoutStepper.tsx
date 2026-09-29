@@ -11,49 +11,77 @@ export const STEP_LABELS: Record<CheckoutStep, string> = {
   confirmation: "Confirmation",
 };
 
+/** MCheckout: shorter last label, no numbers. */
+const PHONE_LABELS: Record<CheckoutStep, string> = { ...STEP_LABELS, confirmation: "Done" };
+
 export interface CheckoutStepperProps {
   steps: CheckoutStep[]; // shipping is dropped when the cart has no print
   current: CheckoutStep;
-  completed: CheckoutStep[];
-  /** Steps with a validation error show a red dot and "needs attention". */
+  /** Steps the buyer can click: the ones reached and the next one (it validates first). None after confirmation. */
+  clickable: CheckoutStep[];
+  /** Steps left with errors: Signal bar and text, " — incomplete" (desktop). */
   errors?: CheckoutStep[];
   onGo: (s: CheckoutStep) => void;
+  /** desktop = Checkout board ("01 Contact", 2 px bar above); phone = MCheckout ("Contact", tighter). */
+  variant?: "desktop" | "phone";
 }
 
 /**
- * "01 Contact — 02 Shipping — 03 Payment — 04 Confirmation". Completed steps are clickable (go back
- * and edit), upcoming steps are not. Current: Ink + underline. Error: Signal text and dot.
- * After confirmation, no step is clickable.
+ * One column per step with a 2 px bar above its label (boards Checkout, MCheckout). Bar: Ink up to
+ * the current step, Line after, Signal on a step with errors. Text: Ink for the current step,
+ * Stone otherwise, Signal with errors. After confirmation nothing is clickable.
  */
-export function CheckoutStepper({ steps, current, completed, errors = [], onGo }: CheckoutStepperProps) {
-  const done = current === "confirmation";
+export function CheckoutStepper({ steps, current, clickable, errors = [], onGo, variant = "desktop" }: CheckoutStepperProps) {
+  const phone = variant === "phone";
+  const currentIndex = steps.indexOf(current);
   return (
-    <nav aria-label="Checkout steps">
-      <ol className="flex flex-wrap items-center gap-x-8 gap-y-4">
-        {steps.map((s, i) => {
-          const isCur = s === current;
-          const isDone = completed.includes(s);
-          const err = errors.includes(s);
-          const clickable = isDone && !isCur && !done;
-          const label = `${String(i + 1).padStart(2, "0")} ${STEP_LABELS[s]}`;
+    <ol aria-label="Checkout steps" className={cn("grid", phone ? "gap-x-6" : "gap-x-8")} style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
+      {steps.map((s, i) => {
+        const isCur = s === current;
+        const err = errors.includes(s);
+        const bar = err ? "bg-danger" : i <= currentIndex ? "bg-fg" : "bg-border";
+        const text = err ? "text-danger" : isCur ? "text-fg" : "text-fg-muted";
+        const label = phone ? PHONE_LABELS[s] : `${String(i + 1).padStart(2, "0")} ${STEP_LABELS[s]}`;
+        const content = (
+          <>
+            {label}
+            {err && (phone ? <span className="sr-only"> — incomplete</span> : " — incomplete")}
+          </>
+        );
+        const canGo = clickable.includes(s) && !isCur;
+        if (phone) {
+          const cls = cn("flex min-h-32 flex-col items-stretch gap-6 text-left", text);
           return (
-            <li key={s} className="flex items-center gap-8">
-              {i > 0 && <span aria-hidden="true" className="h-px w-24 bg-border" />}
-              {clickable ? (
-                <button type="button" onClick={() => onGo(s)} className={cn("min-h-32 hover:underline hover:underline-offset-4", err ? "text-danger" : "text-fg")}>
-                  {label} <span className="sr-only">(completed, edit)</span>
+            <li key={s} className="flex">
+              {canGo ? (
+                <button type="button" onClick={() => onGo(s)} className={cn(cls, "w-full hover:text-fg")}>
+                  <span aria-hidden="true" className={cn("h-2", bar)} />
+                  <span>{content}</span>
                 </button>
               ) : (
-                <span aria-current={isCur ? "step" : undefined} className={cn("inline-flex min-h-32 items-center gap-6", isCur ? "text-fg underline underline-offset-4" : isDone ? "text-fg" : "text-fg-muted", err && "text-danger")}>
-                  {err && <span aria-hidden="true" className="size-6 rounded-full bg-danger" />}
-                  {label}
-                  {err && <span className="sr-only">needs attention</span>}
+                <span aria-current={isCur ? "step" : undefined} className={cn(cls, "w-full")}>
+                  <span aria-hidden="true" className={cn("h-2", bar)} />
+                  <span>{content}</span>
                 </span>
               )}
             </li>
           );
-        })}
-      </ol>
-    </nav>
+        }
+        return (
+          <li key={s} className="flex flex-col gap-8">
+            <span aria-hidden="true" className={cn("h-2", bar)} />
+            {canGo ? (
+              <button type="button" onClick={() => onGo(s)} className={cn("inline-flex min-h-24 items-center self-start hover:text-fg hover:underline hover:underline-offset-4", text)}>
+                {content}
+              </button>
+            ) : (
+              <span aria-current={isCur ? "step" : undefined} className={cn("flex min-h-24 items-center", text)}>
+                {content}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }

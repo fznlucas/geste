@@ -25,8 +25,8 @@ function Column({ title, links, className }: { title: string; links: ReadonlyArr
     <div className={cn("flex-col", className)}>
       <div className="leading-[22px] text-fg-muted md:mb-6">{title}</div>
       {links.map(([l, h]) => (
-        // 22 px rows as drawn; the 1 px padding cancelled by a -1 px margin makes each target 24 px tall (WCAG 2.2).
-        <Link key={l} href={h} className="-my-1 block py-1 leading-[22px] hover:text-fg-muted">{l}</Link>
+        // 24 px rows (boards draw 22): each link is a full 24 px target that no other overlaps (WCAG 2.2 target size).
+        <Link key={l} href={h} className="block leading-[24px] hover:text-fg-muted">{l}</Link>
       ))}
     </div>
   );

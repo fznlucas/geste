@@ -12,6 +12,7 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Primitives | `Badge` | `src/components/primitives/Badge.tsx` | Admin sidebar |
 | Primitives | `Button` | `src/components/primitives/Button.tsx` | all CTAs — Product, Checkout, Admin |
 | Primitives | `Checkbox` | `src/components/primitives/Checkbox.tsx` | Checkout, Admin |
+| Primitives | `RadioRows` | `src/components/primitives/RadioRows.tsx` | Checkout, MCheckout (delivery, payment method) |
 | Primitives | `Field` | `src/components/primitives/Field.tsx` | Checkout, Login, Register, Settings |
 | Primitives | `IconButton` | `src/components/primitives/IconButton.tsx` | headers |
 | Primitives | `Input` | `src/components/primitives/Input.tsx` | Checkout, Admin |
@@ -44,7 +45,8 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Layout | `ArticleCard` | `src/components/layout/ArticleCard.tsx` | Journal, MJournal, Article ("Keep reading") |
 | Commerce | `CheckoutStepper` | `src/components/commerce/CheckoutStepper.tsx` | Checkout, MCheckout |
 | Commerce | `EditionCounter` | `src/components/commerce/EditionCounter.tsx` | Print |
-| Commerce | `ExpressPay` | `src/components/commerce/ExpressPay.tsx` | Checkout |
+| Commerce | `ExpressPay` | `src/components/commerce/ExpressPay.tsx` | Checkout, MCheckout |
+| Commerce | `OrderSummary`, `OrderSummaryToggle` | `src/components/commerce/OrderSummary.tsx` | Checkout, MCheckout |
 | Commerce | `GuideConfigurator` | `src/components/commerce/GuideConfigurator.tsx` | Product, MProduct |
 | Commerce | `PriceMorph` | `src/components/commerce/PriceMorph.tsx` | Shop, Home |
 | Commerce | `ProductGallery` | `src/components/commerce/ProductGallery.tsx` | Product |
@@ -156,12 +158,32 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 `src/components/primitives/Checkbox.tsx` · used on Checkout, Admin
 
-**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the 44 px hit area.
+**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area: 44 px tall by default; `layout="inline"` (checkout) is the label's height, box top-aligned, text 23 px from the left edge as drawn.
 
 ```ts
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: ReactNode;
   invalid?: boolean;
+  layout?: "row" | "inline";
+}
+```
+
+
+## RadioRows
+
+`src/components/primitives/RadioRows.tsx` · used on Checkout, MCheckout
+
+**RadioRows** — Stacked white rows sharing their borders (delivery: 56 px with a Stone second line and the price; payment method: 52 px with a Stone note). 10 px ring, filled Ink when selected; the selected row's border is Ink. Heights are inside the 1 px borders, as on the boards. Native radios underneath (arrow keys), focus ring on the row, disabled rows at 40 %. `dense` = MCheckout (22 px dot column, 12 px padding, 16 px lines).
+
+```ts
+export interface RadioRowsProps<T extends string> {
+  name: string;
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: Array<{ value: T; label: ReactNode; sub?: ReactNode; aside?: ReactNode; asideMuted?: boolean; disabled?: boolean }>;
+  rowHeight?: 52 | 56;
+  dense?: boolean;
 }
 ```
 
@@ -427,11 +449,14 @@ export interface ModalProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  /** danger = destructive confirm (refund, delete): title stays Ink, confirm button uses Signal fill. */
-  tone?: "default" | "danger";
+  /** danger = destructive confirm: title stays Ink, confirm button uses Signal fill.
+   *  alert = something went wrong ("Step 01 · Contact is incomplete"): Signal title, alertdialog role. */
+  tone?: "default" | "danger" | "alert";
   children?: ReactNode;
   actions: ReactNode;
-  width?: 400 | 460 | 560;
+  width?: 400 | 440 | 460 | 560;
+  /** Where focus goes on close instead of the opener (the first invalid field). */
+  focusOnClose?: () => HTMLElement | null | undefined;
 }
 ```
 
@@ -608,16 +633,16 @@ export interface CartTotals {
 
 `src/components/commerce/CheckoutStepper.tsx` · used on Checkout, MCheckout
 
-**CheckoutStepper** — "01 Contact — 02 Shipping — 03 Payment — 04 Confirmation". Completed steps are clickable (go back and edit), upcoming steps are not. Current: Ink + underline. Error: Signal text and dot. After confirmation, no step is clickable.
+**CheckoutStepper** — One column per step with a 2 px bar above its label (Checkout: "01 Contact … 04 Confirmation", 8 px gaps; MCheckout: "Contact … Done", 6 px gaps). Bar Ink up to the current step, Line after, Signal on a step with errors (desktop adds " — incomplete"). Text Ink for the current step, Stone otherwise. Reached steps and the next one are clickable (the next one validates first); nothing after confirmation.
 
 ```ts
 export interface CheckoutStepperProps {
   steps: CheckoutStep[]; // shipping is dropped when the cart has no print
   current: CheckoutStep;
-  completed: CheckoutStep[];
-  /** Steps with a validation error show a red dot and "needs attention". */
+  clickable: CheckoutStep[];
   errors?: CheckoutStep[];
   onGo: (s: CheckoutStep) => void;
+  variant?: "desktop" | "phone";
 }
 ```
 
@@ -633,7 +658,22 @@ export interface CheckoutStepperProps {
 
 `src/components/commerce/ExpressPay.tsx` · used on Checkout
 
-**ExpressPay** — Top of checkout step 1. One sentence explains what express pay does (validated after user confusion): "One tap: your wallet fills in contact, address and payment". Buttons are the real Stripe Express Checkout Element (Apple Pay, Google Pay, PayPal) mounted in `children`; this component only frames them and draws the "or fill in step by step" divider.
+**ExpressPay** — Top of checkout step 1. "Express checkout" + one sentence explaining what it does (validated after user confusion): "One tap: your wallet fills in contact, address and payment", three ghost buttons (Apple Pay, Google Pay, PayPal) and the "or fill in step by step" divider. Phone: Stone title, no sentence, no divider. Mock: `onPay` runs the success path; later the Stripe Express Checkout Element replaces the buttons. `busy` shows "Processing…" on the chosen button and disables the others.
+
+```ts
+export interface ExpressPayProps {
+  onPay: (method: "apple_pay" | "google_pay" | "paypal") => void;
+  busy?: ExpressMethod | null;
+  variant?: "desktop" | "phone";
+}
+```
+
+
+## OrderSummary
+
+`src/components/commerce/OrderSummary.tsx` · used on Checkout, MCheckout
+
+**OrderSummary** — Checkout right column on #F4F1ED (`surface-hover`), 24 px padding, 16 px gaps: "Order summary", lines with 56×70 thumbs ("N°03 — Guide" / "60×80 · Intermediate" / "+ shopping list", price right), "Gift card or promo code" + Apply (turns "Invalid code"), Subtotal / Shipping ("Next step" until a carrier is chosen) / Total / "Including VAT $10.67", four reassurance lines. Hidden on the confirmation. **OrderSummaryToggle** (phone): "Show order summary   $64" opens the receipt lines ("N°03 — Guide, 60×80") and the shipping.
 
 
 ## GuideConfigurator
@@ -796,7 +836,7 @@ export interface DryingTimerProps {
 
 `src/components/reader/StepProgress.tsx` · used on GuideReader, AppStep
 
-**StepProgress** — 15 segments in one row, 2 px gaps, grouped by layer (6 px gap between layers). Done: Ink. Current: Ink, taller (6 px vs 4 px). Upcoming: Line. Every segment is a 44 px-tall button.
+**StepProgress** — 15 segments in one row, 2 px gaps, grouped by layer (6 px gap between layers). Done: Ink. Current: Ink, taller (6 px vs 4 px). Upcoming: Line. One 44 px-tall slider across the row (15 separate targets would be under 24 px on a phone): click a segment to jump to it, arrows / Home / End from the keyboard.
 
 ```ts
 export interface StepProgressProps {

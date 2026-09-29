@@ -21,11 +21,12 @@ export const PRINT_PRICES = { A3: 4500, A2: 7500, "50×70": 9500 } as const;
 export type PrintSize = keyof typeof PRINT_PRICES;
 export const PRINT_A3_PRICE = PRINT_PRICES.A3;
 
-/** Print shipping. Relay and home are on the Cart ("from $4") and AdminOrderDetail boards; international is a mock value. */
+/** Print shipping. Relay and home are on the Cart ("from $4") and AdminOrderDetail boards, express on Checkout; international is a mock value. */
 export const SHIPPING = {
   mondial_relay: { label: "Mondial Relay", cents: 400 },
   colissimo: { label: "Colissimo — home", cents: 600 },
   international: { label: "Colissimo — international", cents: 1200 },
+  chronopost_express: { label: "Chronopost — express", cents: 1400 }, // Checkout board: next working day
 } as const;
 export type ShippingMethod = keyof typeof SHIPPING;
 

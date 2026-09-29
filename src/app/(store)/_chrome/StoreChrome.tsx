@@ -58,6 +58,7 @@ function Frame({ children }: { children: ReactNode }) {
   const session = useSession();
   const { remove, undo, forget, quantity } = useUndoableCart();
   const signedIn = session.status === "signed_in";
+  const checkout = pathname === "/checkout" || pathname.startsWith("/checkout/");
   const active = SECTIONS.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))?.[1];
 
   const setDrawer = useCallback(
@@ -85,21 +86,24 @@ function Frame({ children }: { children: ReactNode }) {
           <MobileHeader cartCount={cart.count} signedIn={signedIn} onCartClick={() => router.push("/cart")} locale="en" onLocaleChange={onLocaleChange} />
         </div>
         <main id="main" className="flex flex-1 flex-col">{children}</main>
-        <SiteFooter locale="en" onLocaleChange={onLocaleChange} subscribe={subscribe} />
-        <p className="px-16 pb-24 text-fg-muted lg:px-32">
-          Demo site: nothing is sold, nothing is sent.{" "}
-          <button
-            type="button"
-            onClick={() => {
-              resetMockState();
-              forget();
-              toast.show("Demo reset.");
-            }}
-            className="min-h-44 text-fg underline underline-offset-3 hover:text-fg-muted"
-          >
-            Reset demo
-          </button>
-        </p>
+        {/* MCheckout draws no footer: on phones the checkout ends with its own buttons. */}
+        <div className={checkout ? "hidden lg:block" : undefined}>
+          <SiteFooter locale="en" onLocaleChange={onLocaleChange} subscribe={subscribe} />
+          <p className="px-16 pb-24 text-fg-muted lg:px-32">
+            Demo site: nothing is sold, nothing is sent.{" "}
+            <button
+              type="button"
+              onClick={() => {
+                resetMockState();
+                forget();
+                toast.show("Demo reset.");
+              }}
+              className="min-h-44 text-fg underline underline-offset-3 hover:text-fg-muted"
+            >
+              Reset demo
+            </button>
+          </p>
+        </div>
       </div>
       <Drawer open={open} onOpenChange={setDrawer} title={`Cart (${cart.count})`}>
         <CartPanel cart={cart} variant="drawer" onRemove={remove} onQuantity={quantity} onUndo={undo} onNavigate={() => setDrawer(false)} />
