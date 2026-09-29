@@ -19,8 +19,9 @@ export interface WorkCardProps {
   priority?: boolean;
 }
 
-/** "Beginner" → "Beg." (MShop, MHome). */
-const short = (level: string) => `${level.slice(0, 3)}.`;
+/** Short levels for narrow captions: Beginner → Beg., Intermediate → Inter., Advanced → Adv. (MShop writes "Int.": docs/decisions.md). */
+const SHORT_LEVEL: Record<string, string> = { Beginner: "Beg.", Intermediate: "Inter.", Advanced: "Adv." };
+const short = (level: string) => SHORT_LEVEL[level] ?? level;
 
 /**
  * Work tile: the work whole on the page at its own ratio (no ground, no crop), as wide as the grid
@@ -29,8 +30,8 @@ const short = (level: string) => `${level.slice(0, 3)}.`;
  * Desktop shop: only the meta line morphs in on hover or keyboard focus. Desktop home: "N°01   from $15"
  * then "Beginner · 1h30". Phone (< 1200 px, no hover): one line "Beg. · 1h30   from $15".
  * Every caption line is one line as wide as the image: when it does not fit, "from $31" → "$31", then
- * the time goes, then the level is shortened (docs/decisions.md "Captions on one line"). The full
- * wording is the link's aria-label. Sold out: image at 60%, "Sold out" replaces the price.
+ * the level is shortened with the time kept ("Inter. · 3h30"), and only then the time goes
+ * (docs/decisions.md "Captions on one line"). The full wording is the link's aria-label. Sold out: image at 60%, "Sold out" replaces the price.
  */
 export function WorkCard({ work, variant = "shop", alwaysShowMeta, priority }: WorkCardProps) {
   const [hover, setHover] = useState(false);
@@ -43,7 +44,7 @@ export function WorkCard({ work, variant = "shop", alwaysShowMeta, priority }: W
   const desktop = [
     { meta: `${level} · ${time}`, price },
     { meta: `${level} · ${time}`, price: bare },
-    { meta: level, price: bare },
+    { meta: `${short(level)} · ${time}`, price: bare },
     { meta: short(level), price: bare },
   ];
   // Phones start from the boards' short level ("Beg. · 1h30").
@@ -73,7 +74,7 @@ export function WorkCard({ work, variant = "shop", alwaysShowMeta, priority }: W
       {variant === "home" ? (
         <span aria-hidden="true" className="hidden flex-col gap-10 lg:flex">
           <FitLine variants={[price, bare].map((p) => ({ left: <span className="underline-offset-3 group-hover:underline">{work.number}</span>, right: p }))} />
-          <FitLine variants={[`${level} · ${time}`, level, short(level)].map((m) => ({ left: <span className="text-fg-muted">{m}</span> }))} />
+          <FitLine variants={[`${level} · ${time}`, `${short(level)} · ${time}`, short(level)].map((m) => ({ left: <span className="text-fg-muted">{m}</span> }))} />
         </span>
       ) : (
         <span aria-hidden="true" className="hidden lg:block">
@@ -102,7 +103,7 @@ export interface PrintWorkCardProps {
 /**
  * One work in the /prints gallery, shown as a print: the Sand sheet (PrintPaper), then one line
  * "N°06   S · M · L   from $55" (sold-out sizes struck). When the line does not fit its sheet: "$55",
- * then "S·M·L", then the sizes go ("Sold out" → "Sold" last). The grid gives it its width (ProportionalGrid). Every size sold out:
+ * then "S·M·L"; as a last resort (not reached with the catalog) the sizes go, then "Sold out" → "Sold". The grid gives it its width (ProportionalGrid). Every size sold out:
  * the work at 60 % and "Sold out".
  */
 export function PrintWorkCard({ href, imageUrl, orientation, number, editionSize, sizes, fromCents, priority }: PrintWorkCardProps) {

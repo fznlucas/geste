@@ -225,11 +225,11 @@ export default function KitPage() {
           <State label="Proportional grid · shop cards, one height per row (260 px, less when the row passes the width), meta shown on the first">
             <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w, i) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} alwaysShowMeta={i === 0} /> }))} />
           </State>
-          <State label="Fit line · the same caption at 240, 170 and 110 px: from $31 → $31, then no time, then Int.">
+          <State label="Fit line · the same caption at 240, 170, 130 and 90 px: from $31 → $31, then Inter. · 3h30, then Inter.">
             <div className="flex items-start gap-40">
-              {[240, 170, 110].map((w) => (
+              {[240, 170, 130, 90].map((w) => (
                 <div key={w} style={{ width: w }}>
-                  <FitLine variants={[["Intermediate · 3h30", "from $31"], ["Intermediate · 3h30", "$31"], ["Intermediate", "$31"], ["Int.", "$31"]].map(([m, p]) => ({ left: <span className="text-fg-muted">{m}</span>, right: p }))} />
+                  <FitLine variants={[["Intermediate · 3h30", "from $31"], ["Intermediate · 3h30", "$31"], ["Inter. · 3h30", "$31"], ["Inter.", "$31"]].map(([m, p]) => ({ left: <span className="text-fg-muted">{m}</span>, right: p }))} />
                 </div>
               ))}
             </div>
@@ -321,8 +321,8 @@ export default function KitPage() {
             <State label="Shopping list · budget"><ShoppingListTable lines={LIST} tier="budget" have={new Set()} onToggle={() => {}} /></State>
             <State label="Print paper · portrait (print page sheet)"><PrintPaper imageUrl={asset("mock/work-03.jpg")} alt="N°03, limited print" orientation="portrait" caption="N°03 · 1/100" className="w-320" sizes="320px" /></State>
             <State label="Print paper · landscape (N°07)"><PrintPaper imageUrl={asset("mock/work-07.jpg")} alt="N°07, limited print" orientation="landscape" caption="N°07 · 12/100" className="w-full" sizes="560px" /></State>
-            <State label="Print to scale · S, M, L above a 160 cm sideboard"><div className="flex flex-col gap-16">{(["S", "M", "L"] as const).map((z) => <PrintScale key={z} imageUrl={asset("mock/work-06.jpg")} alt={`N°06 in ${z}`} orientation="portrait" size={z} caption="N°06 · 6/100" />)}</div></State>
-            <State label="Print to scale · landscape L (N°01)"><PrintScale imageUrl={asset("mock/work-01.jpg")} alt="N°01 in L" orientation="landscape" size="L" caption="N°01 · 3/25" /></State>
+            <State label="Print to scale · S, M, L above a 160 cm sideboard"><div className="flex flex-col gap-16">{(["S", "M", "L"] as const).map((z) => <PrintScale key={z} imageUrl={asset("mock/work-06.jpg")} alt={`N°06 in ${z}`} orientation="portrait" size={z} />)}</div></State>
+            <State label="Print to scale · landscape L (N°01)"><PrintScale imageUrl={asset("mock/work-01.jpg")} alt="N°01 in L" orientation="landscape" size="L" /></State>
             <State label="Gift card preview · empty names show …"><GiftCardPreview imageUrl={asset("mock/work-03.jpg")} amountCents={3000} toName="Léa" fromName="" message="For your first canvas." /></State>
           </div>
           <div className="grid grid-cols-4 gap-40">

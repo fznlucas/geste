@@ -823,10 +823,10 @@ interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "
 
 `src/components/commerce/ProportionalGrid.tsx` · used on Shop, Home, /prints, /prints/[slug] (Other editions)
 
-**ProportionalGrid** — One image height for the whole grid, each work as wide as its ratio. `perRow` per breakpoint (default phones 2, tablets 3, desktop 5), `maxHeight` (desktop 260 px): the height is the one that makes the widest row fill the container, capped, and every row uses it, left-justified. Gaps 14 / 40 px, left-justified, `rowSpace` under each row. Pure CSS (per-breakpoint widths from each row's ratios, one line break per row and breakpoint), so the static render is already right.
+**ProportionalGrid** — A justified grid: every row fills the content width exactly (left and right edges), fixed gaps (14 px phones, 40 px desktop), each row's height set so its widths plus gaps equal the width; each work as wide as its ratio. Desktop / tablets: `perRow` in order (5 / 3). Phones: a landscape work alone on the full width, portraits in pairs; a lone portrait keeps the nearest pair's height, left-aligned. Desktop guard-rail `heights` (190–280 px at `contentWidth`, 1200 by default): a row taller than 280 px stays at 280, left-aligned; an incomplete last row keeps the previous row's height. Pure CSS (per-breakpoint widths, one line break per row and breakpoint). Items carry `data-grid-item` (tests).
 
 ```ts
-interface ProportionalGridProps { items: Array<{ key: string; ratio: number; node: ReactNode }>; perRow?: { base: number; md: number; lg: number }; maxHeight?: { base?: number; md?: number; lg?: number }; rowSpace?: string; className?: string }
+interface ProportionalGridProps { items: Array<{ key: string; ratio: number; node: ReactNode }>; perRow?: { md: number; lg: number }; heights?: { min: number; max: number; fallback: number }; landscapeAlone?: boolean; contentWidth?: number; rowSpace?: string; className?: string }
 ```
 
 ## PrintPaper
@@ -851,7 +851,7 @@ interface ProportionalGridProps { items: Array<{ key: string; ratio: number; nod
 
 `src/components/commerce/PrintScale.tsx` · used on /prints/[slug] ("To scale")
 
-**PrintScale** — The print at its real size on the page (the wall) above a 160 cm sideboard silhouette (Line-field colour), scene in centimetres (200 × 220 cm): its PrintPaper in a 2 px Ink frame, animated 420 ms when S / M / L changes; no transition under reduced motion. Landscape works hang turned.
+**PrintScale** — The print at its real size on the page (the wall) above a 160 cm sideboard silhouette (Line-field colour), scene in centimetres (200 × 220 cm): its PrintPaper (no printed text) in a 2 px Ink frame, animated 420 ms when S / M / L changes; no transition under reduced motion. Landscape works hang turned.
 
 ## WorkCard
 

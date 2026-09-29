@@ -16,8 +16,8 @@ export interface PrintPaperProps {
   imageUrl: string;
   alt: string;
   orientation: Orientation;
-  /** Left of the caption: "N°06 · Edition of 100", "N°07 · 12/100". "Geste Studio" is on the right. */
-  caption: string;
+  /** Left of the caption: "N°06 · Edition of 100", "N°07 · 12/100". "Geste Studio" is on the right. None: nothing printed (To scale). */
+  caption?: string;
   /** Print the caption whatever the size (the print page's sheet, 9 px at least). Elsewhere it only shows at 9 px or more. */
   captionAlways?: boolean;
   className?: string;
@@ -45,18 +45,20 @@ export function PrintPaper({ imageUrl, alt, orientation, caption, captionAlways,
       <span className="absolute" style={{ left: pct(MARGIN, short.x), right: pct(MARGIN, short.x), top: pct(MARGIN, short.y), bottom: pct(BOTTOM, short.y) }}>
         <Image src={imageUrl} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-contain", imgClassName)} />
       </span>
-      <span
-        aria-hidden="true"
-        // 2.8 % of the height reaches 9 px at 230 px of portrait sheet, 450 px of landscape sheet: below, not printed (the sheet keeps its margin).
-        className={cn(
-          "absolute items-center justify-between gap-8 whitespace-nowrap text-sheet text-fg",
-          captionAlways ? "flex" : orientation === "portrait" ? "hidden @min-[230px]:flex" : "hidden @min-[450px]:flex",
-        )}
-        style={{ left: pct(MARGIN, short.x), right: pct(MARGIN, short.x), bottom: 0, height: pct(BOTTOM, short.y) }}
-      >
-        <span>{caption}</span>
-        <span>Geste Studio</span>
-      </span>
+      {caption && (
+        <span
+          aria-hidden="true"
+          // 2.8 % of the height reaches 9 px at 230 px of portrait sheet, 450 px of landscape sheet: below, not printed (the sheet keeps its margin).
+          className={cn(
+            "absolute items-center justify-between gap-8 whitespace-nowrap text-sheet text-fg",
+            captionAlways ? "flex" : orientation === "portrait" ? "hidden @min-[230px]:flex" : "hidden @min-[450px]:flex",
+          )}
+          style={{ left: pct(MARGIN, short.x), right: pct(MARGIN, short.x), bottom: 0, height: pct(BOTTOM, short.y) }}
+        >
+          <span>{caption}</span>
+          <span>Geste Studio</span>
+        </span>
+      )}
     </span>
   );
 }

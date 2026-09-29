@@ -79,7 +79,7 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
               </div>
             ) : (
               <div className="flex items-end pt-24 lg:h-760 lg:pt-0">
-                <PrintScale imageUrl={picked.imageUrl} alt={`${work.number} in ${picked.size}, ${picked.dimensions}, above a 160 cm sideboard`} orientation={picked.orientation} size={picked.size} caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`} />
+                <PrintScale imageUrl={picked.imageUrl} alt={`${work.number} in ${picked.size}, ${picked.dimensions}, above a 160 cm sideboard`} orientation={picked.orientation} size={picked.size} />
               </div>
             )}
             {/* As on the work page: the views left, a caption right (desktop). */}
@@ -158,8 +158,7 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
           </div>
           <ProportionalGrid
             rowSpace="mb-0"
-            perRow={{ base: 4, md: 4, lg: 4 }}
-            maxHeight={{ lg: 340 }}
+            perRow={{ md: 4, lg: 4 }}
             items={others.map((o) => ({
               key: o.slug,
               ratio: SHEET_RATIO[o.orientation],

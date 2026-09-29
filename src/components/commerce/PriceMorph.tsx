@@ -6,7 +6,7 @@ export interface PriceMorphProps {
   visible: boolean;
   meta: ReactNode;
   price: ReactNode;
-  /** Shorter wordings, longest first, for a narrow image ("$25", "Intermediate", "Int."): see FitLine. */
+  /** Shorter wordings, longest first, for a narrow image ("$25", "Inter. · 3h30", "Inter."): see FitLine. */
   shorter?: Array<{ meta: ReactNode; price: ReactNode }>;
 }
 

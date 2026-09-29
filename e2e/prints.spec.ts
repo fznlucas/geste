@@ -33,22 +33,52 @@ test("gallery: one print per work, filters in the URL, a work sold out in every 
   await expectNoAxeViolations(page);
 });
 
-test("shop and /prints: one image height for the whole grid, widths follow the work", async ({ page }) => {
-  const heights = async (selector: string) =>
-    page.locator(selector).evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ h: Math.round(r.height * 2) / 2, w: Math.round(r.width) })));
-  await page.goto("/shop/");
-  const works = await heights("main a[href^='/works/'] img");
-  expect(works).toHaveLength(15);
-  // Every work exactly the same height (±0.5 px of rounding), N°01 (landscape) wider than tall.
-  for (const b of works) expect(Math.abs(b.h - works[0]!.h)).toBeLessThanOrEqual(0.5);
-  expect(works[0]!.w).toBeGreaterThan(works[0]!.h);
-  if ((page.viewportSize()?.width ?? 1440) >= 1200) expect(works[0]!.h).toBeLessThanOrEqual(260);
+/** Rows of a justified grid: the image (or sheet) boxes of its items grouped by top edge, with the grid's box. */
+async function gridRows(page: Page) {
+  return page.locator("main [data-grid-item]").first().locator("xpath=..").evaluate((grid) => {
+    const g = grid.getBoundingClientRect();
+    const boxes = Array.from(grid.querySelectorAll(":scope > [data-grid-item]")).map((item) => {
+      const r = item.querySelector("a > span")!.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: Math.round(r.top), height: r.height };
+    });
+    const rows: Array<typeof boxes> = [];
+    for (const b of boxes) {
+      const row = rows.find((x) => x[0]!.top === b.top);
+      if (row) row.push(b);
+      else rows.push([b]);
+    }
+    return { left: g.left, right: g.right, rows };
+  });
+}
 
-  await page.goto("/prints/");
-  const sheets = await heights("main a[href^='/prints/n'] > span:first-child");
-  expect(sheets).toHaveLength(15);
-  for (const b of sheets) expect(Math.abs(b.h - sheets[0]!.h)).toBeLessThanOrEqual(0.5);
-});
+for (const path of ["/shop/", "/prints/"]) {
+  test(`${path}: justified rows, left and right edges on the content, equal gaps`, async ({ page }) => {
+    await page.goto(path);
+    const { left, right, rows } = await gridRows(page);
+    const desktop = (page.viewportSize()?.width ?? 1440) >= 1200;
+    expect(rows.flat()).toHaveLength(15);
+    for (const row of rows) {
+      const h = row[0]!.height;
+      for (const b of row) expect(Math.abs(b.height - h)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(row[0]!.left - left)).toBeLessThanOrEqual(0.5);
+      const gaps = row.slice(1).map((b, k) => b.left - row[k]!.right);
+      for (const g of gaps) expect(Math.abs(g - (desktop ? 40 : 14))).toBeLessThanOrEqual(0.5);
+      if (desktop && h > 279.5) {
+        // Guard-rail: a row that would be taller than 280 px stays at 280, left-aligned (docs/decisions.md).
+        expect(Math.abs(h - 280)).toBeLessThanOrEqual(0.5);
+        continue;
+      }
+      expect(Math.abs(row[row.length - 1]!.right - right)).toBeLessThanOrEqual(0.5);
+      if (desktop) {
+        expect(row).toHaveLength(5);
+        expect(h).toBeGreaterThanOrEqual(190);
+      } else {
+        // Phones: a landscape work alone on the full width, portraits in pairs.
+        expect(row.length === 1 ? row[0]!.right - row[0]!.left > row[0]!.height : row.length === 2).toBe(true);
+      }
+    }
+  });
+}
 
 test("print page: sizes turned for a landscape work, to scale, then the bundle in the cart", async ({ page }) => {
   await page.goto("/");

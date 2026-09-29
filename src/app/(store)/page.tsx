@@ -99,8 +99,9 @@ export default async function HomePage() {
           </div>
           <div className="lg:col-span-8 lg:col-start-5">
             {/* Phones show the first print, desktop three: each on its Sand sheet, one height per row. */}
-            <ProportionalGrid className="lg:hidden" rowSpace="mb-0" perRow={{ base: 1, md: 1, lg: 1 }} maxHeight={{ base: 320, md: 320 }} items={prints.slice(0, 1).map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
-            <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" perRow={{ base: 3, md: 3, lg: 3 }} maxHeight={{ lg: 300 }} items={prints.map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
+            <ProportionalGrid className="lg:hidden" rowSpace="mb-0" items={prints.slice(0, 1).map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
+            {/* Eight columns of the 1200 px grid: 787 px. */}
+            <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" perRow={{ md: 3, lg: 3 }} contentWidth={787} items={prints.map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
           </div>
         </section>
       )}
