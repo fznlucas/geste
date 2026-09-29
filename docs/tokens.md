@@ -35,6 +35,7 @@ JetBrains Mono 400 and 500 only. Sentence case. No italic, no uppercase, no lett
 | xs | `text-xs` | 12 / 20 | 400 | Default for everything: body, UI, buttons, labels |
 | sm | `text-sm` | 14 / 22 | 400 | Phone step text, emphasis |
 | body | `text-body` | 14 / 24 | 400 | Journal article body and lede (Article / MArticle) |
+| code | `text-code` + `tracking-code` (0.3em) | 16 / 20 | 400 | The 6-digit login code field (Login / MLogin) |
 | md | `text-md` | 22 / 30 | 500 | Desktop reader step text, phone page titles, mobile menu |
 | lg | `text-lg` | 28 / 1.2 (33.6) | 500 | Page and section titles, KPI values |
 | xl | `text-xl` | 40 / 1.2 (48) | 500 | Hero lines |

@@ -1,6 +1,6 @@
 "use client";
 
-import { DEMO_CUSTOMER_ID, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput } from "@/lib/api";
+import { DEMO_CUSTOMER_ID, MOCK_NOW, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput } from "@/lib/api";
 import { clearCart } from "./cart";
 import { signIn } from "./session";
 import { createPersistentStore, isRecord, useStore } from "./store";
@@ -51,7 +51,7 @@ export async function placeOrder(req: PlaceOrderRequest): Promise<string> {
   const { firstName, ...input } = req;
   // The account the webhook finds or creates from the email (same rule as the fake sign-in).
   const customerId = (await findCustomerByEmail(input.email))?.id ?? DEMO_CUSTOMER_ID;
-  const rows = buildOrder({ ...input, customerId, now: new Date().toISOString() }); // throws before anything is kept
+  const rows = buildOrder({ ...input, customerId, now: orderTime() }); // throws before anything is kept
   await signIn({ method: "email_code", email: input.email });
   purchasesStore.set((s) => ({
     orders: [...rows.orders, ...s.orders],
@@ -61,6 +61,15 @@ export async function placeOrder(req: PlaceOrderRequest): Promise<string> {
   }));
   clearCart();
   return rows.number;
+}
+
+/**
+ * Payment time of a mock order: never before the mock's "now" (its orders are dated up to
+ * Oct 2, 2026) and after the previous local order, so a new purchase always tops Orders and Library.
+ */
+function orderTime(): string {
+  const last = purchasesStore.get().orders.reduce((m, o) => Math.max(m, Date.parse(o.createdAt)), 0);
+  return new Date(Math.max(Date.now(), Date.parse(MOCK_NOW), last + 60_000)).toISOString();
 }
 
 /** Re-renders when a purchase is recorded (e.g. in another tab). */

@@ -11,19 +11,24 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Primitives | `Accordion` | `src/components/primitives/Accordion.tsx` | Product details, Help |
 | Primitives | `Badge` | `src/components/primitives/Badge.tsx` | Admin sidebar |
 | Primitives | `Button` | `src/components/primitives/Button.tsx` | all CTAs — Product, Checkout, Admin |
-| Primitives | `Checkbox` | `src/components/primitives/Checkbox.tsx` | Checkout, Admin |
+| Primitives | `Checkbox` | `src/components/primitives/Checkbox.tsx` | Checkout, Login, Register, Settings, Admin |
 | Primitives | `RadioRows` | `src/components/primitives/RadioRows.tsx` | Checkout, MCheckout (delivery, payment method) |
 | Primitives | `Field` | `src/components/primitives/Field.tsx` | Checkout, Login, Register, Settings |
 | Primitives | `IconButton` | `src/components/primitives/IconButton.tsx` | headers |
 | Primitives | `Input` | `src/components/primitives/Input.tsx` | Checkout, Admin |
 | Primitives | `OtpInput` | `src/components/primitives/OtpInput.tsx` | Login (code), AdminLogin |
-| Primitives | `PasswordInput` | `src/components/primitives/PasswordInput.tsx` | Login, Register, Settings |
+| Primitives | `PasswordInput` | `src/components/primitives/PasswordInput.tsx` | (eye icon variant, not used by the account boards) |
+| Primitives | `PasswordField`, `PasswordRules`, `OrDivider` | `src/components/primitives/PasswordField.tsx` | Login, MLogin, Register, MRegister |
 | Primitives | `Pill` | `src/components/primitives/Pill.tsx` | Admin filters |
 | Primitives | `ProgressBar` | `src/components/primitives/ProgressBar.tsx` | Account library, AdminEditions |
 | Primitives | `Segmented` | `src/components/primitives/Segmented.tsx` | Product (format, level), Shop filters |
 | Primitives | `StatusChip` | `src/components/primitives/StatusChip.tsx` | Orders, Admin |
 | Primitives | `Switch` | `src/components/primitives/Switch.tsx` | Settings, AdminMAlerts |
 | Primitives | `Tabs` | `src/components/primitives/Tabs.tsx` | Help, Account, Admin |
+| Layout | `AccountNav` | `src/components/layout/AccountNav.tsx` | Account, Orders, Settings, MAccount, MOrders, MSettings |
+| Commerce | `LibraryRow` | `src/components/commerce/LibraryRow.tsx` | Account, MAccount |
+| Commerce | `AccountOrderRow` | `src/components/commerce/AccountOrderRow.tsx` | Orders, MOrders |
+| Commerce | `TrackingSteps` | `src/components/commerce/TrackingSteps.tsx` | Tracking, MTracking |
 | Overlays | `Drawer` | `src/components/overlay/Drawer.tsx` | Cart, MMenu |
 | Overlays | `Menu` | `src/components/overlay/Menu.tsx` | Account shortcuts |
 | Overlays | `Modal` | `src/components/overlay/Modal.tsx` | Checkout errors, AdminOrderDetail refund |
@@ -139,6 +144,8 @@ export interface AccordionProps {
 
 **LoadingDots** — Three dots pulsing in sequence; replaces the trailing arrow while loading.
 
+Variants: `primary`, `ghost`, `text`, `danger` (Signal outline), `danger-solid` (filled Signal laid out like primary, for the confirmation of a deletion: Settings "Yes, delete   →").
+
 **ButtonLink** — A `next/link` that looks like a Button ("Checkout   $68", "Browse works   →"). Same `variant`, `size`, `trailing`, `fullWidth`; takes `href` instead of `onClick`/`loading`.
 
 ```ts
@@ -158,13 +165,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 `src/components/primitives/Checkbox.tsx` · used on Checkout, Admin
 
-**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area: 44 px tall by default; `layout="inline"` (checkout) is the label's height, box top-aligned, text 23 px from the left edge as drawn.
+**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area: 44 px tall by default; `layout="inline"` (checkout, register) is the label's height, box top-aligned, text 23 px from the left edge as drawn; `layout="setting"` (Settings, Login "Keep me logged in") is a 32 px row (36 on phones), text where the boards' native boxes put it (`gap` = board gap + 2 px).
 
 ```ts
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: ReactNode;
   invalid?: boolean;
-  layout?: "row" | "inline";
+  layout?: "row" | "inline" | "setting";
+  /** setting only, default "gap-12". */
+  gap?: string;
 }
 ```
 
@@ -310,6 +319,8 @@ export interface ProgressBarProps {
   label: string;
   /** Mark the bar as needing attention (e.g. edition almost sold out): Signal fill. */
   tone?: "default" | "danger";
+  /** line = the Library's 2 px Line track with a square Ink fill (Account, MAccount). */
+  variant?: "bar" | "line";
   className?: string;
 }
 ```
@@ -1036,3 +1047,37 @@ export interface ShoppingListTableProps {
 
 **ArticleCard** — Journal tile: picture (300 px, phone 200; `keep` variant 240 px), "Method · Sept 24" in Stone, title (medium, underlined on hover), excerpt (desktop only).
 
+
+## PasswordField
+
+`src/components/primitives/PasswordField.tsx` · used on Login, MLogin, Register, MRegister
+
+**PasswordField** — Label row with "Show" / "Hide" in text at its end (the button stretches to the 26 px label row, so its word sits 3 px lower, as drawn), then the field and its error. Props: `label`, `error`, plus the Input props.
+
+**PasswordRules** — The three rules ("· At least 8 characters" in Stone, "✓ …" in Ink once met), `aria-live="polite"`. `passwordRules(pw, email)` computes them, `passwordOk(pw, email)` is true when all are met.
+
+**OrDivider** — "—— or ——" between the main action and the other ways in.
+
+## AccountNav
+
+`src/components/layout/AccountNav.tsx` · used on Account, Orders, Settings (+ M*)
+
+**AccountNav** — "Hi Camille" (the page's h1) and Library / Orders / Settings / Log out. Desktop: a column, current link underlined, 28 px rows, "Log out" in Stone 12 px below. Phone: 28 px title over a row of 44 px tabs, current underlined (offset 6), others Stone, "Log out" pushed right. Props: `current`, `firstName`, `onLogOut`, `variant`.
+
+## LibraryRow
+
+`src/components/commerce/LibraryRow.tsx` · used on Account, MAccount
+
+**LibraryRow** — One guide of the Library. Desktop: 144×180 picture, number + "Available offline", detail, 2 px progress line + status, "Continue →" (160 px), "Shopping list", "Print · n left" (disabled at 0 or while preparing, then "Preparing your PDF…"). Phone: 96×120, status under the line, text links Continue / List / Print (24 px targets). Props: `imageUrl`, `number`, `detail`, `progress` (0–1), `status`, `action`, `onOpen`, `listHref`, `printsLeft`, `onPrint`, `preparing`, `variant`.
+
+## AccountOrderRow
+
+`src/components/commerce/AccountOrderRow.tsx` · used on Orders, MOrders
+
+**AccountOrderRow** — A 56 px row (number, date, status, total, + / −; columns 140 · 140 · 1fr · 100 · 24) that opens the receipt lines and ghost actions. Phone: 64 px, "#GS-2041 · $70" over "date · status", actions share the width. `aria-expanded` + `aria-controls`. Props: `number`, `date`, `status`, `total`, `lines`, `open`, `onToggle`, `actions`, `variant`.
+
+## TrackingSteps
+
+`src/components/commerce/TrackingSteps.tsx` · used on Tracking, MTracking
+
+**TrackingSteps** — Parcel timeline: 10 px dots (filled Ink once reached, hollow after), thread Ink when the next step is reached, Line-grey otherwise; the last step reached is 500 and `aria-current="step"`, steps to come are Stone with "to come" for screen readers. Desktop 56 px rows with the time in a 160 px right column; phone 52 px rows with the time under the label. Props: `steps: { label, time, done, current }[]`, `variant`.

@@ -1,7 +1,9 @@
 /** Orders (admin and account). */
 import { asset } from "@/lib/asset";
+import { shortDate } from "@/lib/dates";
+import { CARRIERS, carrierOf, deliveryName, deliveryRange, deliveryWindow, formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
-import { SHIPPING } from "@/lib/pricing";
+import { FORMATS, SHIPPING } from "@/lib/pricing";
 import { customers } from "@/data/customers";
 import { printEditions } from "@/data/editions";
 import { refunds, shipments } from "@/data/orders";
@@ -11,7 +13,7 @@ import { works } from "@/data/works";
 import { clone } from "./clone";
 import { allOrders, allPrintCopies } from "./local";
 import { mapThread } from "./support";
-import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrdersQuery, OrdersTab } from "./types";
+import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrdersTab, OrderTracking, TrackingStep } from "./types";
 
 /** Least advanced print decides the status of an order with prints. */
 const PRINT_STATUS: Array<[FulfilmentStatus, OrderDisplayStatus]> = [
@@ -68,6 +70,7 @@ export function mapOrder(row: OrderRow): Order {
         const e = printEditions.find((x) => x.id === i.editionId);
         return e ? { size: e.size, editionSize: e.editionSize } : null;
       })(),
+      printedAt: itemCopies.length && itemCopies.every((c) => c.printedAt) ? itemCopies.map((c) => c.printedAt!).sort().at(-1)! : null,
     };
   });
   const summary = items
@@ -97,7 +100,7 @@ export function mapOrder(row: OrderRow): Order {
       .filter((r) => r.orderId === row.id)
       .map(({ id, amountCents, reason, restock, revokeAccess, createdAt }) => ({ id, amountCents, reason, restock, revokeAccess, createdAt })),
     shipment: shipment
-      ? { id: shipment.id, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, deliveredAt: shipment.deliveredAt }
+      ? { id: shipment.id, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, inTransitAt: shipment.inTransitAt, outForDeliveryAt: shipment.outForDeliveryAt, deliveredAt: shipment.deliveredAt }
       : null,
   };
 }
@@ -153,3 +156,85 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
     supportThreads: supportThreads.filter((t) => t.orderId === row.id).map(mapThread),
   });
 }
+
+// ── Customer side (Account › Orders, confirmation, tracking) ────────────────
+
+/** "12/50", "12–13/50" */
+export function copyNumbersLabel(i: OrderItem): string {
+  const n = i.copyNumbers;
+  if (!n.length || !i.edition) return "";
+  return `${n.length > 1 ? `${n[0]}–${n[n.length - 1]}` : n[0]}/${i.edition.editionSize}`;
+}
+
+/** Receipt wording of the Checkout and Orders boards: "N°03 — Guide, 60×80", "N°07 — Print A3, 12/50". */
+export function orderLineTitle(i: OrderItem): string {
+  if (i.kind === "guide") return `${i.workNumber} — Guide, ${i.config.format ? FORMATS[i.config.format].label : ""}`;
+  if (i.kind === "print") return `${i.workNumber} — Print ${i.edition?.size ?? ""}, ${copyNumbersLabel(i)}`;
+  return i.title;
+}
+
+/** Least advanced print of the order, or null without prints. */
+const printStage = (o: Order): FulfilmentStatus | null => {
+  const prints = o.items.filter((i) => i.kind === "print");
+  if (!prints.length) return null;
+  return PRINT_STATUS.find(([f]) => prints.some((i) => i.fulfilment === f))?.[0] ?? "delivered";
+};
+
+/**
+ * Status line of Account › Orders: "Print shipped · arriving Oct 3–5", "Delivered instantly" (Orders
+ * board); the other wordings follow them for states the board does not draw.
+ */
+export function customerOrderStatus(o: Order): string {
+  if (o.status === "refunded") return "Refunded";
+  if (o.status === "partially_refunded") return "Partly refunded";
+  if (o.status === "cancelled") return "Cancelled";
+  if (o.status === "pending") return "Payment pending";
+  const stage = printStage(o);
+  if (!stage) return o.items.every((i) => i.kind === "gift_card") ? "Sent by email" : "Delivered instantly";
+  const window = deliveryWindow(o.shippingMethod, o.paidAt);
+  if (stage === "delivered" || stage === "returned") return o.shipment?.deliveredAt ? `Print delivered ${shortDate(o.shipment.deliveredAt)}` : "Print delivered";
+  if (stage === "shipped") return `Print shipped · arriving ${window}`;
+  return `Print in preparation · arriving ${window}`;
+}
+
+/**
+ * /track?order=: the parcel's steps (Tracking board). Mock: no token check, and the carrier scans
+ * come from the mock shipments; later the Boxtal webhook writes them.
+ */
+export async function getOrderTracking(number: string): Promise<OrderTracking | null> {
+  const row = allOrders().find((o) => o.number === normalizeNumber(number));
+  if (!row) return null;
+  const o = mapOrder(row);
+  const prints = o.items.filter((i) => i.kind === "print");
+  if (!prints.length) return null;
+  const carrier = CARRIERS[o.shipment?.carrier ?? carrierOf(o.shippingMethod)];
+  const s = o.shipment;
+  const raw: Array<[TrackingStep["key"], string, string | null]> = [
+    ["ordered", "Ordered", o.paidAt],
+    ["printed", "Printed and signed", prints.every((p) => p.printedAt) ? prints.map((p) => p.printedAt!).sort().at(-1)! : null],
+    ["handed", `Handed to ${carrier.name}`, s?.shippedAt ?? null],
+    ["in_transit", "In transit", s?.inTransitAt ?? null],
+    ["out_for_delivery", "Out for delivery", s?.outForDeliveryAt ?? null],
+    ["delivered", "Delivered", s?.deliveredAt ?? null],
+  ];
+  // A step counts only once every step before it happened.
+  let reached = 0;
+  while (reached < raw.length && raw[reached]![2]) reached++;
+  const steps: TrackingStep[] = raw.map(([key, label, at], i) => ({ key, label, at: i < reached ? at : null, done: i < reached, current: i === reached - 1 }));
+  const delivered = !!s?.deliveredAt;
+  return clone({
+    number: o.number,
+    shippingMethod: o.shippingMethod,
+    carrier: { name: carrier.name, url: carrier.url },
+    trackingNo: s?.trackingNo ? formatTrackingNo(s.trackingNo) : null,
+    steps,
+    delivered,
+    deliveryDate: delivered ? s!.deliveredAt! : deliveryRange(o.shippingMethod, o.paidAt).end.toISOString(),
+    prints,
+    shippingAddress: o.shippingAddress,
+    guide: o.items.find((i) => i.kind === "guide")?.workNumber ? { workNumber: o.items.find((i) => i.kind === "guide")!.workNumber! } : null,
+  });
+}
+
+/** "Colissimo, home" on desktop, "Colissimo" on phones (Tracking, MTracking). */
+export const trackingCarrierLine = (t: OrderTracking, phone: boolean) => (phone ? t.carrier.name : deliveryName(t.shippingMethod) || t.carrier.name);

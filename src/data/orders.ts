@@ -111,7 +111,7 @@ export const refunds: RefundRow[] = [
 ];
 
 export const shipments: ShipmentRow[] = [
-  { id: "ship-2033", orderId: "order-2033", carrier: "colissimo", trackingNo: "6A20331234567", parcel: "Tube 80 cm · 0.6 kg", status: "in_transit", shippedAt: "2026-09-29T16:00:00Z", deliveredAt: null },
-  { id: "ship-2029", orderId: "order-2029", carrier: "colissimo", trackingNo: "CA20290045FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-26T16:00:00Z", deliveredAt: "2026-09-30T11:00:00Z" },
-  { id: "ship-2014", orderId: "order-2014", carrier: "colissimo", trackingNo: "CA20140012FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-20T16:00:00Z", deliveredAt: "2026-09-23T10:30:00Z" },
+  { id: "ship-2033", orderId: "order-2033", carrier: "colissimo", trackingNo: "6A20331234567", parcel: "Tube 80 cm · 0.6 kg", status: "in_transit", shippedAt: "2026-09-29T16:00:00Z", inTransitAt: "2026-09-30T06:12:00Z", outForDeliveryAt: null, deliveredAt: null },
+  { id: "ship-2029", orderId: "order-2029", carrier: "colissimo", trackingNo: "CA20290045FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-26T16:00:00Z", inTransitAt: "2026-09-27T05:40:00Z", outForDeliveryAt: "2026-09-30T07:55:00Z", deliveredAt: "2026-09-30T11:00:00Z" },
+  { id: "ship-2014", orderId: "order-2014", carrier: "colissimo", trackingNo: "CA20140012FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-20T16:00:00Z", inTransitAt: "2026-09-21T06:05:00Z", outForDeliveryAt: "2026-09-23T08:20:00Z", deliveredAt: "2026-09-23T10:30:00Z" },
 ];

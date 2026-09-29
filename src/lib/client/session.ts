@@ -90,8 +90,12 @@ export async function signIn(input: { method: SignInMethod; email?: string }): P
   return session;
 }
 
-/** "Log out" on the Account tabs. Keeps the cart, like a guest cookie cart. */
+/** Set by `signOut` so the guard of the page being left does not send it to /login. */
+let leaving = false;
+
+/** "Log out" on the Account tabs, then the caller navigates away. Keeps the cart, like a guest cookie cart. */
 export function signOut() {
+  leaving = true;
   sessionStore.set((s) => ({ ...s, customer: null }));
 }
 
@@ -142,7 +146,12 @@ export function useRequireCustomer(): SessionStatus<CustomerSession> {
   const state = useSession();
   const router = useRouter();
   useEffect(() => {
-    if (state.status === "signed_out") router.replace(`/login?next=${encodeURIComponent(currentPath())}`);
+    if (state.status !== "signed_out") return;
+    if (leaving) {
+      leaving = false;
+      return;
+    }
+    router.replace(`/login?next=${encodeURIComponent(currentPath())}`);
   }, [state.status, router]);
   return state;
 }

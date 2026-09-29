@@ -6,7 +6,7 @@ import type { EntitlementRow } from "@/data/types";
 import { palettes, works } from "@/data/works";
 import { clone } from "./clone";
 import { allEntitlements } from "./local";
-import { mapGuide } from "./guides";
+import { flattenSteps, mapGuide } from "./guides";
 import type { Guide, LibraryItem } from "./types";
 
 export function mapLibraryItem(row: EntitlementRow): LibraryItem {
@@ -17,6 +17,7 @@ export function mapLibraryItem(row: EntitlementRow): LibraryItem {
   const completedAt = row.progress.completedAt ?? null;
   return {
     entitlementId: row.id,
+    stepIds: flattenSteps(guide).map((s) => s.id),
     guideId: row.guideId,
     work: { id: work.id, number: work.number, slug: work.slug, imageUrl: asset(work.previewPath) },
     format: guideRow.format,
@@ -34,6 +35,13 @@ export function mapLibraryItem(row: EntitlementRow): LibraryItem {
     revoked: row.revokedAt !== null,
     createdAt: row.createdAt,
   };
+}
+
+/** Share of the guide done, 0–1: the steps before the current one (1 once finished, 0 before the first open). */
+export function libraryProgress(item: Pick<LibraryItem, "state" | "step" | "stepIds">): number {
+  if (item.state === "finished") return 1;
+  if (item.state === "not_started") return 0;
+  return Math.max(0, item.stepIds.indexOf(item.step)) / Math.max(1, item.stepIds.length);
 }
 
 /** Guides the customer can open, newest first. Revoked ones (refunded) are left out. */

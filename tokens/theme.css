@@ -26,6 +26,8 @@
   --text-sm--line-height: 22px;
   --text-body: 14px;
   --text-body--line-height: 24px;
+  --text-code: 16px;
+  --text-code--line-height: 20px;
   --text-md: 22px;
   --text-md--line-height: 30px;
   --text-lg: 28px;
@@ -36,6 +38,7 @@
   --text-2xl--line-height: 96px;
   --text-admin-title: 20px;
   --text-admin-title--line-height: 24px;
+  --tracking-code: 0.3em;
   --radius-*: initial;
   --radius-bar: 3px;
   --shadow-*: initial;

@@ -10,27 +10,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ButtonLink, CheckoutStepper, Tooltip, type CheckoutStep } from "@/components";
-import { getOrder, type OrderDetail, type OrderItem } from "@/lib/api";
+import { copyNumbersLabel as numbersLabel, getOrder, orderLineTitle as receiptTitle, type OrderDetail, type OrderItem } from "@/lib/api";
 import { useHydrated, usePurchases } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
-import { FORMATS } from "@/lib/pricing";
 import { useMediaQuery } from "@/lib/useMediaQuery";
-import { deliveryName, deliveryWindow } from "../_parts/delivery";
+import { deliveryName, deliveryWindow } from "@/lib/delivery";
 
 type Load = { status: "loading" } | { status: "missing" } | { status: "ready"; order: OrderDetail };
-
-const numbersLabel = (i: OrderItem) => {
-  const n = i.copyNumbers;
-  if (!n.length || !i.edition) return "";
-  return `${n.length > 1 ? `${n[0]}–${n[n.length - 1]}` : n[0]}/${i.edition.editionSize}`;
-};
-
-/** Receipt wording of the board: "N°03 — Guide, 60×80", "N°07 — Print A3, 12/50". */
-function receiptTitle(i: OrderItem): string {
-  if (i.kind === "guide") return `${i.workNumber} — Guide, ${i.config.format ? FORMATS[i.config.format].label : ""}`;
-  if (i.kind === "print") return `${i.workNumber} — Print ${i.edition?.size ?? ""}, ${numbersLabel(i)}`;
-  return i.title;
-}
 
 const listWorks = (numbers: string[]) => (numbers.length < 2 ? numbers.join("") : `${numbers.slice(0, -1).join(", ")} and ${numbers[numbers.length - 1]}`);
 
@@ -131,12 +117,12 @@ export function SuccessPage() {
             <div className="flex flex-col gap-4">
               <span className="font-medium">Print {p.workNumber}, {numbersLabel(p)}</span>
               <span className="text-fg-muted">{shipName}</span>
-              <Link href="/account/orders" className="self-start underline underline-offset-3 hover:text-fg-muted">Track it</Link>
+              <Link href={`/track?order=${order.number}`} className="self-start underline underline-offset-3 hover:text-fg-muted">Track it</Link>
             </div>
           </div>
         ))}
         {gifts.map((g) => <GiftCardRow key={g.id} item={g} phone />)}
-        <Link href="/account/settings" className="flex justify-between border border-border p-14 hover:bg-surface-muted">
+        <Link href="/account/settings#passkeys" className="flex justify-between border border-border p-14 hover:bg-surface-muted">
           <span>Save a passkey for next time</span>
           <span className="underline underline-offset-3">Set up</span>
         </Link>
@@ -199,7 +185,7 @@ export function SuccessPage() {
       </div>
       <div className="flex items-center justify-between border border-border px-20 py-16">
         <span>Log in faster next time: save a passkey (Face ID, Touch ID).</span>
-        <Link href="/account/settings" className="underline underline-offset-3 hover:text-fg-muted">Set it up</Link>
+        <Link href="/account/settings#passkeys" className="underline underline-offset-3 hover:text-fg-muted">Set it up</Link>
       </div>
       {guides.length > 0 && (
         <div className="flex flex-col gap-4">

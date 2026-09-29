@@ -30,6 +30,7 @@ const preset: Partial<Config> = {
       "xs": ["12px", { lineHeight: "20px", fontWeight: "400" }],
       "sm": ["14px", { lineHeight: "22px", fontWeight: "400" }],
       "body": ["14px", { lineHeight: "24px", fontWeight: "400" }],
+      "code": ["16px", { lineHeight: "20px", fontWeight: "400" }],
       "md": ["22px", { lineHeight: "30px", fontWeight: "500" }],
       "lg": ["28px", { lineHeight: "1.2", fontWeight: "500" }],
       "xl": ["40px", { lineHeight: "1.2", fontWeight: "500" }],

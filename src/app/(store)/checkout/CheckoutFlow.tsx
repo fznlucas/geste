@@ -21,6 +21,7 @@ import {
   OrderSummary,
   OrderSummaryToggle,
   RadioRows,
+  Segmented,
   Select,
   type CheckoutStep,
   type ExpressMethod,
@@ -32,7 +33,7 @@ import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING, type ShippingMethod } from "@/lib/pricing";
 import { useMediaQuery } from "@/lib/useMediaQuery";
-import { COUNTRIES, DELIVERY } from "./_parts/delivery";
+import { COUNTRIES, DELIVERY } from "@/lib/delivery";
 
 // ── Form ─────────────────────────────────────────────────────────────────────
 
@@ -61,11 +62,12 @@ type Key = keyof Values;
 type Errors = Partial<Record<Key, string>>;
 
 type PayMethod = "card" | "paypal" | "klarna" | "apple";
-const PAY_METHODS: Array<{ value: PayMethod; name: string; note: string }> = [
-  { value: "card", name: "Card", note: "Visa · Mastercard · CB" },
-  { value: "paypal", name: "PayPal", note: "" },
-  { value: "klarna", name: "Pay in 3 with Klarna", note: "from $30" },
-  { value: "apple", name: "Apple Pay", note: "" },
+/** `short`: the phone's one-line choice (decisions.md "Phone checkout: country and payment method"). */
+const PAY_METHODS: Array<{ value: PayMethod; name: string; short: string; note: string }> = [
+  { value: "card", name: "Card", short: "Card", note: "Visa · Mastercard · CB" },
+  { value: "paypal", name: "PayPal", short: "PayPal", note: "" },
+  { value: "klarna", name: "Pay in 3 with Klarna", short: "Klarna", note: "from $30" },
+  { value: "apple", name: "Apple Pay", short: "Apple Pay", note: "" },
 ];
 const KLARNA_MIN_CENTS = 3000;
 
@@ -528,13 +530,33 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
     />
   );
 
+  const countrySelect = (className?: string) => (
+    // 7 px under the label: the board's native select sits 1 px lower than the text fields (inline baseline).
+    <Field label="Country" className={cn(className, "[&>label]:mb-7")}>
+      <Select id="co-country" value={v.country} onChange={(e) => set("country", e.target.value)} autoComplete="country">
+        {COUNTRIES.map(([label, code]) => (
+          <option key={code} value={code}>{label}</option>
+        ))}
+      </Select>
+    </Field>
+  );
+  const payMethodDisabled = (m: PayMethod) => m === "klarna" && cart.totals.totalCents < KLARNA_MIN_CENTS;
+  const choosePay = (m: PayMethod) => {
+    setPay(m);
+    setErr({});
+  };
+
   const shipping = phone ? (
     <section {...sectionProps}>
       {payAlert}
       <h2 className="font-medium tracking-normal">Shipping address</h2>
+      {countrySelect()}
       {field("a1", "Address", { autoComplete: "address-line1" })}
-      {field("zip", "Postcode", { autoComplete: "postal-code" })}
-      {field("city", "City", { autoComplete: "address-level2" })}
+      {/* Side by side (like Expiry / Code) so the added Country row keeps the step as long as MCheckout's. */}
+      <div className="grid grid-cols-2 gap-12">
+        {field("zip", "Postcode", { autoComplete: "postal-code" })}
+        {field("city", "City", { autoComplete: "address-level2" })}
+      </div>
       <h2 className="font-medium tracking-normal">Delivery</h2>
       {deliveryRows}
       <div className="flex gap-10">
@@ -548,14 +570,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
       <SummaryRow label="Contact" value={contactLine} onChange={() => goTo("contact")} />
       {heading("Shipping address", "— for your print. Guides are digital.")}
       <div className="grid grid-cols-2 gap-14">
-        {/* 7 px under the label: the board's native select sits 1 px lower than the text fields (inline baseline). */}
-        <Field label="Country" className="col-span-2 [&>label]:mb-7">
-          <Select id="co-country" value={v.country} onChange={(e) => set("country", e.target.value)} autoComplete="country">
-            {COUNTRIES.map(([label, code]) => (
-              <option key={code} value={code}>{label}</option>
-            ))}
-          </Select>
-        </Field>
+        {countrySelect("col-span-2")}
         {field("a1", "Address", { placeholder: "Street and number", autoComplete: "address-line1" }, "col-span-2")}
         {field("a2", "Apartment, building, floor — optional", { autoComplete: "address-line2" }, "col-span-2")}
         {field("zip", "Postcode", { autoComplete: "postal-code" })}
@@ -579,11 +594,16 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
     <section {...sectionProps}>
       {payAlert}
       <h2 className="font-medium tracking-normal">Payment</h2>
-      {field("card", "Card number", { placeholder: "1234 1234 1234 1234", autoComplete: "cc-number", inputMode: "numeric" })}
-      <div className="grid grid-cols-2 gap-12">
-        {field("exp", "Expiry", { placeholder: "MM / YY", autoComplete: "cc-exp", inputMode: "numeric" })}
-        {field("cvc", "Code", { placeholder: "123", autoComplete: "cc-csc", inputMode: "numeric" })}
-      </div>
+      <Segmented<PayMethod> label="Payment method" gap="gap-x-16" value={pay} onChange={choosePay} options={PAY_METHODS.map((m) => ({ value: m.value, label: m.short, disabled: payMethodDisabled(m.value) }))} />
+      {pay === "card" && (
+        <>
+          {field("card", "Card number", { placeholder: "1234 1234 1234 1234", autoComplete: "cc-number", inputMode: "numeric" })}
+          <div className="grid grid-cols-2 gap-12">
+            {field("exp", "Expiry", { placeholder: "MM / YY", autoComplete: "cc-exp", inputMode: "numeric" })}
+            {field("cvc", "Code", { placeholder: "123", autoComplete: "cc-csc", inputMode: "numeric" })}
+          </div>
+        </>
+      )}
       {cart.hasGuide && <Checkbox layout="inline" label="Immediate access to my guide: I waive the 14-day withdrawal right for digital content." checked={v.waiver} onChange={(e) => set("waiver", e.target.checked)} />}
       <Checkbox
         layout="inline"
@@ -618,12 +638,9 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
         name="payment"
         label="Payment method"
         value={pay}
-        onChange={(m) => {
-          setPay(m);
-          setErr({});
-        }}
+        onChange={choosePay}
         rowHeight={52}
-        options={PAY_METHODS.map((m) => ({ value: m.value, label: m.name, aside: m.note, asideMuted: true, disabled: m.value === "klarna" && cart.totals.totalCents < KLARNA_MIN_CENTS }))}
+        options={PAY_METHODS.map((m) => ({ value: m.value, label: m.name, aside: m.note, asideMuted: true, disabled: payMethodDisabled(m.value) }))}
       />
       {pay === "card" && (
         <div className="grid grid-cols-2 gap-14 bg-surface-muted p-16">

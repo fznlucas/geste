@@ -175,6 +175,9 @@ export interface ShipmentRow {
   parcel: string; // "Tube 60 cm · 0.4 kg"
   status: "label_created" | "in_transit" | "delivered";
   shippedAt: string | null;
+  /** Mock-only: the carrier's scans (Boxtal tracking webhook), not columns yet (docs/decisions.md "Mock-only fields"). */
+  inTransitAt: string | null;
+  outForDeliveryAt: string | null;
   deliveredAt: string | null;
 }
 

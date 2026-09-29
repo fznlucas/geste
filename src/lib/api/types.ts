@@ -278,6 +278,8 @@ export interface OrderItem {
   copyNumbers: number[];
   /** Prints: "A3", 50. */
   edition: { size: string; editionSize: number } | null;
+  /** Prints: when the copy was printed and signed (Tracking board). */
+  printedAt: string | null;
 }
 
 export interface Refund {
@@ -296,7 +298,35 @@ export interface Shipment {
   parcel: string;
   status: "label_created" | "in_transit" | "delivered";
   shippedAt: string | null;
+  inTransitAt: string | null;
+  outForDeliveryAt: string | null;
   deliveredAt: string | null;
+}
+
+/** One row of the Tracking board's timeline. `current` is the last step reached (drawn 500). */
+export interface TrackingStep {
+  key: "ordered" | "printed" | "handed" | "in_transit" | "out_for_delivery" | "delivered";
+  label: string; // "Handed to Colissimo"
+  at: string | null;
+  done: boolean;
+  current: boolean;
+}
+
+/** /track: where a parcel is (Tracking, MTracking). */
+export interface OrderTracking {
+  number: string;
+  shippingMethod: ShippingMethod | null;
+  carrier: { name: string; url: string };
+  /** "6A 123 456 789 01", null until the label exists. */
+  trackingNo: string | null;
+  steps: TrackingStep[];
+  /** Delivery date once delivered, else the end of the carrier's window. */
+  delivered: boolean;
+  deliveryDate: string;
+  prints: OrderItem[];
+  shippingAddress: Address | null;
+  /** First guide of the order ("Meanwhile, keep painting N°03"). */
+  guide: { workNumber: string } | null;
 }
 
 export interface Order {
@@ -364,6 +394,8 @@ export interface CustomerDetail extends CustomerSummary {
 
 export interface LibraryItem {
   entitlementId: string;
+  /** Every step id of the guide in reading order ("1a" … "3e"): progress = position of `step`. */
+  stepIds: string[];
   guideId: string;
   work: { id: string; number: string; slug: string; imageUrl: string };
   format: FormatKey;
@@ -381,6 +413,19 @@ export interface LibraryItem {
   completedAt: string | null;
   revoked: boolean;
   createdAt: string;
+}
+
+export interface Passkey {
+  id: string;
+  /** "iPhone" */
+  device: string;
+  addedAt: string;
+}
+
+/** Settings › Password and Passkeys. */
+export interface AccountSecurity {
+  passwordChangedAt: string;
+  passkeys: Passkey[];
 }
 
 export interface StaffMember {

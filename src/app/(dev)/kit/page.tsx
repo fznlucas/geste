@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
   ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  AccountNav, AccountOrderRow, LibraryRow, OrDivider, PasswordField, PasswordRules, passwordRules, TrackingSteps,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
@@ -49,6 +50,15 @@ const LIST: ShoppingListLine[] = [
   { position: 2, name: "Orange", standard: { label: "Acrylic, 60 ml", priceCents: 700, url: "#" }, budget: { label: "Student range, 75 ml", priceCents: 350, url: "#" } },
 ];
 
+const TRACK = [
+  { label: "Ordered", time: "Oct 1, 14:02", done: true, current: false },
+  { label: "Printed and signed", time: "Oct 2, 10:30", done: true, current: false },
+  { label: "Handed to Colissimo", time: "Oct 2, 17:45", done: true, current: false },
+  { label: "In transit", time: "Oct 3, 06:12", done: true, current: true },
+  { label: "Out for delivery", time: "", done: false, current: false },
+  { label: "Delivered", time: "", done: false, current: false },
+];
+
 const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
 
 function Board({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -86,6 +96,8 @@ export default function KitPage() {
   const [seg, setSeg] = useState("beginner");
   const [otp, setOtp] = useState("4812");
   const [pw, setPw] = useState("Paint-it-2026");
+  const [pw2, setPw2] = useState("paint");
+  const [orderOpen, setOrderOpen] = useState(true);
   const [sw, setSw] = useState(true);
   const [cfg, setCfg] = useState<GuideConfig>({ format: "60x80", level: "match", palette: "original" });
   const [added, setAdded] = useState(false);
@@ -132,6 +144,7 @@ export default function KitPage() {
             <State label="Primary · disabled"><Button trailing="→" disabled>Continue</Button></State>
             <State label="Ghost"><Button variant="ghost">Preview</Button></State>
             <State label="Danger"><Button variant="danger">Refund…</Button></State>
+            <State label="Danger solid · confirm a deletion"><Button variant="danger-solid" trailing="→">Yes, delete</Button></State>
             <State label="Text"><Button variant="text">Forgot password?</Button></State>
             <State label="Dense (admin)"><div className="flex gap-6"><Pill>7 d</Pill><Pill selected>30 d</Pill><Pill>90 d</Pill></div></State>
           </div>
@@ -148,6 +161,12 @@ export default function KitPage() {
             <Field label="Message"><Textarea placeholder="Tell us what happened" /></Field>
             <div className="flex flex-col"><Checkbox label="Send me letters from the studio" defaultChecked /><Checkbox label="I accept the terms" invalid /><Checkbox layout="inline" label="Inline (checkout): Also create a password — optional" /><Checkbox layout="inline" disabled label="Inline, disabled" /></div>
             <Switch label="New order notifications" checked={sw} onCheckedChange={setSw} />
+            <State label="Password field · Show in the label row (Login, Register)"><PasswordField label="Password" autoComplete="off" value={pw2} onChange={(e) => setPw2(e.target.value)} /></State>
+            <State label="Password field · error"><PasswordField label="Password" autoComplete="off" defaultValue="" error="Enter your password" /></State>
+            <State label="Password rules · as typed above"><PasswordRules rules={passwordRules(pw2)} className="gap-2" /></State>
+            <State label="Or divider"><OrDivider /></State>
+            <State label="Checkbox · setting (Settings, Login)"><div className="flex flex-col"><Checkbox layout="setting" label="Letters from the studio, twice a month" defaultChecked /><Checkbox layout="setting" gap="gap-10" label="Keep me logged in" /><Checkbox layout="setting" disabled label="Disabled" /></div></State>
+            <State label="Code field (Login)"><Field label="6-digit code"><Input inputMode="numeric" placeholder="123 456" className="text-code tracking-code" /></Field></State>
           </div>
         </Board>
 
@@ -158,6 +177,7 @@ export default function KitPage() {
             <Tabs label="Help topics" items={[{ value: "a", label: "Orders", content: <p className="text-fg-muted">Tab panel content.</p> }, { value: "b", label: "Guides", count: 12, content: <p>Guides</p> }, { value: "c", label: "Prints", content: <p>Prints</p> }]} />
             <Accordion items={[{ value: "a", title: "What’s in the guide", content: "15 steps, 3 layers, a drying timer and a printable PDF." }, { value: "b", title: "Materials", content: "Shopping list with standard and budget options." }]} defaultValue={["a"]} />
             <State label="Progress"><ProgressBar value={55} label="Guide progress" /></State>
+            <State label="Progress · line (Library)"><div className="flex flex-col gap-12"><ProgressBar variant="line" value={33} label="N°03 progress" /><ProgressBar variant="line" value={0} label="N°01 progress" /><ProgressBar variant="line" value={100} label="N°07 progress" /></div></State>
             <EditionCounter left={5} total={50} size="A3" />
           </div>
         </Board>
@@ -204,6 +224,28 @@ export default function KitPage() {
             <State label="Order summary · checkout step 01 (shipping next step)"><div className="w-374"><OrderSummary lines={summaryLines(CART_FULL)} totals={summaryTotals(CART_FULL, null)} onApplyCode={async () => false} /></div></State>
             <State label="Order summary · carrier chosen, sold-out line"><div className="w-374"><OrderSummary lines={summaryLines(CART_SOLD_OUT)} totals={summaryTotals(CART_SOLD_OUT, undefined)} onApplyCode={async () => false} /></div></State>
             <State label="Order summary · phone toggle (tap to open)"><div className="w-358"><OrderSummaryToggle lines={summaryLines(CART_FULL)} totals={summaryTotals(CART_FULL, 600)} /></div></State>
+          </div>
+          <div className="grid grid-cols-[1fr_358px] gap-40">
+            <div className="flex flex-col">
+              <State label="Library row · in progress, not started, finished · preparing, no print left"><div>
+                <LibraryRow imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate · Original palette" progress={0.33} status="Layer 2 of 3" action="Continue" onOpen={() => {}} listHref="#" printsLeft={2} onPrint={() => {}} />
+                <LibraryRow imageUrl={asset("mock/work-01.jpg")} number="N°01" detail="40×50 · Beginner · Warm palette" progress={0} status="Not started" action="Start" onOpen={() => {}} listHref="#" printsLeft={3} onPrint={() => {}} preparing />
+                <LibraryRow imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner · Original palette" progress={1} status="Finished · signed 12 Sept" action="Open" onOpen={() => {}} listHref="#" printsLeft={0} onPrint={() => {}} />
+              </div></State>
+            </div>
+            <State label="Library row · phone"><div>
+              <LibraryRow variant="phone" imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate" progress={0.33} status="Layer 2 of 3 · offline ready" action="Continue" onOpen={() => {}} listHref="#" printsLeft={2} onPrint={() => {}} />
+              <LibraryRow variant="phone" imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner" progress={1} status="Finished · signed" action="Open" onOpen={() => {}} listHref="#" printsLeft={0} onPrint={() => {}} />
+            </div></State>
+            <State label="Account order rows · open, closed (desktop)"><div>
+              <AccountOrderRow number="#GS-2041" date="Oct 1, 2026" status="Print shipped · arriving Oct 3–5" total="$70" lines={[{ label: "N°03 — Guide, 60×80", price: "$19" }, { label: "N°07 — Print A3, 12/50", price: "$45" }, { label: "Colissimo, home", price: "$6" }]} open={orderOpen} onToggle={() => setOrderOpen((o) => !o)} actions={<><ButtonLink href="#" variant="ghost">Track the print</ButtonLink><ButtonLink href="#" variant="ghost">Open in library</ButtonLink></>} />
+              <AccountOrderRow number="#GS-1987" date="Sept 10, 2026" status="Delivered instantly" total="$25" lines={[]} open={false} onToggle={() => {}} actions={null} />
+            </div></State>
+            <State label="Account order row · phone"><div><AccountOrderRow variant="phone" number="#GS-2041" date="Oct 1, 2026" status="Print shipped" total="$70" lines={[{ label: "N°03 — Guide, 60×80", price: "$19" }, { label: "Colissimo, home", price: "$6" }]} open onToggle={() => {}} actions={<><ButtonLink href="#" variant="ghost">Track</ButtonLink><Button variant="ghost">Invoice</Button></>} /></div></State>
+            <State label="Tracking steps · in transit (desktop)"><TrackingSteps steps={TRACK} /></State>
+            <State label="Tracking steps · phone"><TrackingSteps variant="phone" steps={TRACK} /></State>
+            <State label="Account nav · desktop"><AccountNav current="library" firstName="Camille" onLogOut={() => {}} /></State>
+            <State label="Account nav · phone"><div className="flex flex-col gap-14"><AccountNav variant="phone" current="orders" firstName="Camille" onLogOut={() => {}} /></div></State>
           </div>
           <State label="Demo cart (writes the real mock cart, then open the cart icon on any store page)">
             <div className="flex gap-10">

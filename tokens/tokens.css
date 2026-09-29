@@ -23,7 +23,9 @@
   --text-xl: 40px; --leading-xl: 46px; --weight-xl: 500;
   --text-2xl: 96px; --leading-2xl: 96px; --weight-2xl: 500;
   --text-admin-title: 20px; --leading-admin-title: 24px; --weight-admin-title: 500;
+  --text-code: 16px; --leading-code: 20px; --weight-code: 400;
   --tracking-heading: -0.02em;
+  --tracking-code: 0.3em;
   --space-0: 0px;
   --space-2: 2px;
   --space-4: 4px;

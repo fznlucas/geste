@@ -7,7 +7,7 @@
 - **Code state:** OtpInput 6 digits, "Resend code" after 30 s, auto-submit.
 - **Forgot / reset:** email → link → new password with strength meter.
 - **Security:** rate limited; generic error "Email or password is incorrect".
-- **Acceptance:** all three methods work; `next` param honoured.
+- **Acceptance:** all three methods work; `next` param honoured. ✓ M4 mock (e2e/account.spec.ts); code field and reset flow follow the boards (docs/decisions.md "Account (M4)").
 
 ## Register — `/register`
 
@@ -18,7 +18,7 @@
 - **Boards:** Account, MAccount.
 - **Layout:** "Hi Camille" · tabs Library / Orders / Settings / Log out · "Library · 3 guides" · one row per entitlement: thumbnail, N°, "Available offline", "60×80 · Intermediate · Original palette", progress ("Layer 2 of 3" / "Not started" / "Finished · signed 12 Sept"), primary Continue/Start/Open →, links "Shopping list", "Print · 2 left" · banner "Finished N°07? Show us. Upload a photo and get feedback from the studio." + Upload (creates a pending review with photo).
 - **Empty:** "No guides yet. Browse the shop."
-- **Acceptance:** progress matches the reader; "Print · n left" matches `prints_left`.
+- **Acceptance:** progress matches the reader; "Print · n left" matches `prints_left`. ✓ M4 mock: both read the same local progress and `printsLeft`; the reader itself comes with M5.
 
 ## Orders — `/account/orders`
 

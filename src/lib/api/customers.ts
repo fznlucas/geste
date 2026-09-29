@@ -1,13 +1,14 @@
 /** Customers (admin) with their order stats. */
 import { customers } from "@/data/customers";
 import { reviews } from "@/data/reviews";
+import { passkeys, passwordChangedAt } from "@/data/security";
 import type { ProfileRow } from "@/data/types";
 import { clone } from "./clone";
 import { mapLibraryItem } from "./library";
 import { allEntitlements, allOrders } from "./local";
 import { mapOrder } from "./orders";
 import { mapReview } from "./reviews";
-import type { CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
+import type { AccountSecurity, CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
 
 /** The store ships from France: "Abroad" is any other country. */
 const HOME_COUNTRY = "FR";
@@ -66,4 +67,14 @@ export async function findCustomerByEmail(email: string): Promise<CustomerSummar
   const wanted = email.trim().toLowerCase();
   const row = customers.find((c) => c.email === wanted);
   return row ? clone(mapCustomer(row)) : null;
+}
+
+/** Settings › Password and Passkeys. Mock: without a row, the password dates from the account's creation. */
+export async function getAccountSecurity(customerId: string): Promise<AccountSecurity | null> {
+  const row = customers.find((c) => c.id === customerId);
+  if (!row) return null;
+  return clone({
+    passwordChangedAt: passwordChangedAt[customerId] ?? row.createdAt,
+    passkeys: passkeys.filter((p) => p.userId === customerId).map(({ id, device, addedAt }) => ({ id, device, addedAt })),
+  });
 }

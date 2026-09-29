@@ -2,7 +2,7 @@ import Link from "next/link";
 import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "ghost" | "text" | "danger";
+export type ButtonVariant = "primary" | "ghost" | "text" | "danger" | "danger-solid";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -29,11 +29,13 @@ const variants: Record<ButtonVariant, string> = {
   text: "bg-transparent text-fg px-0 hover:text-fg-muted underline-offset-3",
   // Destructive: Signal outline + text (refund, delete). Filled Signal only inside a confirm modal.
   danger: "bg-transparent text-danger border border-danger justify-center px-14 hover:bg-surface-muted",
+  // Filled Signal, laid out like primary: the confirmation of a destructive action ("Yes, delete   →").
+  "danger-solid": "bg-danger text-fg-inverse justify-between px-16 hover:bg-action-hover",
 };
 
 const sizes = {
-  md: { primary: "min-h-48", ghost: "min-h-44", text: "min-h-32", danger: "min-h-44" },
-  sm: { primary: "min-h-32", ghost: "min-h-32", text: "min-h-32", danger: "min-h-32" },
+  md: { primary: "min-h-48", ghost: "min-h-44", text: "min-h-32", danger: "min-h-44", "danger-solid": "min-h-48" },
+  sm: { primary: "min-h-32", ghost: "min-h-32", text: "min-h-32", danger: "min-h-32", "danger-solid": "min-h-32" },
 } as const;
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -50,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       <span>{children}</span>
-      {variant === "primary" && (trailing !== undefined || loading) && (
+      {(variant === "primary" || variant === "danger-solid") && (trailing !== undefined || loading) && (
         <span aria-hidden="true" className="tabular-nums">
           {loading ? <LoadingDots /> : trailing}
         </span>
@@ -75,7 +77,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(functio
   return (
     <Link ref={ref} href={href} className={cn(base, variants[variant], sizes[size][variant], fullWidth && "w-full", className)} {...rest}>
       <span>{children}</span>
-      {variant === "primary" && trailing !== undefined && (
+      {(variant === "primary" || variant === "danger-solid") && trailing !== undefined && (
         <span aria-hidden="true" className="tabular-nums">{trailing}</span>
       )}
     </Link>

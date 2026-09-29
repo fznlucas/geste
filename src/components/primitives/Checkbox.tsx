@@ -4,19 +4,23 @@ import { cn } from "@/lib/cn";
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: ReactNode;
   invalid?: boolean;
-  /** inline = checkout rows (boards Checkout, MCheckout): box top-aligned with the first line, text 23 px from the left edge as drawn, no 44 px row. */
-  layout?: "row" | "inline";
+  /** inline = checkout rows (boards Checkout, MCheckout): box top-aligned with the first line, text 23 px from the left edge as drawn, no 44 px row.
+   *  setting = Settings / MSettings preferences: 32 px rows (36 on phones), text 30 px from the left edge like the boards' native boxes. */
+  layout?: "row" | "inline" | "setting";
+  /** `setting` only: space between box and text (cn does not merge classes). Board gap + 2 px: our box is 1 px wider and has no native 3 px margin. Default 12. */
+  gap?: string;
 }
 
 /**
  * 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area:
  * 44 px tall by default; `inline` rows are the label's height (20 px a line) and at least 24 px wide targets.
  */
-export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox({ label, invalid, layout = "row", className, ...rest }, ref) {
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox({ label, invalid, layout = "row", gap = "gap-12", className, ...rest }, ref) {
   const inline = layout === "inline";
+  const row = { row: "inline-flex min-h-44 cursor-pointer items-center gap-8", inline: "flex cursor-pointer items-start gap-9", setting: cn("flex min-h-36 cursor-pointer items-center lg:min-h-32", gap) }[layout];
   return (
-    <label className={cn(inline ? "flex cursor-pointer items-start gap-9" : "inline-flex min-h-44 cursor-pointer items-center gap-8", rest.disabled && "cursor-not-allowed opacity-40", className)}>
-      <span className={cn("relative inline-flex size-14 shrink-0", inline && "mt-3")}>
+    <label className={cn(row, rest.disabled && "cursor-not-allowed opacity-40", className)}>
+      <span className={cn("relative inline-flex size-14 shrink-0", inline && "mt-3", layout === "setting" && "ml-4")}>
         <input
           ref={ref}
           type="checkbox"

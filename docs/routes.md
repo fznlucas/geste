@@ -21,7 +21,7 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/journal`, `/journal/[slug]` | Journal, Article | MJournal, MArticle | ISR from `articles` | |
 | `/help` | Help | MHelp | static | Tabs: orders, guides, prints, shipping, returns, contact |
 | `/legal/[doc]` | Legal | MLegal | ISR from `legal_documents` | notice, terms, privacy, cookies, accessibility |
-| `/track/[orderId]?t=` | Tracking | MTracking | dynamic | Signed token from the shipping email |
+| `/track/[orderId]?t=` | Tracking | MTracking | dynamic | Signed token from the shipping email. Mock: `/track?order=` (docs/decisions.md "Tracking route (mock)") |
 | 404 | NotFound | MNotFound | — | `not-found.tsx` |
 | Phone menu | — | MMenu | client | Drawer |
 
