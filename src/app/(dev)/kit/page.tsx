@@ -4,16 +4,16 @@
  * /kit — living style guide. Every component in every state, side by side with the canvas board
  * "Dev — design system". Not linked from the store; remove from production with `notFound()` if needed.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
   ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   AccountNav, AccountOrderRow, LibraryRow, OrDivider, PasswordField, PasswordRules, passwordRules, TrackingSteps,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
-  StatusChip, StepCard, StepProgress, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
+  StatusChip, StepCard, StepProgress, Plate, PrintSheet, GuideBooklet, type PrintScope, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
-import { priceCart, type ShoppingListLine, type StoredCartLine } from "@/lib/api";
+import { getGuide, priceCart, type Guide, type ShoppingListLine, type StoredCartLine } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { asset } from "@/lib/asset";
 import type { GuideConfig } from "@/lib/pricing";
@@ -60,6 +60,7 @@ const TRACK = [
 ];
 
 const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
+const STEP_LAYERS = [0, 1, 2].map((l) => STEP_IDS.slice(l * 5, l * 5 + 5));
 
 function Board({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
@@ -102,6 +103,13 @@ export default function KitPage() {
   const [cfg, setCfg] = useState<GuideConfig>({ format: "60x80", level: "match", palette: "original" });
   const [added, setAdded] = useState(false);
   const [step, setStep] = useState(7);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printScope, setPrintScope] = useState<PrintScope>("full");
+  const [printsLeft, setPrintsLeft] = useState(2);
+  const [kitGuide, setKitGuide] = useState<Guide | null>(null);
+  useEffect(() => {
+    void getGuide("00000000-0000-0000-0000-0000000000a3").then(setKitGuide);
+  }, []);
   const [modal, setModal] = useState(false);
   const [incomplete, setIncomplete] = useState(false);
   const [ship, setShip] = useState("home");
@@ -228,14 +236,14 @@ export default function KitPage() {
           <div className="grid grid-cols-[1fr_358px] gap-40">
             <div className="flex flex-col">
               <State label="Library row · in progress, not started, finished · preparing, no print left"><div>
-                <LibraryRow imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate · Original palette" progress={0.33} status="Layer 2 of 3" action="Continue" onOpen={() => {}} listHref="#" printsLeft={2} onPrint={() => {}} />
-                <LibraryRow imageUrl={asset("mock/work-01.jpg")} number="N°01" detail="40×50 · Beginner · Warm palette" progress={0} status="Not started" action="Start" onOpen={() => {}} listHref="#" printsLeft={3} onPrint={() => {}} preparing />
-                <LibraryRow imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner · Original palette" progress={1} status="Finished · signed 12 Sept" action="Open" onOpen={() => {}} listHref="#" printsLeft={0} onPrint={() => {}} />
+                <LibraryRow imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate · Original palette" progress={0.33} status="Layer 2 of 3" action="Continue" openHref="#" listHref="#" printsLeft={2} printHref="#" />
+                <LibraryRow imageUrl={asset("mock/work-01.jpg")} number="N°01" detail="40×50 · Beginner · Warm palette" progress={0} status="Not started" action="Start" openHref="#" listHref="#" printsLeft={3} printHref="#" />
+                <LibraryRow imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner · Original palette" progress={1} status="Finished · signed 12 Sept" action="Open" openHref="#" listHref="#" printsLeft={0} printHref="#" />
               </div></State>
             </div>
             <State label="Library row · phone"><div>
-              <LibraryRow variant="phone" imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate" progress={0.33} status="Layer 2 of 3 · offline ready" action="Continue" onOpen={() => {}} listHref="#" printsLeft={2} onPrint={() => {}} />
-              <LibraryRow variant="phone" imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner" progress={1} status="Finished · signed" action="Open" onOpen={() => {}} listHref="#" printsLeft={0} onPrint={() => {}} />
+              <LibraryRow variant="phone" imageUrl={asset("mock/work-03.jpg")} number="N°03" detail="60×80 · Intermediate" progress={0.33} status="Layer 2 of 3 · offline ready" action="Continue" openHref="#" listHref="#" printsLeft={2} printHref="#" />
+              <LibraryRow variant="phone" imageUrl={asset("mock/work-07.jpg")} number="N°07" detail="30×40 · Beginner" progress={1} status="Finished · signed" action="Open" openHref="#" listHref="#" printsLeft={0} printHref="#" />
             </div></State>
             <State label="Account order rows · open, closed (desktop)"><div>
               <AccountOrderRow number="#GS-2041" date="Oct 1, 2026" status="Print shipped · arriving Oct 3–5" total="$70" lines={[{ label: "N°03 — Guide, 60×80", price: "$19" }, { label: "N°07 — Print A3, 12/50", price: "$45" }, { label: "Colissimo, home", price: "$6" }]} open={orderOpen} onToggle={() => setOrderOpen((o) => !o)} actions={<><ButtonLink href="#" variant="ghost">Track the print</ButtonLink><ButtonLink href="#" variant="ghost">Open in library</ButtonLink></>} />
@@ -273,15 +281,35 @@ export default function KitPage() {
         </Board>
 
         <Board n="06" title="Guide reader">
-          <StepProgress steps={STEP_IDS} current={step} onGo={setStep} />
+          <State label="Step progress · desktop, click a segment (GuideReader)"><StepProgress layers={STEP_LAYERS} current={STEP_IDS[step]!} onGo={(id) => setStep(STEP_IDS.indexOf(id))} /></State>
+          <div className="w-358"><State label="Step progress · phone, current layer (AppStep)"><StepProgress variant="phone" layers={STEP_LAYERS} current={STEP_IDS[step]!} onGo={(id) => setStep(STEP_IDS.indexOf(id))} /></State></div>
           <div className="grid grid-cols-2 gap-40">
             <div className="flex justify-center bg-surface-muted p-24"><CanvasDiagram strokes={N03_STROKES} upTo={Math.floor(step / 5) + 1} current={Math.floor(step / 5) + 1} width={360} /></div>
-            <div className="flex flex-col gap-24">
-              <StepCard index={step} total={15} step={{ id: STEP_IDS[step]!, layer: Math.floor(step / 5) + 1, layerName: layer.t, text: layer.steps[step % 5]!, brush: layer.brush, plate: layer.plate.map(([hex, name]) => ({ hex, name })), tip: layer.tip }} />
-              <div className="flex gap-10"><Button variant="ghost" className="flex-1" onClick={() => setStep(Math.max(0, step - 1))}>Back</Button><Button className="flex-[2]" trailing="→" onClick={() => setStep(Math.min(14, step + 1))}>Next</Button></div>
+            <div className="flex flex-col justify-center gap-24 px-48">
+              <StepCard id={STEP_IDS[step]!} lastLetter="e" brush={layer.brush} text={layer.steps[step % 5]!} plate={layer.plate.map(([hex, name]) => ({ hex, name }))} tip={layer.tip} />
+              <div className="flex gap-10"><Button variant="ghost" className="min-h-56 min-w-120" disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))}>Back</Button><Button className="min-h-56 flex-1" trailing="→" onClick={() => setStep(Math.min(14, step + 1))}>{step % 5 === 4 && step < 14 ? "Start drying timer" : step === 14 ? "I signed it. Finish" : "Next step"}</Button></div>
             </div>
           </div>
-          <DryingTimer seconds={2700} layerName="layer 02" onSkip={() => {}} />
+          <div className="grid grid-cols-3 gap-40">
+            <State label="Step card · phone (AppStep)"><StepCard variant="phone" id="2c" lastLetter="e" brush="50 mm flat" text="Top right: fill a large block with ultramarine, then drag night down in two vertical strokes over it." /></State>
+            <State label="Plate"><Plate colours={layer.plate.map(([hex, name]) => ({ hex, name }))} /></State>
+            <State label="Print sheet (AppPrint) · panel on desktop"><Button variant="ghost" onClick={() => setPrintOpen(true)}>Open the print sheet</Button></State>
+          </div>
+          <div className="grid grid-cols-3 gap-40">
+            <State label="Drying · running (GuideReader)"><DryingTimer left={1452} total={2700} layer="02" running onToggle={() => {}} /></State>
+            <State label="Drying · paused"><DryingTimer left={2700} total={2700} layer="02" running={false} onToggle={() => {}} /></State>
+            <State label="Drying · dry (00:00, toggle disabled)"><DryingTimer left={0} total={2700} layer="02" running={false} onToggle={() => {}} /></State>
+          </div>
+          <div className="w-358"><State label="Drying · phone (AppTimer)"><DryingTimer variant="phone" left={1452} total={2700} layer="2" running /></State></div>
+          {kitGuide && (
+            <State label="Printed guide · cover and layer 02 at 50 % (Guide01, Guide06), watermarked">
+              <div className="flex gap-24" style={{ zoom: 0.5 }}>
+                <GuideBooklet guide={kitGuide} paletteName="Original" license={{ name: "Camille M.", email: "camille.martin@mail.com", orderNumber: "GS-2041" }} only={[1, 6]} />
+              </div>
+            </State>
+          )}
+          <PrintSheet open={printOpen} onClose={() => setPrintOpen(false)} variant="panel" printsLeft={printsLeft} pages={8} name="Camille M." orderNumber="GS-2041" scope={printScope} onScope={setPrintScope} onPrepare={() => setPrintsLeft((n) => Math.max(0, n - 1))} />
+          <div className="flex gap-10"><Button variant="ghost" size="sm" onClick={() => setPrintsLeft(2)}>2 prints left</Button><Button variant="ghost" size="sm" onClick={() => setPrintsLeft(0)}>No prints left</Button></div>
         </Board>
 
         <Board n="07" title="Admin">

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/cn";
+
 export interface DiagramStroke {
   layer: number;
   kind: "rect" | "path";
@@ -18,6 +20,7 @@ export interface CanvasDiagramProps {
   /** Layer being painted: full strength. Earlier layers fade to 30% so the new strokes read. */
   current?: number;
   width?: number;
+  /** Replaces the default sizing ("h-auto max-w-full"), e.g. "h-full max-h-640 w-auto" to fit a column's height. */
   className?: string;
 }
 
@@ -28,7 +31,7 @@ export interface CanvasDiagramProps {
 export function CanvasDiagram({ strokes, upTo, current, width = 420, className }: CanvasDiagramProps) {
   const h = Math.round((width * 800) / 600);
   return (
-    <svg width={width} height={h} viewBox="0 0 600 800" role="img" aria-label={`Diagram of the canvas after layer ${upTo}`} className={className} style={{ display: "block", maxWidth: "100%", height: "auto" }}>
+    <svg width={width} height={h} viewBox="0 0 600 800" role="img" aria-label={`Diagram of the canvas after layer ${upTo}`} className={cn("block", className ?? "h-auto max-w-full")}>
       <rect x={0} y={0} width={600} height={800} fill="#FFFFFF" stroke="var(--color-fg)" strokeWidth={2} />
       {strokes
         .filter((s) => s.layer <= upTo)

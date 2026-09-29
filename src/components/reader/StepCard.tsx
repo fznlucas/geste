@@ -1,28 +1,42 @@
-import type { GuideStep } from "@/lib/types";
+import type { PlateColour } from "@/lib/types";
+import { cn } from "@/lib/cn";
 import { Plate } from "./PlateSwatch";
-import { Icon } from "../brand/Icon";
+
+export interface StepCardProps {
+  /** "2c" */
+  id: string;
+  /** Letter of the layer's last step: "Step c of e". */
+  lastLetter: string;
+  /** Desktop: the layer's brushes ("50 mm · 25 mm · round n°6"); phone: this step's ("Round n°6"). */
+  brush: string;
+  text: string;
+  /** Desktop only. */
+  plate?: PlateColour[];
+  tip?: string;
+  variant?: "desktop" | "phone";
+  className?: string;
+}
 
 /**
- * Right column of the reader (desktop) / body of AppStep (phone).
- * "Layer 02 · Gestures — Step c": Stone. Instruction: 22 px desktop, 14 px phone, max 34 ch.
- * Then brush, plate, and the tip in a Mist panel. The instruction is the only thing that must be read.
+ * The step being painted. Desktop (GuideReader): "Step c of e" + brushes, the instruction at 22 px,
+ * "On the plate", "Tip · …", 28 px apart. Phone (AppStep): the same first line and the instruction
+ * at 14 px, 10 px apart. The instruction is announced when the step changes.
  */
-export function StepCard({ step, total, index }: { step: GuideStep; total: number; index: number }) {
+export function StepCard({ id, lastLetter, brush, text, plate, tip, variant = "desktop", className }: StepCardProps) {
+  const desktop = variant === "desktop";
   return (
-    <article aria-labelledby={`step-${step.id}`} className="flex flex-col gap-24">
-      <span className="text-fg-muted">
-        Layer {String(step.layer).padStart(2, "0")} · {step.layerName} — step {step.id.slice(1)} · {index + 1}/{total}
-      </span>
-      <p id={`step-${step.id}`} className="max-w-[34ch] text-sm lg:text-md">
-        {step.text}
-      </p>
-      <div className="flex flex-col gap-10">
-        <span className="inline-flex items-center gap-6 text-fg-muted">
-          <Icon name="brush" /> {step.brush}
+    <article aria-labelledby={`step-${id}`} className={cn("flex flex-col", desktop ? "gap-28" : "gap-10", className)}>
+      <div className="flex justify-between gap-16">
+        <span className="font-medium">
+          Step {id.slice(-1)} of {lastLetter}
         </span>
-        <Plate colours={step.plate} />
+        <span className="text-right text-fg-muted">{brush}</span>
       </div>
-      {step.tip && <p className="bg-surface-muted p-16">{step.tip}</p>}
+      <p id={`step-${id}`} aria-live="polite" className={cn("m-0 text-pretty", desktop ? "text-reader tracking-reader" : "text-sm")}>
+        {text}
+      </p>
+      {desktop && plate && plate.length > 0 && <Plate colours={plate} />}
+      {desktop && tip && <span className="text-fg-muted">Tip · {tip}</span>}
     </article>
   );
 }

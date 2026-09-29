@@ -4,11 +4,11 @@
  */
 import type {
   Address, DiagramStroke, FormatKey, FulfilmentStatus, ItemKind, LevelKey, OrderStatus, PaletteKey, PrintSize,
-  ReviewStatus, ShippingMethod, Swatch, ThreadStatus, WorkStatus,
+  ReviewStatus, ShippingMethod, Swatch, ThreadStatus, WorkStatus, GuidePrintContent,
 } from "@/lib/api/types";
 
 export type { ArticleRow } from "./articles";
-export type { Address, FulfilmentStatus, ItemKind, OrderStatus, PaletteKey, ReviewStatus, Swatch, ThreadStatus, WorkStatus };
+export type { GuidePrintContent, Address, FulfilmentStatus, ItemKind, OrderStatus, PaletteKey, ReviewStatus, Swatch, ThreadStatus, WorkStatus };
 export type CopyStatus = "available" | "reserved" | "sold" | "void";
 
 export interface WorkRow {
@@ -60,11 +60,17 @@ export interface GuideVersionContent {
     brush: string;
     plate: Swatch[];
     tip: string;
+    /** Mock-only (docs/decisions.md "Reader (M5)"): painting time of the layer, "45 min, then dry 45 min". */
+    minutes: number;
     drySeconds: number;
     diagram: DiagramStroke[];
-    steps: Array<{ position: number; text: string }>;
+    /** `brush`: mock-only, the brush of this step on the phone (AppStep); the layer's brush otherwise. */
+    steps: Array<{ position: number; text: string; brush?: string }>;
   }>;
+  /** Mock-only: what the printed guide adds to the steps (Guide01–08). */
+  print?: GuidePrintContent;
 }
+
 
 export interface GuideVersionRow {
   guideId: string;

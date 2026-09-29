@@ -17,12 +17,14 @@ The interface is colourless so the paintings carry the colour: 7 brand colours, 
 | `--color-fg-muted` | `text-fg-muted` | #6F6A64 | Stone | Secondary text (5.1:1 on Paper). Never on Sand (4.46:1 fails) |
 | `--color-fg-inverse` | `text-fg-inverse` | #FAFAF8 | Paper | Text on Ink |
 | `--color-fg-muted-on-dark` | `text-fg-muted-on-dark` | #A9A39C | — | Stone on Ink |
+| `--color-fg-muted-print` | `text-fg-muted-print` | #5E5953 | — | Stone on the printed guide (Guide01–08), darker for toner |
 | `--color-border` | `border-border` | #E4DFD8 | Line | Dividers, empty progress |
 | `--color-border-field` | `border-border-field` | #D8D3CC | — | Inputs, pills, swatch outlines |
 | `--color-border-dashed` | `border-border-dashed` | #BDB6AD | — | Upload zones, clear-space guides |
 | `--color-action-hover` | `bg-action-hover` | #2E2B28 | — | Primary button hover/active |
 | `--color-danger` | `text-danger` | #B3261E | Signal | Errors, destructive, urgent status (6.3:1 on Paper) |
 | `--color-scrim` | `bg-scrim` | rgba(17,17,17,.24) | — | Behind drawers and modals |
+| `--color-scrim-sheet` | `bg-scrim-sheet` | rgba(17,17,17,.28) | — | Behind the phone print sheet (AppPrint) and the desktop print panel |
 
 No accent colour. Paint colours (guide plates, palettes, diagrams) are **content** stored in the database, never tokens.
 
@@ -36,10 +38,16 @@ JetBrains Mono 400 and 500 only. Sentence case. No italic, no uppercase, no lett
 | sm | `text-sm` | 14 / 22 | 400 | Phone step text, emphasis |
 | body | `text-body` | 14 / 24 | 400 | Journal article body and lede (Article / MArticle) |
 | code | `text-code` + `tracking-code` (0.3em) | 16 / 20 | 400 | The 6-digit login code field (Login / MLogin) |
-| md | `text-md` | 22 / 30 | 500 | Desktop reader step text, phone page titles, mobile menu |
+| md | `text-md` | 22 / 30 | 500 | Phone page titles, mobile menu |
+| reader | `text-reader` + `tracking-reader` (−0.01em) | 22 / 34 | 400 | Desktop reader instruction (GuideReader) |
 | lg | `text-lg` | 28 / 1.2 (33.6) | 500 | Page and section titles, KPI values |
 | xl | `text-xl` | 40 / 1.2 (48) | 500 | Hero lines |
-| 2xl | `text-2xl` | 96 / 96 | 500 | Drying timer digits (tabular) |
+| timer | `text-timer` + `tracking-display` (−0.04em) | 64 / 64 | 400 | Drying timer digits on the phone (AppTimer) |
+| 2xl | `text-2xl` (+ `tracking-display` in the reader) | 96 / 96 | 400 as drawn | Drying timer digits (GuideReader), layer numbers of the printed guide |
+| print | `text-print` | 13 / 1.6 | 400 | Printed guide body (Guide01–08) |
+| print-sm | `text-print-sm` | 12 / 16 | 400 | Printed guide running head, captions, watermark |
+| print-h2 | `text-print-h2` | 20 / 1.3 | 500 | Printed guide "Sign & share" |
+| print-title | `text-print-title` + `tracking-heading` | 40 / 1.1 | 500 | Printed guide cover number |
 | admin-title | `text-admin-title` | 20 / 24 | 500 | Admin page title only |
 
 Emphasis = weight 500 or Ink vs Stone. Links are underlined with offset 3–4 px only where the board underlines them.

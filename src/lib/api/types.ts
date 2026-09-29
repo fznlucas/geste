@@ -136,6 +136,8 @@ export interface GuideStepData {
   id: string; // "2c"
   position: number; // 1…5
   text: string;
+  /** The brush of this step (AppStep); falls back to the layer's. */
+  brush: string;
 }
 
 export interface GuideLayerData {
@@ -144,6 +146,8 @@ export interface GuideLayerData {
   brush: string;
   plate: Swatch[];
   tip: string;
+  /** Painting time, "45 min" in "45 min, then dry 45 min". */
+  minutes: number;
   drySeconds: number;
   diagram: DiagramStroke[];
   steps: GuideStepData[];
@@ -164,6 +168,40 @@ export interface Guide {
   isStandIn: boolean;
   layers: GuideLayerData[];
   stepCount: number;
+  /** "3h30" (estimatedTime of the format and level): the printed cover's "~3h30 · 3 layers". */
+  duration: string;
+  /** What the printed guide adds to the steps; null when the guide has no printed version. */
+  print: GuidePrintContent | null;
+}
+
+/** The printed guide's own copy (Guide01–08 boards). Paint colours are content. */
+export interface GuidePrintContent {
+  /** "Flat brush 50 mm": the tools line of "In the box" (after the canvas and the tubes). */
+  boxTools: string[];
+  kitchen: string[];
+  rules: string[];
+  /** "Your six tubes" (Guide03); also the tubes of "In the box". */
+  tubes: Swatch[];
+  mixes: Array<{ name: string; hex: string; parts: Swatch[] }>;
+  mixNote: string;
+  /** "The plan" (Guide04). */
+  plan: string;
+  brushes: Array<{ name: string; use: string }>;
+  /** Per layer, in order: the longer printed wording (Guide05–07). */
+  layers: Array<{ summary: string; brush: string; tip: string; steps: string[]; colour: string }>;
+  /** "Avoid mud" (Guide08). */
+  mud: { first: string; second: string; mixed: string; clean: string; muddy: string };
+  fixes: Array<{ problem: string; fix: string }>;
+  sign: string[];
+}
+
+/** Who a printed guide is licensed to: the watermark of every page ("Licensed to … · order #GS-2041"). */
+export interface GuideLicense {
+  /** "Camille M." */
+  name: string;
+  email: string;
+  /** "GS-2041" */
+  orderNumber: string;
 }
 
 // ── Prints ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 /** Guide queries (published versions only: what buyers read). */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { FORMATS, LEVELS, estimatedTime, type FormatKey, type LevelKey } from "@/lib/pricing";
 import type { GuideStep } from "@/lib/types";
 import { N03_GUIDE_ID, guideVersions, guides } from "@/data/guides";
 import type { GuideRow, GuideVersionContent } from "@/data/types";
@@ -13,9 +13,11 @@ const STEP_LETTERS = "abcdefghij";
 function publishedContent(row: GuideRow): { content: GuideVersionContent; isStandIn: boolean } {
   const own = guideVersions.find((v) => v.guideId === row.id && v.version === row.currentVersion);
   if (own) return { content: own.content, isStandIn: false };
-  // Mock: N°03's layers, cut to the number of layers of the level.
+  // Mock: N°03's layers (and printed copy), cut to the number of layers of the level.
   const n03 = guideVersions.find((v) => v.guideId === N03_GUIDE_ID)!.content;
-  return { content: { layers: n03.layers.slice(0, LEVELS[row.level].layers) }, isStandIn: true };
+  const layers = n03.layers.slice(0, LEVELS[row.level].layers);
+  const print = n03.print && { ...n03.print, layers: n03.print.layers.slice(0, layers.length) };
+  return { content: { layers, print }, isStandIn: true };
 }
 
 export function mapGuide(row: GuideRow): Guide {
@@ -23,7 +25,7 @@ export function mapGuide(row: GuideRow): Guide {
   const { content, isStandIn } = publishedContent(row);
   const layers = content.layers.map((l) => ({
     ...l,
-    steps: l.steps.map((s) => ({ id: `${l.position}${STEP_LETTERS[s.position - 1]}`, position: s.position, text: s.text })),
+    steps: l.steps.map((s) => ({ id: `${l.position}${STEP_LETTERS[s.position - 1]}`, position: s.position, text: s.text, brush: s.brush ?? l.brush })),
   }));
   return {
     id: row.id,
@@ -39,6 +41,8 @@ export function mapGuide(row: GuideRow): Guide {
     isStandIn,
     layers,
     stepCount: layers.reduce((n, l) => n + l.steps.length, 0),
+    duration: estimatedTime({ format: row.format, level: row.level, palette: "original" }),
+    print: content.print ?? null,
   };
 }
 

@@ -2,12 +2,12 @@
 
 /**
  * /account (boards Account, MAccount): the customer's guides with the reader's progress. Mock:
- * `getLibrary` merges the guides bought at checkout in this browser; "Continue" and "Print" wait for
- * the reader (M5); Upload opens the photo picker and keeps nothing (docs/decisions.md "Account (M4)").
+ * `getLibrary` merges the guides bought at checkout in this browser; "Continue / Start / Open" open
+ * the reader, "Print" its print sheet; Upload opens the photo picker and keeps nothing (docs/decisions.md "Account (M4)").
  */
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Button, LibraryRow, useToast } from "@/components";
+import { Button, ButtonLink, LibraryRow } from "@/components";
 import { getLibrary, libraryProgress, type LibraryItem } from "@/lib/api";
 import { useLibraryProgress } from "@/lib/client";
 import { dayMonth } from "@/lib/dates";
@@ -15,7 +15,7 @@ import { FORMATS, LEVELS } from "@/lib/pricing";
 import { AccountFrame } from "./_parts/AccountFrame";
 
 const ORDER: Record<LibraryItem["state"], number> = { in_progress: 0, not_started: 1, finished: 2 };
-const READER_SOON = "The guide reader opens here in the next version of the demo.";
+const learn = (i: LibraryItem) => `/learn/${i.entitlementId}/`;
 
 export function LibraryPage() {
   return (
@@ -26,9 +26,7 @@ export function LibraryPage() {
 }
 
 function Library({ phone, customerId }: { phone: boolean; customerId: string }) {
-  const toast = useToast();
   const [rows, setRows] = useState<LibraryItem[] | null>(null);
-  const [preparing, setPreparing] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -53,14 +51,6 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
     );
   }
 
-  const open = () => toast.show(READER_SOON);
-  const print = (id: string) => {
-    setPreparing(id);
-    setTimeout(() => {
-      setPreparing(null);
-      toast.show("Printable pages come with the reader, in the next version of the demo.");
-    }, 1200);
-  };
   const finished = items.find((i) => i.state === "finished");
   const next = items.find((i) => i.state !== "finished");
   const listHref = (i: LibraryItem) => `/works/${i.work.slug}/list?format=${i.format}&level=${i.level}&palette=${i.paletteKey}`;
@@ -103,11 +93,10 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
       progress={libraryProgress(i)}
       status={status(i)}
       action={action(i)}
-      onOpen={open}
+      openHref={learn(i)}
       listHref={listHref(i)}
       printsLeft={i.printsLeft}
-      onPrint={() => print(i.entitlementId)}
-      preparing={preparing === i.entitlementId}
+      printHref={`${learn(i)}print/?from=library`}
     />
   ));
 
@@ -115,9 +104,9 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
     return (
       <>
         {next && (
-          <Button fullWidth trailing="→" onClick={open}>
+          <ButtonLink href={learn(next)} fullWidth trailing="→">
             {next.state === "in_progress" ? `Continue ${next.work.number} · layer ${next.currentLayer}` : `Start ${next.work.number}`}
-          </Button>
+          </ButtonLink>
         )}
         {items.length === 0 ? empty : rowsView}
         {finished && (

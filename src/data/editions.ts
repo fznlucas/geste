@@ -59,6 +59,7 @@ export const printCopies: PrintCopyRow[] = [
   // Numbered below the Home board's next numbers (AdminFulfilment shows 12/50 for GS-2041: docs/decisions.md).
   copy("ed-07-a3", 10, "item-2041-2", "to_print", null),
   copy("ed-07-a3", 11, "item-2036-1", "to_print", null),
+  copy("ed-01-a3", 2, "item-2028-1", "shipped", "2026-09-30T10:30:00Z"),
   copy("ed-01-a3", 3, "item-2031-1", "to_print", null),
   copy("ed-01-a2", 9, "item-2038-2", "printed", "2026-10-01T15:10:00Z"),
   copy("ed-08-50x70", 21, "item-2033-1", "shipped", "2026-09-29T10:00:00Z"),

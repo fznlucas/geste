@@ -18,7 +18,7 @@
 - **Boards:** Account, MAccount.
 - **Layout:** "Hi Camille" · tabs Library / Orders / Settings / Log out · "Library · 3 guides" · one row per entitlement: thumbnail, N°, "Available offline", "60×80 · Intermediate · Original palette", progress ("Layer 2 of 3" / "Not started" / "Finished · signed 12 Sept"), primary Continue/Start/Open →, links "Shopping list", "Print · 2 left" · banner "Finished N°07? Show us. Upload a photo and get feedback from the studio." + Upload (creates a pending review with photo).
 - **Empty:** "No guides yet. Browse the shop."
-- **Acceptance:** progress matches the reader; "Print · n left" matches `prints_left`. ✓ M4 mock: both read the same local progress and `printsLeft`; the reader itself comes with M5.
+- **Acceptance:** progress matches the reader; "Print · n left" matches `prints_left`. ✓ M4 mock: both read the same local progress and `printsLeft`. M5: Continue / Start / Open open the reader where the painter stopped, Print opens its print sheet.
 
 ## Orders — `/account/orders`
 

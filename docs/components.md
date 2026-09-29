@@ -60,6 +60,8 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
 | Guide reader | `CanvasDiagram` | `src/components/reader/CanvasDiagram.tsx` | GuideReader, Guide01–08, AdminGuideEditor |
 | Guide reader | `DryingTimer` | `src/components/reader/DryingTimer.tsx` | GuideReader timer, AppTimer |
+| Guide reader | `GuideBooklet` / `GuideSheet` | `src/components/reader/GuideBooklet.tsx` | Guide01–08 |
+| Guide reader | `PrintSheet` | `src/components/reader/PrintSheet.tsx` | AppPrint |
 | Guide reader | `PlateSwatch` | `src/components/reader/PlateSwatch.tsx` | GuideReader, AppStep |
 | Guide reader | `StepCard` | `src/components/reader/StepCard.tsx` | GuideReader, AppStep |
 | Guide reader | `StepProgress` | `src/components/reader/StepProgress.tsx` | GuideReader, AppStep |
@@ -808,6 +810,7 @@ export interface CanvasDiagramProps {
   /** Layer being painted: full strength. Earlier layers fade to 30% so the new strokes read. */
   current?: number;
   width?: number;
+  /** Replaces the default sizing "h-auto max-w-full" (the desktop reader uses "h-full max-h-640 w-auto"). */
   className?: string;
 }
 ```
@@ -817,44 +820,88 @@ export interface CanvasDiagramProps {
 
 `src/components/reader/DryingTimer.tsx` · used on GuideReader timer, AppTimer
 
-**DryingTimer** — Full-width drying view: "Let layer 02 dry" · 96 px digits (tabular) · Pause/Resume ghost · "Skip, it's dry" text. Counts down every second with no animation. Keeps time with Date.now() so a locked phone stays right. At zero: one optional soft sound + a notification if the PWA has permission (asked on first timer, never before).
+**DryingTimer** — Drying view, drawn from the boards: "Layer 02 is drying" (phone "Layer 2"), the digits (96 px desktop, 64 px phone, tabular, −0.04em, no animation), a 2 px bar filling up (280 / 200 px), the touch test in Stone, and on desktop the ghost "Pause" / "Start timer" (disabled at 00:00). Presentational: the page keeps the end date in `progress.drying` (so a reload or a locked phone keeps the right time) and re-renders every second. The phone page places its own buttons ("Pause" / "Start timer", "It is dry, go to layer 3"). No notification permission is asked in the mock.
 
 ```ts
 export interface DryingTimerProps {
-  seconds: number;
-  layerName: string;
-  onDone?: () => void;
-  onSkip: () => void;
+  left: number;      // seconds left
+  total: number;     // full drying time: the bar's 100 %
+  layer: string;     // "02" desktop, "2" phone
+  running: boolean;
+  onToggle?: () => void; // desktop button
+  variant?: "desktop" | "phone";
+}
+```
+
+
+## GuideBooklet
+
+`src/components/reader/GuideBooklet.tsx` · used on Guide01–08 (`/learn/[id]/print`)
+
+**GuideBooklet** — The printed guide from the guide's content and its printed copy (`guide.print`): cover, before you start (the box list follows the format: canvas size, tube size), palette & mixes, the plan, one page per layer (layer diagram with earlier layers faded, plate, the printed wording of the steps, tip in Mist), avoid mud & sign. **GuideSheet** is one A4 page: 794 × 1123 px on screen, 210 × 297 mm printed (`@page` A4, no margin, paint colours kept), running head "geste — N°03 · Guide" / "01 / 08", and the licence watermark in the bottom margin of every page: "Licensed to Camille M. · camille.martin@mail.com" / "order #GS-2041". `guidePageCount(guide)` = 5 + layers; `layerPage(n)` = 4 + n.
+
+```ts
+export interface GuideBookletProps {
+  guide: Guide;
+  license: GuideLicense; // { name: "Camille M.", email, orderNumber: "GS-2041" }
+  paletteName: string;
+  only?: number[];       // pages to render, 1-based ("Current layer only")
 }
 ```
 
 
 ## PlateSwatch
 
-`src/components/reader/PlateSwatch.tsx` · used on GuideReader, AppStep
+`src/components/reader/PlateSwatch.tsx` · used on GuideReader
 
-**PlateSwatch** — 14 px square of paint with a 1 px #D8D3CC inset outline (so white paint shows) + the colour name.
+**PlateSwatch** — 20 px square of paint with a 1 px Line-field inset outline (so white paint shows), 8 px, the colour name. **Plate**: "On the plate" in Stone, then the swatches in rows 10 px apart, 18 px between colours.
+
+
+## PrintSheet
+
+`src/components/reader/PrintSheet.tsx` · used on AppPrint (and centred on desktop)
+
+**PrintSheet** — "Print this guide" / "Close"; prints as three 2 px segments 6 px apart (used ones Ink); "2 of 3 prints left" (at 0: "No prints left. Ask us for more." → /help, everything disabled); "8 pages, A4. Each page carries your name and order number: Camille M. · #GS-2041."; radios "Full guide · 8 pages" / "Current layer only · 1 page" (native, Ink accent); "Prepare PDF   →" (loading "Preparing your PDF…"). Radix dialog: focus goes to the sheet, stays inside, Escape and Close leave. `sheet` is pinned to the bottom of the phone (the page draws the 0.28 scrim under the half-faded diagram, as on the board); `panel` is 440 px, centred, with the scrim.
+
+```ts
+export interface PrintSheetProps {
+  open: boolean; onClose: () => void;
+  printsLeft: number; printsTotal?: number; pages: number;
+  name: string; orderNumber: string;
+  scope: "full" | "layer"; onScope: (s: "full" | "layer") => void;
+  onPrepare: () => void; preparing?: boolean;
+  variant?: "sheet" | "panel"; scrim?: boolean;
+}
+```
 
 
 ## StepCard
 
 `src/components/reader/StepCard.tsx` · used on GuideReader, AppStep
 
-**StepCard** — Right column of the reader (desktop) / body of AppStep (phone). "Layer 02 · Gestures — Step c": Stone. Instruction: 22 px desktop, 14 px phone, max 34 ch. Then brush, plate, and the tip in a Mist panel. The instruction is the only thing that must be read.
+**StepCard** — The step being painted. Desktop (GuideReader): "Step c of e" (500) with the layer's brushes in Stone on the right, the instruction at 22 / 34 (−0.01em, pretty wrap), `Plate`, "Tip · …" in Stone, 28 px apart. Phone (AppStep): the same first line with this step's brush ("Round n°6"), the instruction at 14 / 22, 10 px apart. The instruction is `aria-live="polite"`, so a step change is read out. The reader keys it by step and slides it 8 px in the direction of travel (320 ms, `duration.step`).
+
+```ts
+export interface StepCardProps {
+  id: string; lastLetter: string; brush: string; text: string;
+  plate?: PlateColour[]; tip?: string;   // desktop
+  variant?: "desktop" | "phone"; className?: string;
+}
+```
 
 
 ## StepProgress
 
 `src/components/reader/StepProgress.tsx` · used on GuideReader, AppStep
 
-**StepProgress** — 15 segments in one row, 2 px gaps, grouped by layer (6 px gap between layers). Done: Ink. Current: Ink, taller (6 px vs 4 px). Upcoming: Line. One 44 px-tall slider across the row (15 separate targets would be under 24 px on a phone): click a segment to jump to it, arrows / Home / End from the keyboard.
+**StepProgress** — As drawn: 2 px segments, 4 px apart, Ink up to and including the current step, Line after (hover: Line-field). Desktop shows every layer (12 px between layers, 20 px-tall buttons); the phone shows the current layer's segments only. Each segment is a button ("Layer 02, step c", `aria-current="step"` on the current one) inside a `role="list"`; a pseudo-element stretches the hit area to 44 px without moving the layout (phone buttons are 24 px boxes with negative margins, for axe's target size). The reader's ← → keys and swipes move one step.
 
 ```ts
 export interface StepProgressProps {
-  /** Step ids in order, e.g. ["1a","1b",…,"3e"]. */
-  steps: string[];
-  current: number; // index
-  onGo: (index: number) => void;
+  layers: string[][]; // [["1a",…,"1e"], ["2a",…], …]
+  current: string;    // "2c"
+  onGo: (id: string) => void;
+  variant?: "desktop" | "phone";
 }
 ```
 
@@ -1068,7 +1115,7 @@ export interface ShoppingListTableProps {
 
 `src/components/commerce/LibraryRow.tsx` · used on Account, MAccount
 
-**LibraryRow** — One guide of the Library. Desktop: 144×180 picture, number + "Available offline", detail, 2 px progress line + status, "Continue →" (160 px), "Shopping list", "Print · n left" (disabled at 0 or while preparing, then "Preparing your PDF…"). Phone: 96×120, status under the line, text links Continue / List / Print (24 px targets). Props: `imageUrl`, `number`, `detail`, `progress` (0–1), `status`, `action`, `onOpen`, `listHref`, `printsLeft`, `onPrint`, `preparing`, `variant`.
+**LibraryRow** — One guide of the Library. Desktop: 144×180 picture, number + "Available offline", detail, 2 px progress line + status, "Continue →" (160 px), "Shopping list", "Print · n left". Phone: 96×120, status under the line, text links Continue / List / Print (24 px targets). All three are links: the reader (`openHref`), the shopping list, the print sheet (`printHref`, which says "No prints left" at 0). Props: `imageUrl`, `number`, `detail`, `progress` (0–1), `status`, `action`, `openHref`, `listHref`, `printsLeft`, `printHref`, `variant`.
 
 ## AccountOrderRow
 

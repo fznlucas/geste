@@ -42,7 +42,7 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/learn` | redirects to `/account` on desktop; library on the installed PWA | |
 | `/learn/[entitlementId]?step=2c` | GuideReader (desktop), AppStep (phone) | Full-screen, no site chrome. ← → keys, swipe on phone |
 | `/learn/[entitlementId]/timer?layer=2` | GuideReader timer view, AppTimer | |
-| `/learn/[entitlementId]/print` | AppPrint, Guide01–08 | Generates the watermarked PDF (uses 1 print credit) |
+| `/learn/[entitlementId]/print` | AppPrint, Guide01–08 | Generates the watermarked PDF (uses 1 print credit). Mock: watermarked A4 preview + browser print, no credit spent |
 
 ## Admin — `src/app/(admin)/admin` (staff, AAL2)
 

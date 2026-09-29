@@ -61,6 +61,8 @@ export * from "./reader/StepProgress";
 export * from "./reader/StepCard";
 export * from "./reader/PlateSwatch";
 export * from "./reader/DryingTimer";
+export * from "./reader/PrintSheet";
+export * from "./reader/GuideBooklet";
 
 export * from "./admin/AdminShell";
 export * from "./admin/DataTable";

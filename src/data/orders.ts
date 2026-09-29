@@ -92,6 +92,8 @@ export const orders: OrderRow[] = [
   order(2031, "2026-09-27T10:05:00Z", "nina-keller", [{ kind: "print", edition: "ed-01-a3" }], { shipping: "international", last4: "8431" }),
   order(2030, "2026-09-26T18:40:00Z", "paul-girard", [{ kind: "guide", work: 6 }, { kind: "guide", work: 4 }], { last4: "1117" }),
   order(2029, "2026-09-25T13:35:00Z", "maya-lopez", [{ kind: "print", edition: "ed-02-a3" }, { kind: "guide", work: 12 }], { shipping: "international", last4: "3056" }),
+  // Camille's second print: shipped, in transit on the mock's "now" (Tracking board's steps, GS-2041 stays in preparation).
+  order(2028, "2026-09-25T08:30:00Z", "camille-martin", [{ kind: "print", edition: "ed-01-a3" }]),
   order(2025, "2026-09-24T09:05:00Z", "adam-faure", [{ kind: "guide", work: 8 }], { status: "refunded", last4: "0341" }),
   order(2021, "2026-09-22T19:45:00Z", "tom-laurent", [{ kind: "guide", work: 15 }], { last4: "7310" }),
   order(2019, "2026-09-21T10:30:00Z", "lea-dubois", [{ kind: "guide", work: 12, palette: "earth" }], { last4: "0005" }),
@@ -112,6 +114,7 @@ export const refunds: RefundRow[] = [
 
 export const shipments: ShipmentRow[] = [
   { id: "ship-2033", orderId: "order-2033", carrier: "colissimo", trackingNo: "6A20331234567", parcel: "Tube 80 cm · 0.6 kg", status: "in_transit", shippedAt: "2026-09-29T16:00:00Z", inTransitAt: "2026-09-30T06:12:00Z", outForDeliveryAt: null, deliveredAt: null },
+  { id: "ship-2028", orderId: "order-2028", carrier: "colissimo", trackingNo: "6A20281234501", parcel: "Tube 60 cm · 0.4 kg", status: "in_transit", shippedAt: "2026-09-30T17:45:00Z", inTransitAt: "2026-10-01T06:12:00Z", outForDeliveryAt: null, deliveredAt: null },
   { id: "ship-2029", orderId: "order-2029", carrier: "colissimo", trackingNo: "CA20290045FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-26T16:00:00Z", inTransitAt: "2026-09-27T05:40:00Z", outForDeliveryAt: "2026-09-30T07:55:00Z", deliveredAt: "2026-09-30T11:00:00Z" },
   { id: "ship-2014", orderId: "order-2014", carrier: "colissimo", trackingNo: "CA20140012FR", parcel: "Tube 60 cm · 0.4 kg", status: "delivered", shippedAt: "2026-09-20T16:00:00Z", inTransitAt: "2026-09-21T06:05:00Z", outForDeliveryAt: "2026-09-23T08:20:00Z", deliveredAt: "2026-09-23T10:30:00Z" },
 ];

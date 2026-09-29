@@ -8,7 +8,7 @@
 - **Input:** ← → keys, swipe left/right on phone, segment click.
 - **Data:** `guide_versions` (published) for the entitlement's guide, palette names from `palettes`, progress from `entitlements.progress`.
 - **Events:** `guide_opened` (first), `guide_step_viewed`, `guide_completed`.
-- **Acceptance:** reopening resumes the last step; works offline once opened online; text never below 14 px on phone.
+- **Acceptance:** reopening resumes the last step; works offline once opened online; text never below 14 px on phone. ✓ M5 mock: resumes (Library and reader share `progress`), ← → / swipe / segments, events; the instruction is 14 px on phone (AppStep keeps its 12 px labels). Offline caching waits for the PWA (M8); an "Offline — your guides are saved on this device" line shows when the browser is offline. Boards over this spec: docs/decisions.md "Reader (M5)".
 
 ## Drying timer — `/learn/[id]/timer?layer=2`
 
@@ -17,7 +17,7 @@
 ## Print — `/learn/[id]/print`
 
 - **Boards:** AppPrint (phone, watermarked preview), Guide01–08 (A4 pages: cover, before you start, palette & mixes, the plan, layer 01, layer 02, layer 03, avoid mud & finish).
-- **Rule:** each generation uses one credit (3 per purchase), watermark footer "Licensed to {email} · order {number}". At 0: "No prints left. Ask us for more." (support can reset).
+- **Rule:** each generation uses one credit (3 per purchase), watermark footer "Licensed to {email} · order {number}". At 0: "No prints left. Ask us for more." (support can reset). M5 mock: watermarked A4 preview + browser print, no credit spent; the footer carries name, email and order (decisions "Reader (M5)").
 
 ## PWA
 

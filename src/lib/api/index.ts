@@ -9,7 +9,7 @@ export { getGuide, findGuide, flattenSteps } from "./guides";
 export { getEditions, getEdition, getPrintCopies } from "./editions";
 export { getOrders, getOrder, getOrderTracking, customerOrderStatus, orderLineTitle, copyNumbersLabel, trackingCarrierLine } from "./orders";
 export { getCustomers, getCustomer, findCustomerByEmail, getAccountSecurity } from "./customers";
-export { getLibrary, getEntitlement, libraryProgress } from "./library";
+export { getLibrary, getEntitlement, getEntitlementIds, libraryProgress } from "./library";
 export { getReviews } from "./reviews";
 export { priceCart, sameCartLine, GIFT_CARD_PRESETS, GIFT_CARD_MIN, GIFT_CARD_MAX } from "./cart";
 export { buildOrder, nextOrderNumber, CheckoutError, type PlaceOrderInput } from "./checkout";

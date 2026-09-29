@@ -112,3 +112,20 @@ test("an order paid at checkout shows in the library, the orders and the trackin
   await expect(page.getByRole("listitem").filter({ hasText: "Ordered" })).toHaveAttribute("aria-current", "step");
   if (!isPhone(page)) await expect(page.getByText("1000 Bruxelles, Belgium")).toBeVisible();
 });
+
+test("a shipped print shows its full carrier timeline, GS-2041 stays in preparation", async ({ page }) => {
+  await fresh(page);
+  await page.goto("/login/");
+  await page.getByRole("button", { name: /passkey|Face ID/ }).click();
+  await page.goto("/account/orders/");
+  // Phones show the first part of the status ("Print shipped").
+  await expect(page.getByRole("button", { name: /#GS-2028/ })).toHaveAccessibleName(isPhone(page) ? /Print shipped$/ : /Print shipped · arriving Sept 30–Oct 2/);
+  await expect(page.getByRole("button", { name: /#GS-2041/ })).toHaveAccessibleName(isPhone(page) ? /Print in preparation$/ : /Print in preparation · arriving Oct 6–8/);
+  await page.goto("/track/?order=GS-2028");
+  await expect(page.getByRole("heading", { name: "Friday, Oct 2" })).toBeVisible();
+  for (const label of ["Ordered", "Printed and signed", "Handed to Colissimo"]) await expect(page.getByRole("listitem").filter({ hasText: label })).not.toHaveAttribute("aria-current");
+  await expect(page.getByRole("listitem").filter({ hasText: "In transit" })).toHaveAttribute("aria-current", "step");
+  await expect(page.getByText("Oct 1, 06:12")).toBeVisible();
+  await expect(page.getByText(/6A 202 812 345 01/)).toBeVisible();
+  await expectNoAxeViolations(page);
+});

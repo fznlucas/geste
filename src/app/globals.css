@@ -1,3 +1,9 @@
 @import "tailwindcss";
 @import "../../tokens/tokens.css";
 @import "../../tokens/theme.css";
+
+/* Printed guide (/learn/[id]/print): A4 with no browser margins, paint colours kept. */
+@media print {
+  @page { size: A4; margin: 0; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

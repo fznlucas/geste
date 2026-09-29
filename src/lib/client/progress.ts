@@ -16,9 +16,20 @@ export interface ProgressEntry {
   step: string;
   openedAt: string;
   completedAt: string | null;
-  /** Running drying timer (reader timer view): the layer that dries and when it is dry. */
-  drying: { layer: number; until: string } | null;
+  /**
+   * Drying timer of a layer (reader timer view). Running: `until` is when it is dry. Paused:
+   * `until` is null and `pausedLeft` holds the seconds left. Survives a reload or closing the app.
+   */
+  drying: Drying | null;
   updatedAt: string;
+}
+
+export interface Drying {
+  layer: number;
+  /** Full drying time of the layer (the bar's 100 %). */
+  seconds: number;
+  until: string | null;
+  pausedLeft: number | null;
 }
 
 type ProgressState = Record<string, ProgressEntry>;
@@ -29,7 +40,11 @@ const EMPTY: ProgressState = {};
 function parseEntry(raw: unknown): ProgressEntry | null {
   if (!isRecord(raw) || typeof raw.step !== "string" || !STEP_ID.test(raw.step)) return null;
   if (typeof raw.openedAt !== "string" || typeof raw.updatedAt !== "string") return null;
-  const drying = isRecord(raw.drying) && typeof raw.drying.layer === "number" && typeof raw.drying.until === "string" ? { layer: raw.drying.layer, until: raw.drying.until } : null;
+  const d = raw.drying;
+  const drying =
+    isRecord(d) && typeof d.layer === "number" && typeof d.seconds === "number" && (typeof d.until === "string" || typeof d.pausedLeft === "number")
+      ? { layer: d.layer, seconds: d.seconds, until: typeof d.until === "string" ? d.until : null, pausedLeft: typeof d.pausedLeft === "number" ? d.pausedLeft : null }
+      : null;
   return { step: raw.step, openedAt: raw.openedAt, completedAt: typeof raw.completedAt === "string" ? raw.completedAt : null, drying, updatedAt: raw.updatedAt };
 }
 
@@ -77,9 +92,29 @@ export function completeGuide(entitlementId: string, lastStep: string) {
   update(entitlementId, undefined, (e) => ({ step: lastStep, completedAt: e.completedAt ?? new Date().toISOString(), drying: null }));
 }
 
-/** Drying timer started for a layer: survives a reload or closing the app. */
-export function startDrying(entitlementId: string, layer: number, seconds: number) {
-  update(entitlementId, undefined, () => ({ drying: { layer, until: new Date(Date.now() + seconds * 1000).toISOString() } }));
+/** Drying timer of a layer: "Start drying timer" runs it at once; opening the timer page directly sets it paused. */
+export function startDrying(entitlementId: string, layer: number, seconds: number, opts: { paused?: boolean } = {}) {
+  const drying: Drying = opts.paused
+    ? { layer, seconds, until: null, pausedLeft: seconds }
+    : { layer, seconds, until: new Date(Date.now() + seconds * 1000).toISOString(), pausedLeft: null };
+  update(entitlementId, undefined, () => ({ drying }));
+}
+
+/** Seconds left on a drying timer, at `now`. */
+export function dryingLeft(d: Drying, now = Date.now()): number {
+  if (d.until === null) return d.pausedLeft ?? 0;
+  return Math.max(0, Math.ceil((Date.parse(d.until) - now) / 1000));
+}
+
+/** "Pause" / "Start timer" on the drying view. */
+export function toggleDrying(entitlementId: string) {
+  update(entitlementId, undefined, (e) => {
+    if (!e.drying) return {};
+    const d = e.drying;
+    return d.until === null
+      ? { drying: { ...d, until: new Date(Date.now() + (d.pausedLeft ?? 0) * 1000).toISOString(), pausedLeft: null } }
+      : { drying: { ...d, until: null, pausedLeft: dryingLeft(d) } };
+  });
 }
 
 /** At zero, or "Skip, it's dry". */
