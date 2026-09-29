@@ -38,6 +38,7 @@ export * from "./layout/AccountNav";
 export * from "./layout/InfoPage";
 export * from "./layout/CookieSettings";
 
+export * from "./commerce/FitLine";
 export * from "./commerce/PriceMorph";
 export * from "./commerce/Artwork";
 export * from "./commerce/WorkCard";

@@ -813,11 +813,17 @@ export interface StickyBuyBarProps {
 interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "landscape"; ratio?: number; align?: "top-left" | "bottom"; className?: string; imgClassName?: string; imgStyle?: CSSProperties; sizes: string; priority?: boolean }
 ```
 
+## FitLine
+
+`src/components/commerce/FitLine.tsx` · used by WorkCard, PriceMorph, PrintWorkCard, PrintCard, Home prints
+
+**FitLine** — One caption line that never wraps, as wide as its parent: given wordings longest first (`{ left, right? }`), it measures each in a hidden measurer and shows the longest that fits (on resize and font load). Marked `data-fit-line` (tested by `e2e/captions.spec.ts`).
+
 ## ProportionalGrid
 
 `src/components/commerce/ProportionalGrid.tsx` · used on Shop, Home, /prints, /prints/[slug] (Other editions)
 
-**ProportionalGrid** — Rows where every image has the same height and its own width (its ratio). `perRow` per breakpoint (default phones 2, tablets 3, desktop 5), `maxHeight` (desktop 260 px): a desktop row too wide for the container at that height is lowered to fit; phone and tablet rows fill the width (a short row as if completed with 4:5 works). Gaps 14 / 40 px, left-justified, `rowSpace` under each row. Pure CSS (per-breakpoint widths from each row's ratios, one line break per row and breakpoint), so the static render is already right.
+**ProportionalGrid** — One image height for the whole grid, each work as wide as its ratio. `perRow` per breakpoint (default phones 2, tablets 3, desktop 5), `maxHeight` (desktop 260 px): the height is the one that makes the widest row fill the container, capped, and every row uses it, left-justified. Gaps 14 / 40 px, left-justified, `rowSpace` under each row. Pure CSS (per-breakpoint widths from each row's ratios, one line break per row and breakpoint), so the static render is already right.
 
 ```ts
 interface ProportionalGridProps { items: Array<{ key: string; ratio: number; node: ReactNode }>; perRow?: { base: number; md: number; lg: number }; maxHeight?: { base?: number; md?: number; lg?: number }; rowSpace?: string; className?: string }
@@ -827,13 +833,13 @@ interface ProportionalGridProps { items: Array<{ key: string; ratio: number; nod
 
 `src/components/commerce/PrintPaper.tsx` · used on /prints, /prints/[slug], Home "Limited prints", PrintScale, PrintCard
 
-**PrintPaper** — A print as its sheet: Sand (the cotton paper tone), no outline, no shadow, 5:7 (7:5 landscape, `SHEET_RATIO`). The work whole inside an 8 % margin (of the short side), 15 % at the bottom where the caption is printed in Ink: "N°06 · Edition of 100" left, "Geste Studio" right, `text-sheet` (2.8 % of the sheet's height, 6–12 px; left out under 150 px of sheet).
+**PrintPaper** — A print as its sheet: Sand (the cotton paper tone), no outline, no shadow, 5:7 (7:5 landscape, `SHEET_RATIO`). The work whole inside an 8 % margin (of the short side), 15 % at the bottom where the caption is printed in Ink: "N°06 · Edition of 100" left, "Geste Studio" right, `text-sheet` (2.8 % of the sheet's height, 9–12 px), aria-hidden, printed only from 9 px (230 px portrait / 450 px landscape sheet) unless `captionAlways` (print page).
 
 ## PrintWorkCard
 
 `src/components/commerce/WorkCard.tsx` · used on /prints
 
-**PrintWorkCard** — One work in the print gallery: its PrintPaper, then "N°06   S · M · L" (sold-out sizes struck, Stone) and "from $55" (or "Sold out", the work at 60 %).
+**PrintWorkCard** — One work in the print gallery: its PrintPaper, then one FitLine "N°06   S · M · L   from $55" (sold-out sizes struck, Stone; "Sold out" and the work at 60 % when every size is).
 
 ## GridFilter
 

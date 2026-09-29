@@ -17,8 +17,8 @@ test("gallery: one print per work, filters in the URL, a work sold out in every 
   // N°13 has sold every size: last, struck sizes, "Sold out". N°12 has only S sold out: it stays in place.
   await expect(cards.last()).toHaveAttribute("aria-label", "N°13 print, S sold out, M sold out, L sold out, Sold out");
   await expect(page.locator("main a[aria-label^='N°12 print']")).toHaveAttribute("aria-label", /S sold out, M, L, from \$95/);
-  // The sheet: Sand, "N°06 · Edition of 100" and "Geste Studio" printed on it.
-  await expect(page.getByText("N°06 · Edition of 100")).toBeVisible();
+  // The caption printed on the sheet shows only at 9 px or more: not at gallery size (it is in the card's caption).
+  await expect(page.getByText("N°06 · Edition of 100")).toBeHidden();
 
   await page.getByRole("radio", { name: "Landscape" }).click();
   await expect(page).toHaveURL(/orientation=landscape/);
@@ -33,20 +33,21 @@ test("gallery: one print per work, filters in the URL, a work sold out in every 
   await expectNoAxeViolations(page);
 });
 
-test("shop: the works of a row share one image height, widths follow the work", async ({ page }) => {
+test("shop and /prints: one image height for the whole grid, widths follow the work", async ({ page }) => {
+  const heights = async (selector: string) =>
+    page.locator(selector).evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ h: Math.round(r.height * 2) / 2, w: Math.round(r.width) })));
   await page.goto("/shop/");
-  const imgs = page.locator("main a[href^='/works/'] img");
-  await expect(imgs).toHaveCount(15);
-  const boxes = await imgs.evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ y: Math.round(r.y), h: Math.round(r.height), w: Math.round(r.width) })));
-  const perRow = (page.viewportSize()?.width ?? 1440) >= 1200 ? 5 : 2;
-  for (let i = 0; i + 1 < boxes.length; i++) {
-    if (Math.floor(i / perRow) !== Math.floor((i + 1) / perRow)) continue;
-    expect(Math.abs(boxes[i]!.h - boxes[i + 1]!.h)).toBeLessThanOrEqual(1);
-    expect(boxes[i]!.y).toBe(boxes[i + 1]!.y);
-  }
-  // N°01 is landscape: wider than tall. Desktop rows stay within 260 px.
-  expect(boxes[0]!.w).toBeGreaterThan(boxes[0]!.h);
-  if (perRow === 5) for (const b of boxes) expect(b.h).toBeLessThanOrEqual(260);
+  const works = await heights("main a[href^='/works/'] img");
+  expect(works).toHaveLength(15);
+  // Every work exactly the same height (±0.5 px of rounding), N°01 (landscape) wider than tall.
+  for (const b of works) expect(Math.abs(b.h - works[0]!.h)).toBeLessThanOrEqual(0.5);
+  expect(works[0]!.w).toBeGreaterThan(works[0]!.h);
+  if ((page.viewportSize()?.width ?? 1440) >= 1200) expect(works[0]!.h).toBeLessThanOrEqual(260);
+
+  await page.goto("/prints/");
+  const sheets = await heights("main a[href^='/prints/n'] > span:first-child");
+  expect(sheets).toHaveLength(15);
+  for (const b of sheets) expect(Math.abs(b.h - sheets[0]!.h)).toBeLessThanOrEqual(0.5);
 });
 
 test("print page: sizes turned for a landscape work, to scale, then the bundle in the cart", async ({ page }) => {
@@ -55,6 +56,8 @@ test("print page: sizes turned for a landscape work, to scale, then the bundle i
   await page.goto("/prints/n07/");
   await expect(page.getByText("42 × 30 cm · A3").filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText("89 of 100 left")).toBeVisible();
+  // The print page's sheet always carries its printed caption.
+  await expect(page.getByText("N°07 · 12/100").first()).toBeVisible();
 
   await page.getByRole("radio", { name: "M", exact: true }).click();
   await expect(page).toHaveURL(/size=m/);

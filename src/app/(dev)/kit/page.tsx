@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
-  AppIcon, ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, GridFilter, PrintCard, PrintWorkCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Artwork, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  AppIcon, ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, GridFilter, FitLine, PrintCard, PrintWorkCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Artwork, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   AccountNav, AccountOrderRow, LibraryRow, OrDivider, PasswordField, PasswordRules, passwordRules, TrackingSteps,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Plate, PrintSheet, GuideBooklet, type PrintScope, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
@@ -225,6 +225,15 @@ export default function KitPage() {
           <State label="Proportional grid · shop cards, one height per row (260 px, less when the row passes the width), meta shown on the first">
             <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w, i) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} alwaysShowMeta={i === 0} /> }))} />
           </State>
+          <State label="Fit line · the same caption at 240, 170 and 110 px: from $31 → $31, then no time, then Int.">
+            <div className="flex items-start gap-40">
+              {[240, 170, 110].map((w) => (
+                <div key={w} style={{ width: w }}>
+                  <FitLine variants={[["Intermediate · 3h30", "from $31"], ["Intermediate · 3h30", "$31"], ["Intermediate", "$31"], ["Int.", "$31"]].map(([m, p]) => ({ left: <span className="text-fg-muted">{m}</span>, right: p }))} />
+                </div>
+              ))}
+            </div>
+          </State>
           <State label="Grid filter · Orientation (88 px label column on phones)"><GridFilter label="Orientation" labelWidth="w-88" value="landscape" options={[{ value: "all", label: "All" }, { value: "portrait", label: "Portrait" }, { value: "landscape", label: "Landscape" }]} onChange={() => {}} /></State>
           <State label="Proportional grid · home cards">
             <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} variant="home" /> }))} />
@@ -233,11 +242,11 @@ export default function KitPage() {
             <ProportionalGrid
               rowSpace="mb-0"
               items={[
-                { n: "N°07", img: "07", o: "landscape" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $55" },
-                { n: "N°12", img: "12", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $95" },
-                { n: "N°06", img: "06", o: "portrait" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $55" },
-                { n: "N°13", img: "13", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: true }, { size: "L", soldOut: true }], price: "Sold out" },
-              ].map((p) => ({ key: p.n, ratio: SHEET_RATIO[p.o], node: <PrintWorkCard href="#" imageUrl={asset(`mock/work-${p.img}.jpg`)} orientation={p.o} number={p.n} editionSize={p.sizes[0]!.soldOut ? 50 : 100} sizes={p.sizes} price={p.price} /> }))}
+                { n: "N°07", img: "07", o: "landscape" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
+                { n: "N°12", img: "12", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 9500 },
+                { n: "N°06", img: "06", o: "portrait" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
+                { n: "N°13", img: "13", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: true }, { size: "L", soldOut: true }], price: null },
+              ].map((p) => ({ key: p.n, ratio: SHEET_RATIO[p.o], node: <PrintWorkCard href="#" imageUrl={asset(`mock/work-${p.img}.jpg`)} orientation={p.o} number={p.n} editionSize={p.sizes[0]!.soldOut ? 50 : 100} sizes={p.sizes} fromCents={p.price} /> }))}
             />
           </State>
           <div className="grid grid-cols-2 gap-40">

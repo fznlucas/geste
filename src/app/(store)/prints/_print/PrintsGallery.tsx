@@ -3,7 +3,6 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { Button, GridFilter, PrintWorkCard, ProportionalGrid, SHEET_RATIO } from "@/components";
-import { fromPrice } from "@/lib/format";
 import type { Orientation, PrintSize } from "@/lib/pricing";
 import type { GalleryWork } from "./data";
 
@@ -86,7 +85,7 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[];
                 number={w.number}
                 editionSize={w.editionSize}
                 sizes={w.sizes}
-                price={w.fromCents === null ? "Sold out" : fromPrice(w.fromCents)}
+                fromCents={w.fromCents}
                 priority={n < 5}
               />
             ),

@@ -71,6 +71,7 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
                   alt={`${work.number}, limited print`}
                   orientation={picked.orientation}
                   caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`}
+                  captionAlways
                   className={picked.orientation === "landscape" ? "w-full" : "w-256 lg:w-486"}
                   sizes="(min-width: 1200px) 640px, 100vw"
                   priority

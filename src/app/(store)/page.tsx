@@ -5,7 +5,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ButtonLink, CanvasDiagram, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
+import { ButtonLink, CanvasDiagram, FitLine, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
 import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
 import { fromPrice, formatPrice } from "@/lib/format";
 import { FORMATS, PRINT_WITH_GUIDE } from "@/lib/pricing";
@@ -150,15 +150,16 @@ function SectionHead({ title, href, link, shortLink }: { title: string; href: st
 /** One print of the Home: its sheet, "N°07 print   $55", "Edition 12/100" (phone: "N°07 print · 12/100"). */
 function FeaturedPrint({ e }: { e: PrintEdition }) {
   return (
-    <Link href={`/prints/${e.workSlug}`} className="group flex flex-col gap-8 lg:gap-10">
+    <Link href={`/prints/${e.workSlug}`} aria-label={`${e.workNumber} print, ${editionLabel(e, false)}, ${formatPrice(e.priceCents)}`} className="group flex flex-col gap-8 lg:gap-10">
       <PrintPaper imageUrl={e.imageUrl} alt="" orientation={e.orientation} caption={`${e.workNumber} · Edition of ${e.editionSize}`} className="w-full" sizes="(min-width: 1200px) 400px, 100vw" />
-      <span className="flex flex-wrap justify-between gap-x-8">
-        <span className="underline-offset-3 group-hover:underline">
-          {e.workNumber} print<span className="lg:hidden"> · {editionLabel(e, true)}</span>
-        </span>
-        <span className="ml-auto">{formatPrice(e.priceCents)}</span>
+      {/* One line each, as wide as the sheet (FitLine shortens "N°07 print" to "N°07" when needed). */}
+      <span aria-hidden="true" className="lg:hidden">
+        <FitLine variants={[`${e.workNumber} print · ${editionLabel(e, true)}`, `${e.workNumber} · ${editionLabel(e, true)}`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: formatPrice(e.priceCents) }))} />
       </span>
-      <span className="hidden text-fg-muted lg:inline">{editionLabel(e, false)}</span>
+      <span aria-hidden="true" className="hidden flex-col gap-10 lg:flex">
+        <FitLine variants={[`${e.workNumber} print`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: formatPrice(e.priceCents) }))} />
+        <FitLine variants={[editionLabel(e, false), editionLabel(e, true)].map((t) => ({ left: <span className="text-fg-muted">{t}</span> }))} />
+      </span>
     </Link>
   );
 }
