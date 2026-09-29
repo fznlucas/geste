@@ -44,6 +44,8 @@ test("about: the studio, its three promises, the way to the method", async ({ pa
   await page.goto("/about/");
   await expect(page.getByRole("heading", { level: 1, name: "A studio that designs paintings for other hands." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Honest previews" })).toBeVisible();
+  // The AI's role, stated plainly (docs/screens/store.md §About).
+  await expect(page.getByText(/composed with the help of AI tools, then broken into layers and painted by hand/)).toBeVisible();
   await expectNoAxeViolations(page);
   await page.getByRole("link", { name: "Read the method" }).click();
   await expect(page).toHaveURL(/\/method\/?$/);

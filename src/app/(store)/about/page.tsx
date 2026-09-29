@@ -1,6 +1,6 @@
 /**
  * About — boards About (1440) and MAbout (390), docs/screens/store.md §About. Built at deploy time.
- * The studio photo and the founder note are the boards' placeholders until Lucas supplies them (docs/decisions.md).
+ * The AI sentence under the lead is Lucas's (not drawn). The studio photo and the founder note are the boards' placeholders until Lucas supplies them (docs/decisions.md).
  */
 import type { Metadata } from "next";
 import { ButtonLink } from "@/components";
@@ -25,9 +25,11 @@ export default function AboutPage() {
           <span className="text-fg-muted">About</span>
           <h1 className="text-lg lg:text-xl">A studio that designs paintings for other hands.</h1>
         </div>
-        <p className="text-fg-muted lg:col-span-4 lg:col-start-9 lg:self-end">
-          Geste is a small studio in Lyon. We design abstract works stroke by stroke, then break them into layers anyone can follow.
-        </p>
+        <div className="flex flex-col gap-10 text-fg-muted lg:col-span-4 lg:col-start-9 lg:self-end">
+          <p>Geste is a small studio in Lyon. We design abstract works stroke by stroke, then break them into layers anyone can follow.</p>
+          {/* The AI's role (docs/screens/store.md §About), Lucas's wording; not on the boards (docs/decisions.md "About page"). */}
+          <p>Each work starts as a digital study, composed with the help of AI tools, then broken into layers and painted by hand in the studio until the guide works on a real canvas.</p>
+        </div>
       </div>
 
       <div className="flex h-302 items-center justify-center border border-dashed border-border-dashed text-center text-fg-muted lg:h-562">

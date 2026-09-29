@@ -59,7 +59,7 @@
 
 - **Boards:** Method (2480 tall), About, Journal, Article, Help, Legal (+ phone twins). Content from `articles` and `legal_documents` where applicable; Method and About are static MDX.
 - **About** must state the AI's role honestly (works are designed with AI tools, then tested and painted by hand in the studio).
-- ✓ M7 mock (Method, About): `/method` (Method, MMethod: steps with N°03's diagrams, the size table from pricing, questions, phone accordion; `#materials` on the questions) and `/about` (About, MAbout) built at deploy time, 0 text offsets against the boards at 1440 and 390, axe clean, `e2e/pages.spec.ts`. Open: the About boards do not mention AI (docs/decisions.md "About page (mock)"); photos and the founder note are placeholders.
+- ✓ M7 mock (Method, About): `/method` (Method, MMethod: steps with N°03's diagrams, the size table from pricing, questions, phone accordion; `#materials` on the questions) and `/about` (About, MAbout) built at deploy time, 0 text offsets against the boards at 1440 and 390, axe clean, `e2e/pages.spec.ts`. The AI's role is stated under the lead, in Lucas's words (docs/decisions.md "About page (mock)"); photos and the founder note are placeholders.
 - **Help** tabs match the board; the contact form creates a `support_threads` row.
 - ✓ Help mock: `/help` (Help, MHelp); the topic follows the hash (`/help#shipping`, `#returns`, `#faq`, `#gift`, `#contact`); the contact form validates and adds the thread to this browser's admin inbox (nothing is sent). ✓ Legal mock: one page per document, `/legal/notice`, `terms`, `privacy`, `cookies`, `accessibility` (Legal, MLegal), text from the mock `legal_documents`; cookie choices kept in the browser. See docs/decisions.md "Help page (mock)", "Legal pages (mock)".
 
