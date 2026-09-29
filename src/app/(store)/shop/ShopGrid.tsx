@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { Button, GridFilter, WorkCard } from "@/components";
+import { Button, GridFilter, ProportionalGrid, WorkCard } from "@/components";
 import type { LevelKey, PaletteKey } from "@/lib/api";
 import type { Work } from "@/lib/types";
 
@@ -34,7 +34,8 @@ const pick = <T extends string>(options: Array<{ value: T }>, raw: string | null
 
 /**
  * Filters "Level" and "Palette" (kept in the URL: ?level=&palette=, shareable, no scroll jump),
- * count "15 works", grid 5 × 208 px (40 px gaps, 64 px rows) on desktop, 2 columns on phones.
+ * count "15 works", ProportionalGrid: 5 per row at one height (260 px, less when a row would pass
+ * 1200 px), each work as wide as its ratio, 40 px gaps, 64 px rows; pairs of equal height on phones.
  * `static`: server render / Suspense fallback, unfiltered and without URL access.
  */
 export function ShopGrid({ items, static: isStatic }: { items: ShopItem[]; static?: boolean }) {
@@ -79,11 +80,7 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
           <Button variant="text" className="underline" onClick={() => onChange({ level: "all", palette: "all" })}>Clear filters</Button>
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-x-14 gap-y-28 md:grid-cols-3 lg:grid-cols-5 lg:justify-items-start lg:gap-x-40 lg:gap-y-64">
-          {shown.map((i, n) => (
-            <WorkCard key={i.card.id} work={i.card} priority={n < 5} />
-          ))}
-        </div>
+        <ProportionalGrid items={shown.map((i, n) => ({ key: i.card.id, ratio: i.card.imageRatio, node: <WorkCard work={i.card} priority={n < 5} /> }))} />
       )}
     </>
   );

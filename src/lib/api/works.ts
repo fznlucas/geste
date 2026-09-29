@@ -3,7 +3,7 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, estimatedTime, formatLabel, guidePriceCents, printCm, type FormatKey, type LevelKey, type Orientation, type PrintSize, type WorkPricing } from "@/lib/pricing";
+import { FORMATS, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, estimatedTime, formatLabel, guidePriceCents, imageRatio, printCm, type FormatKey, type LevelKey, type Orientation, type PrintSize, type WorkPricing } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
 import { guides } from "@/data/guides";
@@ -58,6 +58,7 @@ export function mapWork(row: WorkRow): CatalogWork {
     imageUrl: asset(row.previewPath),
     imageAlt: `${row.number} · Digital preview`,
     orientation: row.orientation,
+    imageRatio: imageRatio(row),
     signature: row.signature,
     resultPhotoUrl: row.resultPhotoPath ? asset(row.resultPhotoPath) : null,
     studioTested: row.studioTested,
@@ -132,6 +133,7 @@ export function toWorkCard(work: CatalogWork): WorkCardData {
     imageUrl: work.imageUrl,
     imageAlt: work.imageAlt,
     orientation: work.orientation,
+    imageRatio: work.imageRatio,
     signature: work.signature,
     fromPriceCents: work.fromPriceCents,
     defaultFormat: work.defaultFormat,

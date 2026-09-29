@@ -24,8 +24,8 @@ function edition(n: number, size: PrintSize, soldCount: number, reservedCount = 
 
 /**
  * Copies sold per edition before the mock orders. N°07, N°01 and N°08 in S come first: the Home
- * shows the first three S editions with copies left (next numbers 12/100, 4/100, 21/100). N°12 S and
- * N°13 L are the sold-out examples.
+ * shows the first three S editions with copies left (next numbers 12/100, 4/100, 21/100). N°12 S is a
+ * sold-out size; N°13 is sold out in all three (last in the /prints gallery).
  */
 const SOLD: Record<number, Partial<Record<PrintSize, number | [sold: number, reserved: number]>>> = {
   7: { S: 11, M: 12, L: 3 },
@@ -37,7 +37,7 @@ const SOLD: Record<number, Partial<Record<PrintSize, number | [sold: number, res
   6: { S: 5, M: 3, L: 4 },
   10: { S: 7, M: 1 },
   12: { S: 100, M: 9 },
-  13: { S: 2, L: 25 },
+  13: { S: 100, M: 50, L: 25 },
   15: { S: 6, M: 2, L: 1 },
 };
 

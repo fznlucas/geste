@@ -12,6 +12,13 @@ const DEFAULT_FORMATS: FormatKey[] = [
   "60x80", "30x40", "80x100", "40x50", "30x40",
 ];
 
+/** Pixel size of public/mock/work-01 … 15.jpg (works.preview_width / preview_height). */
+const PREVIEW_SIZE: Array<[number, number]> = [
+  [2360, 1760], [818, 720], [1064, 1200], [1001, 1200], [960, 1102],
+  [1796, 2400], [2260, 1775], [2048, 2272], [960, 1200], [845, 1050],
+  [900, 1204], [992, 1200], [938, 1128], [917, 1046], [960, 1200],
+];
+
 /** Wider than tall: sold in the turned formats (40×30 … 100×80) and shown landscape everywhere. */
 const LANDSCAPE = new Set([1, 2, 7]);
 /** "Signature" works: SIGNATURE_CENTS more on every format of the guide. */
@@ -73,6 +80,8 @@ export const works: WorkRow[] = DEFAULT_FORMATS.map((defaultFormat, i) => {
     signature,
     description: DESCRIPTIONS[i]!,
     previewPath: `mock/work-${pad(n)}.jpg`,
+    previewWidth: PREVIEW_SIZE[i]![0],
+    previewHeight: PREVIEW_SIZE[i]![1],
     // No real result photos yet: the work page shows the board's dashed placeholder.
     resultPhotoPath: null,
     studioTested: !NOT_TESTED.has(n),

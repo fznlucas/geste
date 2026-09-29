@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
-  AppIcon, ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, GridFilter, PrintCard, PrintEditionCard, PrintMat, PrintScale, Artwork, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  AppIcon, ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, GridFilter, PrintCard, PrintWorkCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Artwork, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   AccountNav, AccountOrderRow, LibraryRow, OrDivider, PasswordField, PasswordRules, passwordRules, TrackingSteps,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Plate, PrintSheet, GuideBooklet, type PrintScope, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
@@ -30,6 +30,7 @@ import { totalCents, type GuideConfig } from "@/lib/pricing";
 const WORKS = [1, 2, 3, 4, 5].map((n) => ({
   id: `w${n}`, number: `N°0${n}`, slug: `n0${n}`, imageUrl: asset(`mock/work-0${n}.jpg`), imageAlt: `N°0${n}`,
   orientation: (n <= 2 ? "landscape" : "portrait") as "landscape" | "portrait", signature: n === 1,
+  imageRatio: [2360 / 1760, 818 / 720, 1064 / 1200, 1001 / 1200, 960 / 1102][n - 1]!,
   fromPriceCents: [2500, 1500, 2500, 2500, 1900][n - 1]!, defaultFormat: "40x50" as const,
   levelLabel: ["Beginner", "Beginner", "Intermediate", "Intermediate", "Beginner"][n - 1]!, duration: ["1h30", "1h", "3h30", "2h30", "1h30"][n - 1]!, soldOut: n === 5,
 }));
@@ -221,12 +222,24 @@ export default function KitPage() {
         </Board>
 
         <Board n="05" title="Commerce">
-          <div className="grid grid-cols-5 gap-40">
-            {WORKS.map((w, i) => <WorkCard key={w.id} work={w} alwaysShowMeta={i === 0} />)}
-          </div>
-          <div className="grid grid-cols-5 gap-40">
-            {WORKS.map((w) => <WorkCard key={w.id} work={w} variant="home" />)}
-          </div>
+          <State label="Proportional grid · shop cards, one height per row (260 px, less when the row passes the width), meta shown on the first">
+            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w, i) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} alwaysShowMeta={i === 0} /> }))} />
+          </State>
+          <State label="Grid filter · Orientation (88 px label column on phones)"><GridFilter label="Orientation" labelWidth="w-88" value="landscape" options={[{ value: "all", label: "All" }, { value: "portrait", label: "Portrait" }, { value: "landscape", label: "Landscape" }]} onChange={() => {}} /></State>
+          <State label="Proportional grid · home cards">
+            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} variant="home" /> }))} />
+          </State>
+          <State label="Proportional grid · /prints cards on their Sand sheet (portrait 5:7, landscape 7:5), sizes struck when sold out, all sold out at 60 %">
+            <ProportionalGrid
+              rowSpace="mb-0"
+              items={[
+                { n: "N°07", img: "07", o: "landscape" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $55" },
+                { n: "N°12", img: "12", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $95" },
+                { n: "N°06", img: "06", o: "portrait" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: "from $55" },
+                { n: "N°13", img: "13", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: true }, { size: "L", soldOut: true }], price: "Sold out" },
+              ].map((p) => ({ key: p.n, ratio: SHEET_RATIO[p.o], node: <PrintWorkCard href="#" imageUrl={asset(`mock/work-${p.img}.jpg`)} orientation={p.o} number={p.n} editionSize={p.sizes[0]!.soldOut ? 50 : 100} sizes={p.sizes} price={p.price} /> }))}
+            />
+          </State>
           <div className="grid grid-cols-2 gap-40">
             <State label="Price morph · hidden / shown"><div className="flex w-208 flex-col gap-16"><PriceMorph visible={false} meta="Beginner · 1h" price="from $15" /><PriceMorph visible meta="Beginner · 1h" price="from $15" /></div></State>
             <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} priceCents={totalCents(cfg)} onAdd={() => setAdded(true)} added={added} /></div>
@@ -297,17 +310,15 @@ export default function KitPage() {
           <div className="grid grid-cols-2 gap-40">
             <State label="Shopping list · standard, first line ticked"><ShoppingListTable lines={LIST} tier="standard" have={new Set([0])} onToggle={() => {}} /></State>
             <State label="Shopping list · budget"><ShoppingListTable lines={LIST} tier="budget" have={new Set()} onToggle={() => {}} /></State>
-            <State label="Print mat (board Print) · portrait"><PrintMat imageUrl={asset("mock/work-03.jpg")} alt="N°03, limited print" caption="N°03 · 1/100" /></State>
-            <State label="Print mat · landscape (N°07)"><PrintMat imageUrl={asset("mock/work-07.jpg")} alt="N°07, limited print" caption="N°07 · 12/100" orientation="landscape" /></State>
-            <State label="Print to scale · S, M, L above a 160 cm sideboard"><div className="flex flex-col gap-16">{(["S", "M", "L"] as const).map((z) => <div key={z} className="bg-surface-sunk px-24 pt-24"><PrintScale imageUrl={asset("mock/work-06.jpg")} alt={`N°06 in ${z}`} orientation="portrait" size={z} /></div>)}</div></State>
-            <State label="Print to scale · landscape L (N°01)"><div className="bg-surface-sunk px-24 pt-24"><PrintScale imageUrl={asset("mock/work-01.jpg")} alt="N°01 in L" orientation="landscape" size="L" /></div></State>
+            <State label="Print paper · portrait (print page sheet)"><PrintPaper imageUrl={asset("mock/work-03.jpg")} alt="N°03, limited print" orientation="portrait" caption="N°03 · 1/100" className="w-320" sizes="320px" /></State>
+            <State label="Print paper · landscape (N°07)"><PrintPaper imageUrl={asset("mock/work-07.jpg")} alt="N°07, limited print" orientation="landscape" caption="N°07 · 12/100" className="w-full" sizes="560px" /></State>
+            <State label="Print to scale · S, M, L above a 160 cm sideboard"><div className="flex flex-col gap-16">{(["S", "M", "L"] as const).map((z) => <PrintScale key={z} imageUrl={asset("mock/work-06.jpg")} alt={`N°06 in ${z}`} orientation="portrait" size={z} caption="N°06 · 6/100" />)}</div></State>
+            <State label="Print to scale · landscape L (N°01)"><PrintScale imageUrl={asset("mock/work-01.jpg")} alt="N°01 in L" orientation="landscape" size="L" caption="N°01 · 3/25" /></State>
             <State label="Gift card preview · empty names show …"><GiftCardPreview imageUrl={asset("mock/work-03.jpg")} amountCents={3000} toName="Léa" fromName="" message="For your first canvas." /></State>
           </div>
           <div className="grid grid-cols-4 gap-40">
-            <State label="Print card · landscape work whole on the mat"><PrintCard href="#" imageUrl={asset("mock/work-01.jpg")} orientation="landscape" title="N°01 print" price="from $55" note="4/100" /></State>
-            <State label="Print edition card (/prints) · meta shown / sold out"><div className="flex gap-40"><PrintEditionCard href="#" imageUrl={asset("mock/work-07.jpg")} orientation="landscape" number="N°07" size="S" next="12/100" price="$55" alwaysShowMeta /><PrintEditionCard href="#" imageUrl={asset("mock/work-12.jpg")} orientation="portrait" number="N°12" size="S" next={null} price="$55" alwaysShowMeta /></div></State>
-            <State label="Artwork · turned thumbnail, portrait and landscape"><div className="flex items-start gap-16"><Artwork src={asset("mock/work-03.jpg")} className="w-64" sizes="64px" /><Artwork src={asset("mock/work-01.jpg")} orientation="landscape" className="w-64" sizes="64px" /><Artwork src={asset("mock/work-02.jpg")} orientation="landscape" className="w-144" sizes="144px" /></div></State>
-            <State label="Grid filter"><GridFilter label="Orientation" value="landscape" options={[{ value: "all", label: "All" }, { value: "portrait", label: "Portrait" }, { value: "landscape", label: "Landscape" }]} onChange={() => {}} /></State>
+            <State label="Print card (Other editions) · landscape sheet"><PrintCard href="#" imageUrl={asset("mock/work-01.jpg")} orientation="landscape" title="N°01 print" price="from $55" note="4/100" sheetCaption="N°01 · Edition of 100" /></State>
+            <State label="Artwork · thumbnail slot, portrait and landscape, no ground"><div className="flex items-start gap-16"><Artwork src={asset("mock/work-03.jpg")} className="w-64" sizes="64px" /><Artwork src={asset("mock/work-01.jpg")} orientation="landscape" className="w-64" sizes="64px" /><Artwork src={asset("mock/work-02.jpg")} orientation="landscape" className="w-144" sizes="144px" /></div></State>
             <State label="Article card · journal"><ArticleCard href="#" imageUrl={asset("mock/work-09.jpg")} title="How to avoid mud: three rules" category="Method" date="Sept 24" excerpt="Why colours turn grey-brown, and the three habits that keep them clean." /></State>
             <State label="Article card · keep reading"><ArticleCard href="#" imageUrl={asset("mock/work-10.jpg")} title="First canvas, first signature" excerpt="Five first-time painters, the same guide, five different paintings." variant="keep" /></State>
           </div>

@@ -46,7 +46,6 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `CartSummary` | `src/components/commerce/CartSummary.tsx` | Checkout |
 | Commerce | `CartPanel` | `src/components/commerce/CartPanel.tsx` | Cart (drawer), MCart (/cart) |
 | Commerce | `ShoppingListTable` | `src/components/commerce/ShoppingListTable.tsx` | ShoppingList, MShoppingList |
-| Commerce | `PrintMat` | `src/components/commerce/PrintMat.tsx` | Print, MPrint |
 | Commerce | `PrintCard` | `src/components/commerce/PrintCard.tsx` | Print ("Other editions") |
 | Commerce | `GiftCardPreview` | `src/components/commerce/GiftCardPreview.tsx` | GiftCard, MGiftCard |
 | Layout | `ArticleCard` | `src/components/layout/ArticleCard.tsx` | Journal, MJournal, Article ("Keep reading") |
@@ -60,7 +59,9 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `ShoppingListItem` | `src/components/commerce/ShoppingListItem.tsx` | ShoppingList |
 | Commerce | `StickyBuyBar` | `src/components/commerce/StickyBuyBar.tsx` | MProduct |
 | Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
-| Commerce | `PrintEditionCard` | `src/components/commerce/WorkCard.tsx` | /prints (Shop card) |
+| Commerce | `PrintWorkCard` | `src/components/commerce/WorkCard.tsx` | /prints |
+| Commerce | `ProportionalGrid` | `src/components/commerce/ProportionalGrid.tsx` | Shop, Home, /prints |
+| Commerce | `PrintPaper` | `src/components/commerce/PrintPaper.tsx` | /prints, Print, Home |
 | Commerce | `Artwork` | `src/components/commerce/Artwork.tsx` | every work image |
 | Commerce | `GridFilter` | `src/components/commerce/GridFilter.tsx` | Shop, /prints |
 | Commerce | `PrintScale` | `src/components/commerce/PrintScale.tsx` | /prints/[slug] "To scale" |
@@ -755,7 +756,7 @@ export interface GuideConfiguratorProps {
 
 `src/components/commerce/ProductGallery.tsx` · used on Product, MProduct
 
-**ProductGallery** — Mist box with a "Digital preview" / "Real result" badge and the views "Preview · Real result" below (desktop adds the caption "Original palette, 60×80" on the right). Desktop: 720 px box; the render's height follows the format (440 / 520 / 580 / 660 px) and its CSS filter the palette, both animating 420 ms. Phone: full-width 358 × 440 crop. Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
+**ProductGallery** — The work straight on the page (no Mist box), whole, with a "Digital preview" / "Real result" badge on its corner and the views "Preview · Real result" below (desktop adds the caption "Original palette, 60×80" on the right). Desktop: 720 px area; the render's long side follows the format (440 / 520 / 580 / 660 px: height portrait, width landscape) and its CSS filter the palette, both animating 420 ms. Phone: full width (landscape) or up to 440 px tall (portrait). Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
 
 ```ts
 export interface ProductGalleryProps {
@@ -806,11 +807,33 @@ export interface StickyBuyBarProps {
 
 `src/components/commerce/Artwork.tsx` · used for every work image (cards, thumbnails, admin)
 
-**Artwork** — A work's image, always whole: `object-contain`, centred on Mist (`ground="none"` on a mat), never cropped or stretched. `frame="card"`: the grids' 4:5 frame whatever the orientation. `frame="turn"` (default): 4:5 portrait, 5:4 landscape at the same width, so list columns stay aligned. Width comes from `className` ("w-64"); `self-start` so a flex row cannot stretch it.
+**Artwork** — A work's image, always whole (`object-contain`) and straight on the page: no ground, never cropped or stretched. With `ratio` (width / height of the image) the frame takes exactly that ratio at the width of `className` (grid cards). Without it, a thumbnail slot: 4:5, turned to 5:4 at the same width for a landscape work, the work fitted top-left (`align="bottom"`: bottom centre, admin catalog grid); `self-start` so a flex row cannot stretch it.
 
 ```ts
-interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "landscape"; frame?: "card" | "turn"; className?: string; imgClassName?: string; imgStyle?: CSSProperties; sizes: string; priority?: boolean; ground?: "mist" | "none" }
+interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "landscape"; ratio?: number; align?: "top-left" | "bottom"; className?: string; imgClassName?: string; imgStyle?: CSSProperties; sizes: string; priority?: boolean }
 ```
+
+## ProportionalGrid
+
+`src/components/commerce/ProportionalGrid.tsx` · used on Shop, Home, /prints, /prints/[slug] (Other editions)
+
+**ProportionalGrid** — Rows where every image has the same height and its own width (its ratio). `perRow` per breakpoint (default phones 2, tablets 3, desktop 5), `maxHeight` (desktop 260 px): a desktop row too wide for the container at that height is lowered to fit; phone and tablet rows fill the width (a short row as if completed with 4:5 works). Gaps 14 / 40 px, left-justified, `rowSpace` under each row. Pure CSS (per-breakpoint widths from each row's ratios, one line break per row and breakpoint), so the static render is already right.
+
+```ts
+interface ProportionalGridProps { items: Array<{ key: string; ratio: number; node: ReactNode }>; perRow?: { base: number; md: number; lg: number }; maxHeight?: { base?: number; md?: number; lg?: number }; rowSpace?: string; className?: string }
+```
+
+## PrintPaper
+
+`src/components/commerce/PrintPaper.tsx` · used on /prints, /prints/[slug], Home "Limited prints", PrintScale, PrintCard
+
+**PrintPaper** — A print as its sheet: Sand (the cotton paper tone), no outline, no shadow, 5:7 (7:5 landscape, `SHEET_RATIO`). The work whole inside an 8 % margin (of the short side), 15 % at the bottom where the caption is printed in Ink: "N°06 · Edition of 100" left, "Geste Studio" right, `text-sheet` (2.8 % of the sheet's height, 6–12 px; left out under 150 px of sheet).
+
+## PrintWorkCard
+
+`src/components/commerce/WorkCard.tsx` · used on /prints
+
+**PrintWorkCard** — One work in the print gallery: its PrintPaper, then "N°06   S · M · L" (sold-out sizes struck, Stone) and "from $55" (or "Sold out", the work at 60 %).
 
 ## GridFilter
 
@@ -818,23 +841,17 @@ interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "
 
 **GridFilter** — One filter row: Stone label, then Segmented text choices. Phones use a fixed label column (`labelWidth` "w-56", "w-88" for "Orientation") so the rows align.
 
-## PrintEditionCard
-
-`src/components/commerce/WorkCard.tsx` · used on /prints
-
-**PrintEditionCard** — The Shop card for one print edition: same frame, grid, hover morph and phone line. Meta "N°07 · S · 12/100", price "$55"; sold out: image at 60 %, "Sold out".
-
 ## PrintScale
 
 `src/components/commerce/PrintScale.tsx` · used on /prints/[slug] ("To scale")
 
-**PrintScale** — The print framed at its real size on a Sand wall above a 160 cm sideboard silhouette (Line-field colour), scene in centimetres (200 × 220 cm). The frame (2 px Ink, white paper, 9 % margin, `shadow-mat-sm`) animates its size 420 ms when S / M / L changes; no transition under reduced motion. Landscape works hang turned.
+**PrintScale** — The print at its real size on the page (the wall) above a 160 cm sideboard silhouette (Line-field colour), scene in centimetres (200 × 220 cm): its PrintPaper in a 2 px Ink frame, animated 420 ms when S / M / L changes; no transition under reduced motion. Landscape works hang turned.
 
 ## WorkCard
 
 `src/components/commerce/WorkCard.tsx` · used on Shop, MShop, Home, MHome
 
-**WorkCard** — Work tile: 4:5 frame (208 × 260 on desktop) with the work whole on Mist (Artwork `frame="card"`, landscape included), "Signature" on the frame for Signature works, no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
+**WorkCard** — Work tile: the work whole at its own ratio, straight on the page (Artwork `ratio`), as wide as ProportionalGrid makes it (one height per row, 260 px on desktop); "Signature" on the image for Signature works; captions as wide as the image (the price wraps under a narrow one); no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
 
 ```ts
 export interface WorkCardProps {
@@ -1160,18 +1177,11 @@ export interface ShoppingListTableProps {
 ```
 
 
-## PrintMat
-
-`src/components/commerce/PrintMat.tsx` · used on Print, MPrint
-
-**PrintMat** — A print on its white mat over Sand. Desktop: 760 px panel, mat padding 36 36 64, 400 × 500 picture (500 × 400 for a landscape work), `shadow-mat`, caption "N°07 · 12/100 · Geste Studio". Phone: 36 px Sand padding, mat 16 16 32, 220 × 275 (250 × 200 landscape), `shadow-mat-sm`, no caption. The work is whole (`object-contain`): another ratio only widens the white margin.
-
-
 ## PrintCard
 
 `src/components/commerce/PrintCard.tsx` · used on Print ("Other editions")
 
-**PrintCard** — Sand mat with 24 px padding and a fixed 212 × 265 frame (as drawn, the mat is wider than the picture) holding the work whole, landscape included; title + price, edition number in Stone.
+**PrintCard** — The work's PrintPaper sheet (width from the grid), title + price, edition number in Stone.
 
 
 ## GiftCardPreview

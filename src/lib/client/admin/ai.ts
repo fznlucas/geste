@@ -99,6 +99,9 @@ export async function approveCandidate(id: string): Promise<string> {
     defaultFormat: job?.params.format ?? "40x50",
     orientation: "portrait",
     signature: false,
+    // Read from the image at upload (works.preview_width / preview_height); 0 = not known yet.
+    previewWidth: 0,
+    previewHeight: 0,
     description: "",
     previewPath: c.imagePath,
     resultPhotoPath: null,

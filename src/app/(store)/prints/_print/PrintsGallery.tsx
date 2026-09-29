@@ -2,10 +2,10 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { Button, GridFilter, PrintEditionCard } from "@/components";
-import { formatPrice } from "@/lib/format";
+import { Button, GridFilter, PrintWorkCard, ProportionalGrid, SHEET_RATIO } from "@/components";
+import { fromPrice } from "@/lib/format";
 import type { Orientation, PrintSize } from "@/lib/pricing";
-import type { GalleryEdition } from "./data";
+import type { GalleryWork } from "./data";
 
 type OrientationFilter = "all" | Orientation;
 type SizeFilter = "all" | "s" | "m" | "l";
@@ -27,14 +27,15 @@ const pick = <T extends string>(options: Array<{ value: T }>, raw: string | null
 
 /**
  * Filters "Orientation" and "Size" (kept in the URL: ?orientation=&size=, shareable, no scroll jump),
- * count "45 prints", the Shop's grid (5 × 208 px, 40 px gaps, 64 px rows; 2 columns on phones).
- * `static`: server render / Suspense fallback, unfiltered and without URL access.
+ * count "15 prints", one card per work on its Sand sheet in the Shop's grid rules (ProportionalGrid:
+ * one sheet height per row, width by orientation). The size filter keeps the works that still have
+ * that size; the card then links to it. `static`: server render / Suspense fallback, unfiltered.
  */
-export function PrintsGallery({ items, static: isStatic }: { items: GalleryEdition[]; static?: boolean }) {
+export function PrintsGallery({ items, static: isStatic }: { items: GalleryWork[]; static?: boolean }) {
   return isStatic ? <Gallery items={items} orientation="all" size="all" onChange={() => {}} /> : <UrlGallery items={items} />;
 }
 
-function UrlGallery({ items }: { items: GalleryEdition[] }) {
+function UrlGallery({ items }: { items: GalleryWork[] }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -52,10 +53,11 @@ function UrlGallery({ items }: { items: GalleryEdition[] }) {
   return <Gallery items={items} orientation={orientation} size={size} onChange={onChange} />;
 }
 
-function Gallery({ items, orientation, size, onChange }: { items: GalleryEdition[]; orientation: OrientationFilter; size: SizeFilter; onChange: (next: { orientation?: OrientationFilter; size?: SizeFilter }) => void }) {
+function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[]; orientation: OrientationFilter; size: SizeFilter; onChange: (next: { orientation?: OrientationFilter; size?: SizeFilter }) => void }) {
+  const wanted = size === "all" ? null : (size.toUpperCase() as PrintSize);
   const shown = useMemo(
-    () => items.filter((i) => (orientation === "all" || i.orientation === orientation) && (size === "all" || i.size === (size.toUpperCase() as PrintSize))),
-    [items, orientation, size],
+    () => items.filter((w) => (orientation === "all" || w.orientation === orientation) && (!wanted || w.sizes.some((z) => z.size === wanted && !z.soldOut))),
+    [items, orientation, wanted],
   );
   return (
     <>
@@ -72,11 +74,24 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryEdition
           <Button variant="text" className="underline" onClick={() => onChange({ orientation: "all", size: "all" })}>Clear filters</Button>
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-x-14 gap-y-28 md:grid-cols-3 lg:grid-cols-5 lg:justify-items-start lg:gap-x-40 lg:gap-y-64">
-          {shown.map((e, n) => (
-            <PrintEditionCard key={e.id} href={e.href} imageUrl={e.imageUrl} orientation={e.orientation} number={e.workNumber} size={e.size} next={e.next} price={formatPrice(e.priceCents)} priority={n < 5} />
-          ))}
-        </div>
+        <ProportionalGrid
+          items={shown.map((w, n) => ({
+            key: w.workId,
+            ratio: SHEET_RATIO[w.orientation],
+            node: (
+              <PrintWorkCard
+                href={`/prints/${w.slug}${wanted ? `?size=${size}` : ""}`}
+                imageUrl={w.imageUrl}
+                orientation={w.orientation}
+                number={w.number}
+                editionSize={w.editionSize}
+                sizes={w.sizes}
+                price={w.fromCents === null ? "Sold out" : fromPrice(w.fromCents)}
+                priority={n < 5}
+              />
+            ),
+          }))}
+        />
       )}
     </>
   );

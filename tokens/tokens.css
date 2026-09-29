@@ -31,6 +31,7 @@
   --text-code: 16px; --leading-code: 20px; --weight-code: 400;
   --text-print: 13px; --leading-print: 1.6; --weight-print: 400;
   --text-print-sm: 12px; --leading-print-sm: 16px; --weight-print-sm: 400;
+  --text-sheet: clamp(6px, var(--sheet-type, 3.6cqw), 12px); --leading-sheet: 1.2; --weight-sheet: 400;
   --text-print-h2: 20px; --leading-print-h2: 1.3; --weight-print-h2: 500;
   --text-print-title: 40px; --leading-print-title: 1.1; --weight-print-title: 500;
   --tracking-heading: -0.02em;

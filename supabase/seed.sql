@@ -1,7 +1,7 @@
 -- Seed: one live work (N°03) with its 60×80 intermediate guide, palettes, shopping list and an S print edition.
 -- Images are mock artworks from public/mock (same as the canvas).
-insert into works (id, number, slug, status, default_format, orientation, signature, description, preview_path, studio_tested, seo_title, seo_description, sort_order) values
-  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '60x80', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
+insert into works (id, number, slug, status, default_format, orientation, signature, description, preview_path, preview_width, preview_height, studio_tested, seo_title, seo_description, sort_order) values
+  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '60x80', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', 1064, 1200, true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
 insert into work_formats (work_id, format, default_level, guide_price_cents, est_minutes) values
   ('00000000-0000-0000-0000-000000000003', '30x40', 'beginner', 1500, 60),
   ('00000000-0000-0000-0000-000000000003', '40x50', 'beginner', 1900, 90),

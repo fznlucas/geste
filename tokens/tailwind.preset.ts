@@ -41,6 +41,7 @@ const preset: Partial<Config> = {
       "2xl": ["96px", { lineHeight: "96px", fontWeight: "500" }],
       "print": ["13px", { lineHeight: "1.6", fontWeight: "400" }],
       "print-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+      sheet: ["clamp(6px, var(--sheet-type, 3.6cqw), 12px)", { lineHeight: "1.2", fontWeight: "400" }],
       "print-h2": ["20px", { lineHeight: "1.3", fontWeight: "500" }],
       "print-title": ["40px", { lineHeight: "1.1", fontWeight: "500" }],
       "admin-title": ["20px", { lineHeight: "24px", fontWeight: "500" }],

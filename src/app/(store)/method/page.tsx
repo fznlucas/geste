@@ -67,7 +67,8 @@ export default async function MethodPage() {
       <section aria-label="How it works" className="flex flex-col gap-20 lg:grid lg:grid-cols-4 lg:gap-x-40">
         {STEPS.map((s, i) => (
           <div key={s.n} className="flex items-center gap-14 lg:flex-col lg:items-stretch">
-            <span className="flex h-150 w-120 shrink-0 items-center justify-center bg-surface-muted lg:h-260 lg:w-auto">
+            {/* Diagrams on Mist; the finished work (desktop, 4th) straight on the page. */}
+            <span className={`flex h-150 w-120 shrink-0 items-center justify-center bg-surface-muted lg:h-260 lg:w-auto ${i === 3 ? "lg:bg-transparent" : ""}`}>
               <span className="lg:hidden"><CanvasDiagram strokes={strokes} upTo={Math.min(i + 1, 3)} width={75} /></span>
               <span className="hidden lg:block">
                 {i < 3 ? (

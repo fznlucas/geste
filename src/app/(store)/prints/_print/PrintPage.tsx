@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Button, EditionCounter, PrintCard, PrintMat, PrintScale, Segmented } from "@/components";
+import { Button, EditionCounter, PrintCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Segmented } from "@/components";
 import type { PrintSize } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { formatPrice, fromPrice } from "@/lib/format";
@@ -64,10 +64,21 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
         <div className="flex flex-col gap-20 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-40">
           <div className="flex flex-col gap-22 lg:col-span-7 lg:gap-14">
             {view === "print" ? (
-              <PrintMat imageUrl={picked.imageUrl} alt={`${work.number}, limited print`} caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`} orientation={picked.orientation} priority />
+              // The print as a Sand sheet straight on the page, centred in the board's 760 px area.
+              <div className="flex items-center justify-center lg:h-760">
+                <PrintPaper
+                  imageUrl={picked.imageUrl}
+                  alt={`${work.number}, limited print`}
+                  orientation={picked.orientation}
+                  caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`}
+                  className={picked.orientation === "landscape" ? "w-full" : "w-256 lg:w-486"}
+                  sizes="(min-width: 1200px) 640px, 100vw"
+                  priority
+                />
+              </div>
             ) : (
-              <div className="flex items-end bg-surface-sunk pt-24 lg:h-760 lg:pt-0">
-                <PrintScale imageUrl={picked.imageUrl} alt={`${work.number} in ${picked.size}, ${picked.dimensions}, above a 160 cm sideboard`} orientation={picked.orientation} size={picked.size} />
+              <div className="flex items-end pt-24 lg:h-760 lg:pt-0">
+                <PrintScale imageUrl={picked.imageUrl} alt={`${work.number} in ${picked.size}, ${picked.dimensions}, above a 160 cm sideboard`} orientation={picked.orientation} size={picked.size} caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`} />
               </div>
             )}
             {/* As on the work page: the views left, a caption right (desktop). */}
@@ -144,11 +155,16 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
             <h2 className="text-xs tracking-normal">Other editions</h2>
             <Link href="/prints" className="underline underline-offset-3 hover:text-fg-muted">All prints</Link>
           </div>
-          <div className="grid grid-cols-4 gap-x-40">
-            {others.map((o) => (
-              <PrintCard key={o.slug} href={`/prints/${o.slug}`} imageUrl={o.imageUrl} orientation={o.orientation} title={`${o.number} print`} price={fromPrice(o.fromCents)} note={o.note} />
-            ))}
-          </div>
+          <ProportionalGrid
+            rowSpace="mb-0"
+            perRow={{ base: 4, md: 4, lg: 4 }}
+            maxHeight={{ lg: 340 }}
+            items={others.map((o) => ({
+              key: o.slug,
+              ratio: SHEET_RATIO[o.orientation],
+              node: <PrintCard href={`/prints/${o.slug}`} imageUrl={o.imageUrl} orientation={o.orientation} title={`${o.number} print`} price={fromPrice(o.fromCents)} note={o.note} sheetCaption={`${o.number} · Edition of ${o.editionSize}`} />,
+            }))}
+          />
         </section>
       )}
     </div>

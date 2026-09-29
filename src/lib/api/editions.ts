@@ -1,6 +1,6 @@
 /** Limited print editions and numbered copies. */
 import { asset } from "@/lib/asset";
-import { printCm } from "@/lib/pricing";
+import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
@@ -19,6 +19,7 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
     workSlug: work.slug,
     imageUrl: asset(work.previewPath),
     orientation: work.orientation,
+    imageRatio: imageRatio(work),
     size: row.size,
     dimensions: printCm(row.size, work.orientation),
     editionSize: row.editionSize,

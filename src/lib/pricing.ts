@@ -79,6 +79,15 @@ export function resolveLevel(c: FormatLevel): LevelKey {
   return c.level === "match" ? FORMATS[c.format].defaultLevel : c.level;
 }
 
+/**
+ * Width / height of a work's image (works.preview_width / preview_height), for grids that give every
+ * work the same height. Unknown size (a draft without its image yet): 4:5, or 5:4 when landscape.
+ */
+export function imageRatio(w: { previewWidth?: number | null; previewHeight?: number | null; orientation?: Orientation }): number {
+  if (w.previewWidth && w.previewHeight) return w.previewWidth / w.previewHeight;
+  return w.orientation === "landscape" ? 5 / 4 : 4 / 5;
+}
+
 /** "60×80", or "80×60" for a landscape work. */
 export function formatLabel(format: FormatKey, orientation: Orientation = "portrait"): string {
   return orientation === "landscape" ? FORMATS[format].landscapeLabel : FORMATS[format].label;

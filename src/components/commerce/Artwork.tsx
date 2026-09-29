@@ -8,29 +8,39 @@ export interface ArtworkProps {
   alt?: string;
   orientation?: Orientation;
   /**
-   * card = the grids' 4:5 frame whatever the orientation (Shop, Home, Prints, admin catalog).
-   * turn = the frame turns with the work: 4:5 portrait, 5:4 landscape at the same width (thumbnails).
+   * Width / height of the image. Given, the frame takes exactly that ratio at the width of
+   * `className` (grids: every work its own width). Omitted, the frame is a thumbnail slot: 4:5, turned
+   * to 5:4 for a landscape work at the same width, the work fitted inside.
    */
-  frame?: "card" | "turn";
-  /** Width (and anything else) of the frame: "w-64", "w-full". The height follows the frame's ratio. */
+  ratio?: number;
+  /** Where the work sits in a thumbnail slot of another ratio: top-left (lists, default) or bottom centre (admin catalog grid). */
+  align?: "top-left" | "bottom";
+  /** Width (and anything else) of the frame: "w-64", "w-full". The height follows the ratio. */
   className?: string;
   imgClassName?: string;
   imgStyle?: CSSProperties;
   sizes: string;
   priority?: boolean;
-  /** Ground around the work: Mist (default) or none, when the frame sits on a mat that is its ground. */
-  ground?: "mist" | "none";
 }
 
 /**
- * A work's image, always whole: centred in its frame, never cropped or stretched (docs/decisions.md
- * "Orientation"). The frame is 4:5 in grids; thumbnails turn it to 5:4 for a landscape work.
+ * A work's image, always whole and straight on the page: never cropped or stretched, no ground behind
+ * it (docs/decisions.md "Works on Paper"). Grids pass the image's ratio; thumbnails keep a slot so
+ * list columns stay aligned, the work fitted inside it.
  */
-export function Artwork({ src, alt = "", orientation = "portrait", frame = "turn", className, imgClassName, imgStyle, sizes, priority, ground = "mist" }: ArtworkProps) {
-  const landscape = frame === "turn" && orientation === "landscape";
+export function Artwork({ src, alt = "", orientation = "portrait", ratio, align = "top-left", className, imgClassName, imgStyle, sizes, priority }: ArtworkProps) {
+  const slot = ratio ? undefined : orientation === "landscape" ? "aspect-[5/4]" : "aspect-[4/5]";
   return (
-    <span className={cn("relative block shrink-0 self-start overflow-hidden", landscape ? "aspect-[5/4]" : "aspect-[4/5]", ground === "mist" && "bg-surface-muted", className)}>
-      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-contain", imgClassName)} style={imgStyle} />
+    <span className={cn("relative block shrink-0 self-start", slot, className)} style={ratio ? { aspectRatio: ratio } : undefined}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        className={cn("object-contain", ratio ? undefined : align === "bottom" ? "object-bottom" : "object-left-top", imgClassName)}
+        style={imgStyle}
+      />
     </span>
   );
 }

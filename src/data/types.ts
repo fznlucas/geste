@@ -26,6 +26,9 @@ export interface WorkRow {
   signature: boolean;
   description: string;
   previewPath: string; // "mock/work-03.jpg"
+  /** `works.preview_width/height` (0003): pixel size of the preview, read at upload. Grids size the work by its real ratio. */
+  previewWidth: number;
+  previewHeight: number;
   resultPhotoPath: string | null;
   studioTested: boolean;
   seoTitle: string;

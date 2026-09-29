@@ -115,6 +115,8 @@ export async function createWork(): Promise<string> {
       defaultFormat: "40x50",
       orientation: "portrait",
       signature: false,
+      previewWidth: 0,
+      previewHeight: 0,
       description: "",
       previewPath: "",
       resultPhotoPath: null,

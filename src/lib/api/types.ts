@@ -62,6 +62,8 @@ export interface CatalogWork {
   imageUrl: string;
   imageAlt: string;
   orientation: Orientation;
+  /** Width / height of the image (works.preview_width / preview_height). */
+  imageRatio: number;
   /** "Signature" work: SIGNATURE_CENTS more on every format. */
   signature: boolean;
   resultPhotoUrl: string | null;
@@ -218,6 +220,7 @@ export interface PrintEdition {
   workSlug: string;
   imageUrl: string;
   orientation: Orientation;
+  imageRatio: number;
   size: PrintSize;
   /** "30 × 42 cm", turned for a landscape work. */
   dimensions: string;

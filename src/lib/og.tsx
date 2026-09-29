@@ -11,7 +11,6 @@ export const OG_SIZE = { width: 1200, height: 630 };
 const INK = tokens.brand.ink.$value;
 const PAPER = tokens.brand.paper.$value;
 const STONE = tokens.brand.stone.$value;
-const MIST = tokens.brand.mist.$value;
 
 const font = (file: string) => fs.readFile(path.join(process.cwd(), "src/assets/fonts", file));
 
@@ -25,7 +24,7 @@ async function publicDataUrl(url: string): Promise<string> {
 
 /**
  * The link preview: wordmark, title (26 px on the board) and a Stone detail line on the left,
- * the work on the right: cropped to the half as drawn, or whole on Mist for a landscape work.
+ * the work on the right: cropped to the half as drawn, or whole on Paper for a landscape work.
  * Built at deploy time for every work (and the site).
  */
 export async function linkPreview({ title, detail, imageUrl, orientation = "portrait" }: { title: string; detail: string; imageUrl: string; orientation?: "portrait" | "landscape" }) {
@@ -53,7 +52,7 @@ export async function linkPreview({ title, detail, imageUrl, orientation = "port
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element -- rendered by Satori, not the browser */}
-        <img src={image} alt="" width={600} height={630} style={{ width: 600, height: 630, objectFit: orientation === "landscape" ? "contain" : "cover", background: MIST }} />
+        <img src={image} alt="" width={600} height={630} style={{ width: 600, height: 630, objectFit: orientation === "landscape" ? "contain" : "cover", background: PAPER }} />
       </div>
     ),
     {

@@ -5,7 +5,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Artwork, ButtonLink, CanvasDiagram, WorkCard } from "@/components";
+import { ButtonLink, CanvasDiagram, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
 import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
 import { fromPrice, formatPrice } from "@/lib/format";
 import { FORMATS, PRINT_WITH_GUIDE } from "@/lib/pricing";
@@ -23,10 +23,8 @@ export default async function HomePage() {
   const strokes = guide?.layers.flatMap((l) => l.diagram) ?? [];
 
   // New works: desktop shows the first five (hero included), phones the first four without the hero (MHome).
-  const desktopIds = new Set(works.slice(0, 5).map((w) => w.id));
-  const phoneIds = new Set(works.filter((w) => w.id !== hero.id).slice(0, 4).map((w) => w.id));
-  const newWorks = works.filter((w) => desktopIds.has(w.id) || phoneIds.has(w.id));
-  const onlyOn = (id: string) => (!phoneIds.has(id) ? "hidden lg:block" : !desktopIds.has(id) ? "lg:hidden" : undefined);
+  const desktopWorks = works.slice(0, 5);
+  const phoneWorks = works.filter((w) => w.id !== hero.id).slice(0, 4);
 
   const prints = featuredPrints(editions);
 
@@ -83,13 +81,9 @@ export default async function HomePage() {
       {/* New works */}
       <section className="flex flex-col gap-14 lg:gap-24">
         <SectionHead title="New works" href="/shop" link={`See all ${works.length} works`} shortLink={`See all ${works.length}`} />
-        <div className="grid grid-cols-2 gap-x-14 gap-y-24 md:grid-cols-3 lg:grid-cols-5 lg:gap-x-40">
-          {newWorks.map((w) => (
-            <div key={w.id} className={onlyOn(w.id)}>
-              <WorkCard work={toWorkCard(w)} variant="home" />
-            </div>
-          ))}
-        </div>
+        {/* Phones show four works without the hero, desktop the first five: one grid each, so rows are computed on what is shown. */}
+        <ProportionalGrid className="lg:hidden" rowSpace="mb-24" items={phoneWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
+        <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" items={desktopWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
       </section>
 
       {/* Limited prints */}
@@ -103,22 +97,10 @@ export default async function HomePage() {
               <span className="hidden lg:inline">See the prints</span>
             </Link>
           </div>
-          <div className="lg:col-span-8 lg:col-start-5 lg:grid lg:grid-cols-3 lg:gap-x-40">
-            {prints.map((e, i) => (
-              <Link key={e.id} href={`/prints/${e.workSlug}`} className={`group flex-col gap-8 lg:flex lg:gap-10 ${i === 0 ? "flex" : "hidden"}`}>
-                <span className="flex justify-center bg-surface-sunk p-32 lg:block lg:p-24">
-                  {/* Fixed sizes as drawn (desktop 197 × 246, a little wider than its column; phone 220 × 275); the work whole on the mat. */}
-                  <Artwork src={e.imageUrl} orientation={e.orientation} frame="card" ground="none" className="w-220 lg:w-197" sizes="(min-width: 1200px) 200px, 220px" />
-                </span>
-                <span className="flex justify-between">
-                  <span className="underline-offset-3 group-hover:underline">
-                    {e.workNumber} print<span className="lg:hidden"> · {editionLabel(e, true)}</span>
-                  </span>
-                  <span>{formatPrice(e.priceCents)}</span>
-                </span>
-                <span className="hidden text-fg-muted lg:inline">{editionLabel(e, false)}</span>
-              </Link>
-            ))}
+          <div className="lg:col-span-8 lg:col-start-5">
+            {/* Phones show the first print, desktop three: each on its Sand sheet, one height per row. */}
+            <ProportionalGrid className="lg:hidden" rowSpace="mb-0" perRow={{ base: 1, md: 1, lg: 1 }} maxHeight={{ base: 320, md: 320 }} items={prints.slice(0, 1).map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
+            <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" perRow={{ base: 3, md: 3, lg: 3 }} maxHeight={{ lg: 300 }} items={prints.map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
           </div>
         </section>
       )}
@@ -162,6 +144,22 @@ function SectionHead({ title, href, link, shortLink }: { title: string; href: st
         )}
       </Link>
     </div>
+  );
+}
+
+/** One print of the Home: its sheet, "N°07 print   $55", "Edition 12/100" (phone: "N°07 print · 12/100"). */
+function FeaturedPrint({ e }: { e: PrintEdition }) {
+  return (
+    <Link href={`/prints/${e.workSlug}`} className="group flex flex-col gap-8 lg:gap-10">
+      <PrintPaper imageUrl={e.imageUrl} alt="" orientation={e.orientation} caption={`${e.workNumber} · Edition of ${e.editionSize}`} className="w-full" sizes="(min-width: 1200px) 400px, 100vw" />
+      <span className="flex flex-wrap justify-between gap-x-8">
+        <span className="underline-offset-3 group-hover:underline">
+          {e.workNumber} print<span className="lg:hidden"> · {editionLabel(e, true)}</span>
+        </span>
+        <span className="ml-auto">{formatPrice(e.priceCents)}</span>
+      </span>
+      <span className="hidden text-fg-muted lg:inline">{editionLabel(e, false)}</span>
+    </Link>
   );
 }
 

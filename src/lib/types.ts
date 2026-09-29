@@ -14,6 +14,8 @@ export interface Work {
   imageAlt: string;
   /** Landscape works are shown landscape; in grids they sit whole in the same 4:5 frame. */
   orientation: Orientation;
+  /** Width / height of the image: grids give the works of a row the same height and this width. */
+  imageRatio: number;
   /** "Signature" works: noted on the card. */
   signature?: boolean;
   fromPriceCents: number;

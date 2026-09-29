@@ -2,6 +2,7 @@
 --   works.orientation         'portrait' | 'landscape': a landscape work sells its formats turned (40×30 … 100×80),
 --                             same guide, same price, and is shown landscape everywhere
 --   works.signature           the guide costs SIGNATURE_CENTS more on every format (src/lib/pricing.ts)
+--   works.preview_width/height pixel size of the preview: grids give every work the same height, its own width
 --   work_formats              the guide price depends on the format only: level included, "Custom" is free
 --   print_editions.size       'S' (A3, 30×42) · 'M' (A2, 42×59) · 'L' (50×70), turned for a landscape work
 --   order_items.discount_cents guide + print of the same work in one order: −15 % on both lines
@@ -9,6 +10,9 @@
 
 alter table works add column orientation text not null default 'portrait' check (orientation in ('portrait', 'landscape'));
 alter table works add column signature   boolean not null default false;
+-- Pixel size of the preview image, read when it is uploaded: grids size each work by its real ratio.
+alter table works add column preview_width  int check (preview_width > 0);
+alter table works add column preview_height int check (preview_height > 0);
 
 comment on column work_formats.guide_price_cents is 'Guide price for any level; the Signature supplement is added by pricing.ts';
 

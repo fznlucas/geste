@@ -6,7 +6,7 @@ export interface PrintPageData {
   work: CatalogWork;
   editions: PrintEdition[];
   /** "Other editions": other works' S edition, cheapest open price per work ("from $55"). */
-  others: Array<{ slug: string; number: string; imageUrl: string; orientation: Orientation; fromCents: number; note: string }>;
+  others: Array<{ slug: string; number: string; imageUrl: string; orientation: Orientation; fromCents: number; note: string; editionSize: number }>;
 }
 
 /** Works that sell prints, in the editions' order (N°07 first: the Home leads with it). */
@@ -23,43 +23,49 @@ export async function getPrintPage(slug: string): Promise<PrintPageData | null> 
   const others = [...new Set(all.filter((e) => e.workId !== work.id && e.size === PRINT_WITH_GUIDE && !e.soldOut).map((e) => e.workSlug))].slice(0, 4).map((s) => {
     const own = all.filter((e) => e.workSlug === s && !e.soldOut);
     const first = own.find((e) => e.size === PRINT_WITH_GUIDE)!;
-    return { slug: s, number: first.workNumber, imageUrl: first.imageUrl, orientation: first.orientation, fromCents: Math.min(...own.map((e) => e.priceCents)), note: `${first.nextNumber}/${first.editionSize}` };
+    return { slug: s, number: first.workNumber, imageUrl: first.imageUrl, orientation: first.orientation, fromCents: Math.min(...own.map((e) => e.priceCents)), note: `${first.nextNumber}/${first.editionSize}`, editionSize: first.editionSize };
   });
   return { work, editions, others };
 }
 
-export interface GalleryEdition {
-  id: string;
-  href: string;
+export interface GalleryWork {
+  workId: string;
+  slug: string;
+  number: string;
   imageUrl: string;
   orientation: Orientation;
-  workNumber: string;
-  size: PrintSize;
-  /** "12/100", null when sold out */
-  next: string | null;
-  priceCents: number;
+  /** Edition size of the smallest size on sale ("Edition of 100" on the sheet). */
+  editionSize: number;
+  /** S, M, L that the work sells, in order. */
+  sizes: Array<{ size: PrintSize; soldOut: boolean }>;
+  /** Cheapest size with copies left; null when every size is sold out. */
+  fromCents: number | null;
   soldOut: boolean;
 }
 
 /**
- * Every open edition of the live works, for the /prints gallery: S, then M, then L, each in catalog
- * order; sold-out editions last (docs/decisions.md "Print gallery").
+ * One card per live work that sells prints, for the /prints gallery: catalog order, a work goes
+ * last only when its three sizes are sold out (docs/decisions.md "Print gallery").
  */
-export async function getPrintGallery(): Promise<GalleryEdition[]> {
+export async function getPrintGallery(): Promise<GalleryWork[]> {
   const [works, editions] = await Promise.all([getWorks(), getEditions()]);
-  const order = new Map(works.map((w) => [w.id, w.sortOrder]));
-  return editions
-    .filter((e) => order.has(e.workId))
-    .sort((a, b) => Number(a.soldOut) - Number(b.soldOut) || PRINT_SIZE_ORDER.indexOf(a.size) - PRINT_SIZE_ORDER.indexOf(b.size) || order.get(a.workId)! - order.get(b.workId)!)
-    .map((e) => ({
-      id: e.id,
-      href: `/prints/${e.workSlug}?size=${e.size.toLowerCase()}`,
-      imageUrl: e.imageUrl,
-      orientation: e.orientation,
-      workNumber: e.workNumber,
-      size: e.size,
-      next: e.nextNumber === null ? null : `${e.nextNumber}/${e.editionSize}`,
-      priceCents: e.priceCents,
-      soldOut: e.soldOut,
-    }));
+  return works
+    .map((w): GalleryWork | null => {
+      const own = PRINT_SIZE_ORDER.map((z) => editions.find((e) => e.workId === w.id && e.size === z)).filter((e) => e !== undefined);
+      if (own.length === 0) return null;
+      const open = own.filter((e) => !e.soldOut);
+      return {
+        workId: w.id,
+        slug: w.slug,
+        number: w.number,
+        imageUrl: w.imageUrl,
+        orientation: w.orientation,
+        editionSize: (open[0] ?? own[0]!).editionSize,
+        sizes: own.map((e) => ({ size: e.size, soldOut: e.soldOut })),
+        fromCents: open.length ? Math.min(...open.map((e) => e.priceCents)) : null,
+        soldOut: open.length === 0,
+      };
+    })
+    .filter((w) => w !== null)
+    .sort((a, b) => Number(a.soldOut) - Number(b.soldOut));
 }

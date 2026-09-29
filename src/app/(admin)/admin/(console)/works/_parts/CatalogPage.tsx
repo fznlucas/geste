@@ -94,7 +94,7 @@ export function CatalogPage() {
             <li key={w.id}>
               <Link href={w.editorHref} className="group flex flex-col gap-6 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-fg">
                 {w.imageUrl ? (
-                  <Artwork src={w.imageUrl} orientation={w.orientation} frame="card" className="w-full" sizes="(min-width: 768px) 211px, 50vw" imgClassName={cn("group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
+                  <Artwork src={w.imageUrl} align="bottom" className="w-full" sizes="(min-width: 768px) 211px, 50vw" imgClassName={cn("group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
                 ) : (
                   <span className="flex aspect-[4/5] w-full items-center justify-center border border-dashed border-border-dashed text-fg-muted">No preview yet</span>
                 )}
