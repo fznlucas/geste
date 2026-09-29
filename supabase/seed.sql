@@ -1,12 +1,12 @@
--- Seed: one live work (N°03) with its 60×80 intermediate guide, palettes, shopping list and an A3 edition.
+-- Seed: one live work (N°03) with its 60×80 intermediate guide, palettes, shopping list and an S print edition.
 -- Images are mock artworks from public/mock (same as the canvas).
-insert into works (id, number, slug, status, default_format, description, preview_path, studio_tested, seo_title, seo_description, sort_order) values
-  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '60x80', 'Gestural abstraction. Wide strokes over a thin underlayer, dark marks on top.', 'mock/work-03.jpg', true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $12.', 3);
+insert into works (id, number, slug, status, default_format, orientation, signature, description, preview_path, studio_tested, seo_title, seo_description, sort_order) values
+  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '60x80', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
 insert into work_formats (work_id, format, default_level, guide_price_cents, est_minutes) values
-  ('00000000-0000-0000-0000-000000000003', '30x40', 'beginner', 1200, 60),
-  ('00000000-0000-0000-0000-000000000003', '40x50', 'beginner', 1300, 90),
-  ('00000000-0000-0000-0000-000000000003', '60x80', 'intermediate', 1700, 210),
-  ('00000000-0000-0000-0000-000000000003', '80x100', 'advanced', 2100, 420);
+  ('00000000-0000-0000-0000-000000000003', '30x40', 'beginner', 1500, 60),
+  ('00000000-0000-0000-0000-000000000003', '40x50', 'beginner', 1900, 90),
+  ('00000000-0000-0000-0000-000000000003', '60x80', 'intermediate', 2500, 210),
+  ('00000000-0000-0000-0000-000000000003', '80x100', 'advanced', 2900, 420);
 insert into palettes (work_id, key, name, swatches, preview_filter) values
   ('00000000-0000-0000-0000-000000000003', 'original', 'Original', '[{"hex": "#22A6C9", "name": "Turquoise"}, {"hex": "#1F2433", "name": "Payne’s grey"}, {"hex": "#F2B632", "name": "Cadmium yellow"}, {"hex": "#E8862E", "name": "Orange"}]', null),
   ('00000000-0000-0000-0000-000000000003', 'warm', 'Warm', '[{"hex": "#E8735A", "name": "Coral"}, {"hex": "#E88A3A", "name": "Orange"}, {"hex": "#D9A441", "name": "Yellow ochre"}, {"hex": "#F0A596", "name": "Rose"}]', 'sepia(0.25) saturate(1.25) hue-rotate(-12deg)'),
@@ -43,5 +43,5 @@ insert into shopping_items (work_id, position, name, standard_label, budget_labe
   ('00000000-0000-0000-0000-000000000003', 1, 'Turquoise', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml"}'),
   ('00000000-0000-0000-0000-000000000003', 2, 'Payne’s grey', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml"}'),
   ('00000000-0000-0000-0000-000000000003', 3, 'Flat brush 50 mm', 'Synthetic artist brush', 'Decorating brush', 800, 300, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "1", "40x50": "1", "60x80": "1", "80x100": "1"}');
-insert into print_editions (work_id, size, edition_size, price_cents) values ('00000000-0000-0000-0000-000000000003', 'A3', 50, 4500);
+insert into print_editions (work_id, size, edition_size, price_cents) values ('00000000-0000-0000-0000-000000000003', 'S', 100, 5500);
 insert into site_settings (key, value) values ('home.hero_work', '"n03"'), ('ai.monthly_budget_cents', '8000'), ('support.saved_replies', '[]');

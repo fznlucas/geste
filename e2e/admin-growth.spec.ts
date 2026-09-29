@@ -46,13 +46,13 @@ test("finance: P&L adds up and the CSV downloads", async ({ page }) => {
   await asStaff(page);
   await page.goto("/admin/finance/");
   await expect(page.getByRole("rowheader", { name: "Gross margin" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Net result/ })).toContainText("$2,493");
+  await expect(page.getByRole("row", { name: /Net result/ })).toContainText("$3,543");
   await expectNoAxeViolations(page);
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export for accountant (CSV)" }).click()]);
   expect(download.suggestedFilename()).toBe("geste-finance-2026-09.csv");
   const csv = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8"));
-  expect(csv).toContain("Net result,2493.00,59");
-  expect(csv).toContain("Belgium · OSS,21%,96.00");
+  expect(csv).toContain("Net result,3543.00,65");
+  expect(csv).toContain("Belgium · OSS,21%,125.00");
   await expect(page.getByRole("button", { name: "CSV downloaded" })).toBeVisible();
 });
 
@@ -63,9 +63,9 @@ test("marketing: tabs, create a promo code, gift cards bought here", async ({ pa
     subtotalCents: 3000, discountCents: 0, shippingCents: 0, shippingMethod: null, taxCents: 500, totalCents: 3000, shippingAddress: null,
     stripePaymentIntent: "pi_mock_local_2042", cardLast4: "4242", risk: "low", withdrawalWaived: false,
     paidAt: "2026-10-02T12:05:00Z", createdAt: "2026-10-02T12:05:00Z",
-    items: [{ id: "item-local-2042-1", kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: "Gift card $30", detail: "Sent by email", unitPriceCents: 3000, quantity: 1, fulfilment: "not_required" }],
+    items: [{ id: "item-local-2042-1", kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: "Gift card $30", detail: "Sent by email", unitPriceCents: 3000, quantity: 1, discountCents: 0, fulfilment: "not_required" }],
   };
-  await asStaff(page, "owner", { "geste.purchases.v1": { orders: [order], entitlements: [], copies: [], receipts: [] } });
+  await asStaff(page, "owner", { "geste.purchases.v2": { orders: [order], entitlements: [], copies: [], receipts: [] } });
   await page.goto("/admin/marketing/");
   await expect(page.getByRole("rowheader", { name: "FIRSTCANVAS" })).toBeVisible();
   await expectNoAxeViolations(page);

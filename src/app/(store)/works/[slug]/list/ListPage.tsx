@@ -1,14 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Button, ButtonLink, Segmented, ShoppingListTable } from "@/components";
+import { Artwork, Button, ButtonLink, Segmented, ShoppingListTable } from "@/components";
 import type { CatalogWork, PaletteKey, ShoppingListLine } from "@/lib/api";
 import { createPersistentStore, isRecord, useSession, useStore } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
-import { FORMATS, LEVELS, resolveLevel, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { FORMATS, LEVELS, formatLabel, resolveLevel, type FormatKey, type LevelKey } from "@/lib/pricing";
 
 /** "I already have" ticks, per work, kept in the browser ("geste.list-have.v1"). */
 const haveStore = createPersistentStore<Record<string, number[]>>("list-have", 1, {}, (raw) => {
@@ -58,7 +57,7 @@ function View({ work, lists, format, level, palette }: Props & { format: FormatK
   const haveCount = lines.filter((l) => have.has(l.position)).length;
   const levelLabel = LEVELS[resolveLevel({ format, level, palette })].label;
   const paletteName = work.palettes.find((p) => p.key === palette)?.name ?? "Original";
-  const detail = `${work.number} · ${FORMATS[format].label} · ${levelLabel} · ${paletteName}`;
+  const detail = `${work.number} · ${formatLabel(format, work.orientation)} · ${levelLabel} · ${paletteName}`;
 
   return (
     <div className="mx-auto flex w-full max-w-1264 flex-col gap-18 px-16 pt-8 lg:gap-40 lg:px-32 lg:pt-24">
@@ -75,8 +74,8 @@ function View({ work, lists, format, level, palette }: Props & { format: FormatK
       <div className="flex flex-col gap-18 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-40">
         <div className="flex flex-col gap-18 lg:col-span-8 lg:gap-24">
           <div className="flex items-center gap-20">
-            <span className="relative hidden h-90 w-72 shrink-0 lg:block">
-              <Image src={work.imageUrl} alt="" fill sizes="72px" className="object-cover" />
+            <span className="hidden shrink-0 lg:block">
+              <Artwork src={work.imageUrl} orientation={work.orientation} className="w-72" sizes="72px" />
             </span>
             <div className="flex flex-col gap-18 lg:gap-4">
               <h1 className="text-lg">Shopping list</h1>

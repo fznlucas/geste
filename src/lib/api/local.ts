@@ -1,9 +1,9 @@
 /**
  * Mock phase: rows created in this browser, merged by the read functions with the mock tables.
  *
- * 1. Purchases (`src/lib/client/purchases.ts`, "geste.purchases.v1"): what a mock checkout writes
+ * 1. Purchases (`src/lib/client/purchases.ts`, "geste.purchases.v2"): what a mock checkout writes
  *    (order, numbered copies, entitlements). The Library, Orders, cart stock and the admin see them.
- * 2. Admin overlay (`src/lib/client/admin.ts`, "geste.admin.v1"): what the admin mutations write,
+ * 2. Admin overlay (`src/lib/client/admin.ts`, "geste.admin.v2"): what the admin mutations write,
  *    as patches keyed by table and row id, plus inserted rows (refunds, shipments, notes, audit log…).
  *
  * The client registers the getters; on the server render (build) there is nothing local. Deleted with

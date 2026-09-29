@@ -12,7 +12,8 @@ export interface DailyRevenueRow {
 
 /**
  * September as drawn on the board (relative bar heights, Sep 22 spike), scaled so the month adds up
- * to the board's KPI tiles: $4,212 and 187 orders (the board's own bars add up to $2,857).
+ * to $5,472 and 187 orders: the board's KPI tiles ($4,212) at the prices of docs/decisions.md
+ * "Prices by format" (every money figure × 547,200 / 421,200, so the board's ratios hold).
  */
 const SEPTEMBER_SHAPE = [58, 47, 84, 45, 79, 69, 49, 83, 51, 81, 57, 60, 85, 115, 68, 76, 107, 131, 106, 96, 138, 310, 133, 95, 86, 86, 101, 139, 96, 126];
 
@@ -41,13 +42,13 @@ function month(year: number, m: number, shape: number[], revenueCents: number, o
 }
 
 /**
- * Jul 1 → Sep 30. August: $3,052 and 133 orders, so September reads "+38% vs Aug", orders "+41%",
- * average order "−2%" as on the board.
+ * Jul 1 → Sep 30. August: $3,965 and 133 orders, so September reads "+38% vs Aug", orders "+41%",
+ * average order $29.3, "−2%" as on the board.
  */
 export const dailyRevenue: DailyRevenueRow[] = [
-  ...month(2026, 7, JULY_SHAPE, 241_000, 108),
-  ...month(2026, 8, AUGUST_SHAPE, 305_200, 133),
-  ...month(2026, 9, SEPTEMBER_SHAPE, 421_200, 187),
+  ...month(2026, 7, JULY_SHAPE, 313_100, 108),
+  ...month(2026, 8, AUGUST_SHAPE, 396_500, 133),
+  ...month(2026, 9, SEPTEMBER_SHAPE, 547_200, 187),
 ];
 
 /** Chart annotations ("Sep 22 · TikTok “first canvas” ep. 04 posted"). */
@@ -67,13 +68,13 @@ export const last30d = {
 /** Today (AdminMToday "Today · Oct 2"), up to the mock's now. */
 export const today = {
   day: "2026-10-02",
-  revenueCents: 21_400,
+  revenueCents: 27_800,
   orders: 11,
   guides: 8,
   prints: 3,
   /** Same weekday last week is not there yet: the board compares with Tuesday. */
   compareLabel: "Tue",
-  compareRevenueCents: 17_500,
+  compareRevenueCents: 22_700,
   visitors: 386,
   phonePct: 71,
   conversionPct: 2.8,

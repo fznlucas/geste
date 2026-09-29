@@ -8,7 +8,7 @@ export function formatPrice(cents: number, locale: "en" | "fr" = "en", currency 
   }).format(v);
 }
 
-/** "from $12" style label used on work cards. */
+/** "from $15" style label used on work cards. */
 export function fromPrice(cents: number, locale: "en" | "fr" = "en"): string {
   return (locale === "fr" ? "dès " : "from ") + formatPrice(cents, locale);
 }

@@ -5,16 +5,16 @@ import { useState } from "react";
 import { KanbanBoard, type KanbanColumn } from "@/components";
 import { asset } from "@/lib/asset";
 
-const card = (id: string, order: string, title: string, who: string, n: number) => ({
-  id, label: order, title, subtitle: who, imageUrl: asset(`mock/work-${String(n).padStart(2, "0")}.jpg`), href: "#",
+const card = (id: string, order: string, title: string, who: string, n: number, orientation: "portrait" | "landscape" = "portrait") => ({
+  id, label: order, title, subtitle: who, imageUrl: asset(`mock/work-${String(n).padStart(2, "0")}.jpg`), orientation, href: "#",
 });
 
 const START: Record<string, string> = { a: "to_print", b: "to_print", c: "printed", d: "shipped" };
 const CARDS = [
-  card("a", "#GS-2041", "N°07 · A3 · 10/50", "Camille Martin · Lyon", 7),
-  card("b", "#GS-2036", "N°07 · A3 · 11/50", "Sarah Cohen · Paris", 7),
-  card("c", "#GS-2038", "N°01 · A2 · 9/30", "Inès Moreau · Nantes", 1),
-  card("d", "#GS-2033", "N°08 · 50×70 · 21/25", "Jules Fabre · Lille", 8),
+  card("a", "#GS-2041", "N°07 · S · 10/100", "Camille Martin · Lyon", 7, "landscape"),
+  card("b", "#GS-2036", "N°07 · S · 11/100", "Sarah Cohen · Paris", 7, "landscape"),
+  card("c", "#GS-2038", "N°01 · M · 9/50", "Inès Moreau · Nantes", 1, "landscape"),
+  card("d", "#GS-2033", "N°08 · L · 21/25", "Jules Fabre · Lille", 8),
 ];
 const STEPS = [["to_print", "To print"], ["printed", "Printed & signed"], ["packed", "Packed"], ["shipped", "Shipped"]] as const;
 

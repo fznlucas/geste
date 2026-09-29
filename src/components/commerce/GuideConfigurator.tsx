@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Segmented } from "../primitives/Segmented";
 import { Button } from "../primitives/Button";
-import { FORMATS, LEVELS, estimatedTime, resolveLevel, totalCents, type FormatKey, type GuideConfig, type LevelKey } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, FORMATS, LEVELS, estimatedTime, formatLabel, resolveLevel, type FormatKey, type GuideConfig, type LevelKey, type Orientation } from "@/lib/pricing";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import type { Palette } from "@/lib/types";
@@ -14,8 +14,12 @@ export interface GuideConfiguratorProps {
   palettes: Palette[];
   /** Formats the work sells (default: all four). */
   formats?: FormatKey[];
-  /** The work has an A3 edition with copies left. Otherwise "Guide + list + print" is disabled. */
+  /** The work has an S edition with copies left. Otherwise "Guide + list + print" is disabled. */
   printAvailable?: boolean;
+  /** Landscape works sell the formats turned (40×30 … 100×80). */
+  orientation?: Orientation;
+  /** Total of the configuration, computed by the page with pricing.ts (Signature, bundle discount). */
+  priceCents: number;
   onAdd: () => void;
   adding?: boolean;
   added?: boolean;
@@ -23,13 +27,13 @@ export interface GuideConfiguratorProps {
 
 /**
  * Work page configurator (boards Product, MProduct), in this order:
- *   Format (cm) — "suggests Intermediate"  ·  Level — "set by format": Match format | Custom (Custom reveals the 3 levels)
- *   Palette — 44 px swatch buttons, name on the right  ·  What you get — Guide + list | Guide + list + print
+ *   Format (cm) — "suggests Intermediate"  ·  Level — "set by format": Match format | Custom (Custom reveals the 3 levels, same price)
+ *   Palette — 44 px swatch buttons, name on the right  ·  What you get — Guide + list | Guide + list + print ("−15% on both")
  *   "3 layers   ~3h30   5 colours   Intermediate"  ·  primary "Add to cart   $19" (desktop; phones use StickyBuyBar)
  * Desktop: label and note on one line above the choices. Phone: "Format (cm) · suggests Intermediate".
  * Keep the configuration in the URL (?format=&level=&palette=&print=1) so links reproduce it.
  */
-export function GuideConfigurator({ value, onChange, palettes, formats = Object.keys(FORMATS) as FormatKey[], printAvailable = true, onAdd, adding, added }: GuideConfiguratorProps) {
+export function GuideConfigurator({ value, onChange, palettes, formats = Object.keys(FORMATS) as FormatKey[], printAvailable = true, orientation = "portrait", priceCents, onAdd, adding, added }: GuideConfiguratorProps) {
   const lvl = resolveLevel(value);
   const custom = value.level !== "match";
   const palette = palettes.find((p) => p.id === value.palette) ?? palettes[0];
@@ -44,7 +48,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
           gap={choices}
           value={value.format}
           onChange={(format) => onChange({ ...value, format })}
-          options={formats.map((f) => ({ value: f, label: FORMATS[f].label }))}
+          options={formats.map((f) => ({ value: f, label: formatLabel(f, orientation) }))}
         />
       </Row>
       <Row label="Level" note={custom ? "your choice" : "set by format"} phoneNote={false}>
@@ -91,7 +95,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
           })}
         </div>
       </Row>
-      <Row label="What you get">
+      <Row label="What you get" note={value.withPrint ? `−${BUNDLE_DISCOUNT_PCT}% on both` : undefined}>
         <Segmented<"list" | "print">
           label="What you get"
           gap={choices}
@@ -112,7 +116,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
         </p>
         {/* Phones buy from StickyBuyBar. Button sets its own display, so the breakpoint sits on a wrapper. */}
         <div className="hidden lg:block">
-          <Button onClick={onAdd} loading={adding} trailing={added ? "✓" : formatPrice(totalCents(value))} fullWidth>
+          <Button onClick={onAdd} loading={adding} trailing={added ? "✓" : formatPrice(priceCents)} fullWidth>
             {added ? "Added" : "Add to cart"}
           </Button>
         </div>

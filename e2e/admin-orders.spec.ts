@@ -29,14 +29,14 @@ async function adminLogin(page: Page) {
   await expect(page).toHaveURL(/\/admin\/?$/);
 }
 
-/** Guide N°03 + print N°07 A3, paid by Sarah Cohen with the Stripe success card. */
+/** Guide N°03 + print N°07 S, paid by Sarah Cohen with the Stripe success card. */
 async function buyAsSarah(page: Page): Promise<string> {
   await page.evaluate(() =>
     localStorage.setItem(
-      "geste.cart.v1",
+      "geste.cart.v2",
       JSON.stringify([
         { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", format: "60x80", level: "match", palette: "original" },
-        { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-a3", quantity: 1 },
+        { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-s", quantity: 1 },
       ]),
     ),
   );
@@ -71,7 +71,7 @@ test("a checkout order reaches the admin, ships, then is refunded", async ({ pag
   const first = ordersTable(page).getByRole("row").nth(1);
   await expect(first).toContainText(`#${number}`);
   await expect(first).toContainText("Sarah Cohen");
-  await expect(first).toContainText("Guide N°03 · Print N°07 A3");
+  await expect(first).toContainText("Guide N°03 · Print N°07 S");
   await expect(first).toContainText("To ship");
   await expectNoAxeViolations(page);
 
@@ -98,7 +98,7 @@ test("a checkout order reaches the admin, ships, then is refunded", async ({ pag
   await expect(dialog).toBeVisible();
   await expectNoAxeViolations(page);
   await dialog.getByRole("button", { name: /Full order/ }).click();
-  await dialog.getByRole("button", { name: /^Refund \$70/ }).click();
+  await dialog.getByRole("button", { name: /^Refund \$86/ }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText(/^Refunded · paid/)).toBeVisible();
   await expect(page.getByText("Library access revoked")).toBeVisible();
@@ -124,9 +124,9 @@ test("Support refunds up to $50 only", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: "Refund #GS-2038" });
   await dialog.getByRole("button", { name: /Full order/ }).click();
   await expect(dialog.getByRole("alert")).toContainText("Support can refund up to $50");
-  await expect(dialog.getByRole("button", { name: /^Refund \$106/ })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: /^Refund \$136/ })).toBeDisabled();
   await dialog.getByRole("button", { name: /Guide only/ }).click();
-  await dialog.getByRole("button", { name: /^Refund \$25/ }).click();
+  await dialog.getByRole("button", { name: /^Refund \$35/ }).click();
   await expect(page.getByText(/^Partly refunded · paid/)).toBeVisible();
   // Support does not ship prints.
   await expect(page.getByRole("button", { name: /Mark as shipped/ })).toHaveCount(0);
@@ -153,7 +153,7 @@ test("phone: one-tap mark as shipped", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "To ship · 2" })).toBeVisible();
 
   await page.getByRole("link", { name: "#GS-2036" }).click();
-  await expect(page.getByRole("heading", { name: "#GS-2036 · $49" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "#GS-2036 · $63.50" })).toBeVisible();
   await page.getByLabel("Tracking number").fill("6A 123 456 789 01");
   await page.getByRole("button", { name: "Mark as shipped" }).click();
   await expect(page.getByRole("button", { name: "Shipped · Sarah notified" })).toBeVisible();

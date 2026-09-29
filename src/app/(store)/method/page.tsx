@@ -73,7 +73,7 @@ export default async function MethodPage() {
                 {i < 3 ? (
                   <CanvasDiagram strokes={strokes} upTo={i + 1} width={150} />
                 ) : (
-                  <Image src={work.imageUrl} alt="" width={150} height={200} sizes="150px" className="block h-200 w-150 object-cover" />
+                  <Image src={work.imageUrl} alt="" width={150} height={200} sizes="150px" className="block h-200 w-150 object-contain" />
                 )}
               </span>
             </span>

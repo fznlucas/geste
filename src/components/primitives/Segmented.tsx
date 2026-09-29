@@ -8,7 +8,7 @@ export interface SegmentedOption<V extends string> {
   /** Text, or responsive text (e.g. "+ print" on phones, "Guide + list + print" on desktop). */
   label: ReactNode;
   disabled?: boolean;
-  /** Small Stone note after the label, e.g. "+$2" for Custom level. */
+  /** Small Stone note after the label, e.g. "(sold out)". */
   note?: string;
 }
 

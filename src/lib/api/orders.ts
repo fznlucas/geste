@@ -3,7 +3,7 @@ import { asset } from "@/lib/asset";
 import { shortDate } from "@/lib/dates";
 import { CARRIERS, carrierOf, deliveryName, deliveryRange, deliveryWindow, formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
-import { FORMATS, SHIPPING } from "@/lib/pricing";
+import { SHIPPING, formatLabel } from "@/lib/pricing";
 import { printEditions } from "@/data/editions";
 import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
@@ -68,8 +68,10 @@ export function mapOrder(row: OrderRow): Order {
       title: i.title,
       detail: i.detail,
       imageUrl: work ? asset(work.previewPath) : null,
+      orientation: work?.orientation ?? "portrait",
       unitPriceCents: i.unitPriceCents,
       quantity: i.quantity,
+      discountCents: i.discountCents ?? 0,
       fulfilment: i.kind === "print" ? itemFulfilment(i.id, i.fulfilment) : i.fulfilment,
       certificateNo: itemCopies[0]?.certificateNo ?? null,
       copyNumbers: itemCopies.map((c) => c.number),
@@ -189,7 +191,8 @@ export async function getRefundOptions(number: string): Promise<RefundOption[]> 
   if (!row) return [];
   const refunded = allRefunds().filter((r) => r.orderId === row.id).reduce((s, r) => s + r.amountCents, 0);
   const left = Math.max(0, row.totalCents - refunded);
-  const sum = (kind: string) => row.items.filter((i) => i.kind === kind).reduce((s, i) => s + i.unitPriceCents * i.quantity, 0);
+  // Net of the bundle discount: what the customer paid for those lines.
+  const sum = (kind: string) => row.items.filter((i) => i.kind === kind).reduce((s, i) => s + i.unitPriceCents * i.quantity - (i.discountCents ?? 0), 0);
   const options: RefundOption[] = [];
   const prints = sum("print"), guides = sum("guide");
   if (prints && row.items.some((i) => i.kind !== "print")) options.push({ key: "print", label: "Print only (returned)", amountCents: Math.min(left, prints + row.shippingCents) });
@@ -203,16 +206,16 @@ export const ORDERS_THIS_MONTH = 187;
 
 // ── Customer side (Account › Orders, confirmation, tracking) ────────────────
 
-/** "12/50", "12–13/50" */
+/** "12/100", "12–13/100" */
 export function copyNumbersLabel(i: OrderItem): string {
   const n = i.copyNumbers;
   if (!n.length || !i.edition) return "";
   return `${n.length > 1 ? `${n[0]}–${n[n.length - 1]}` : n[0]}/${i.edition.editionSize}`;
 }
 
-/** Receipt wording of the Checkout and Orders boards: "N°03 — Guide, 60×80", "N°07 — Print A3, 12/50". */
+/** Receipt wording of the Checkout and Orders boards: "N°03 — Guide, 60×80", "N°07 — Print S, 12/100". */
 export function orderLineTitle(i: OrderItem): string {
-  if (i.kind === "guide") return `${i.workNumber} — Guide, ${i.config.format ? FORMATS[i.config.format].label : ""}`;
+  if (i.kind === "guide") return `${i.workNumber} — Guide, ${i.config.format ? formatLabel(i.config.format, i.orientation) : ""}`;
   if (i.kind === "print") return `${i.workNumber} — Print ${i.edition?.size ?? ""}, ${copyNumbersLabel(i)}`;
   return i.title;
 }

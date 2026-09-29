@@ -8,12 +8,12 @@ import { toConfiguratorPalettes, type CatalogWork, type GuideOutlineStep, type P
 import { addToCart } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
 import { duration } from "@/lib/motion";
-import { FORMATS, LEVELS, PRINT_A3_PRICE, guidePriceCents, materialsEstimateUsd, resolveLevel, totalCents, type GuideConfig, type LevelKey } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, LEVELS, bundleDiscountCents, bundleTotalCents, formatLabel, materialsEstimateUsd, resolveLevel, type GuideConfig, type LevelKey } from "@/lib/pricing";
 
 interface Props {
   work: CatalogWork;
-  /** The A3 edition sold with "Guide + list + print", null when there is none with copies left. */
-  a3: PrintEdition | null;
+  /** The S edition sold with "Guide + list + print", null when there is none with copies left. */
+  print: PrintEdition | null;
   /** getGuideOutline for every "level:palette". */
   outlines: Record<string, GuideOutlineStep[]>;
   /** Server render / Suspense fallback: default configuration, no URL access. */
@@ -29,20 +29,20 @@ function defaultConfig(work: CatalogWork): GuideConfig {
 }
 
 /** ?format=&level=&palette=&print=1 → a configuration the work actually sells (anything else falls back to the default). */
-function parseConfig(work: CatalogWork, a3: PrintEdition | null, q: URLSearchParams): GuideConfig {
+function parseConfig(work: CatalogWork, print: PrintEdition | null, q: URLSearchParams): GuideConfig {
   const d = defaultConfig(work);
   const format = work.formats.find((f) => f.active && f.format === q.get("format"))?.format ?? d.format;
   const rawLevel = q.get("level");
   const level: GuideConfig["level"] = rawLevel && rawLevel in LEVELS ? (rawLevel as LevelKey) : "match";
   const palette = work.palettes.find((p) => p.key === q.get("palette"))?.key ?? d.palette;
-  return { format, level, palette, withPrint: !!a3 && q.get("print") === "1" };
+  return { format, level, palette, withPrint: !!print && q.get("print") === "1" };
 }
 
 function UrlWorkPage(props: Props) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const config = parseConfig(props.work, props.a3, params);
+  const config = parseConfig(props.work, props.print, params);
   const onChange = (next: GuideConfig) => {
     const d = defaultConfig(props.work);
     const q = new URLSearchParams();
@@ -56,7 +56,7 @@ function UrlWorkPage(props: Props) {
   return <View {...props} config={config} onChange={onChange} />;
 }
 
-function View({ work, a3, outlines, config, onChange }: Props & { config: GuideConfig; onChange: (c: GuideConfig) => void }) {
+function View({ work, print, outlines, config, onChange }: Props & { config: GuideConfig; onChange: (c: GuideConfig) => void }) {
   const router = useRouter();
   const toast = useToast();
   const [added, setAdded] = useState(false);
@@ -66,12 +66,16 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
   const level = resolveLevel(config);
   const palette = work.palettes.find((p) => p.key === config.palette) ?? work.palettes[0]!;
   const outline = outlines[`${level}:${palette.key}`] ?? [];
-  const total = formatPrice(totalCents(config));
-  const formatLabel = FORMATS[config.format].label;
+  // Prices come from the catalog (pricing.ts on the server): the format's guide price, Signature included.
+  const guideCents = work.formats.find((f) => f.format === config.format)!.priceCents;
+  const withPrint = !!(config.withPrint && print);
+  const totalCents = bundleTotalCents(guideCents, withPrint ? print!.priceCents : null);
+  const total = formatPrice(totalCents);
+  const size = formatLabel(config.format, work.orientation);
 
   const add = () => {
     addToCart({ kind: "guide", workId: work.id, format: config.format, level: config.level, palette: config.palette as PaletteKey });
-    if (config.withPrint && a3) addToCart({ kind: "print", editionId: a3.id, quantity: 1 });
+    if (withPrint) addToCart({ kind: "print", editionId: print!.id, quantity: 1 });
     // docs/motion.md §5: "Added ✓" for 1.6 s; the drawer does not open on desktop; phones get a toast with "View".
     setAdded(true);
     clearTimeout(timer.current);
@@ -83,14 +87,19 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
 
   const items = [
     {
-      name: <>Guide, {formatLabel}, {LEVELS[level].label.toLowerCase()}<span className="hidden lg:inline"> (library + PDF)</span></>,
-      price: formatPrice(guidePriceCents(config)),
+      name: <>Guide, {size}, {LEVELS[level].label.toLowerCase()}<span className="hidden lg:inline"> (library + PDF)</span>{work.signature && <span className="hidden lg:inline">, Signature</span>}</>,
+      price: formatPrice(guideCents),
     },
     {
       name: <><span className="lg:hidden">Shopping list</span><span className="hidden lg:inline">Shopping list: materials ~${materialsEstimateUsd(config)} at partner stores</span></>,
       price: "Included",
     },
-    ...(config.withPrint ? [{ name: <>Print A3, limited edition<span className="hidden lg:inline">, signed</span></>, price: formatPrice(a3?.priceCents ?? PRINT_A3_PRICE) }] : []),
+    ...(withPrint
+      ? [
+          { name: <>Print {print!.size}, {print!.dimensions}<span className="hidden lg:inline">, limited edition, signed</span></>, price: formatPrice(print!.priceCents) },
+          { name: <>Guide + print −{BUNDLE_DISCOUNT_PCT}%</>, discount: true, price: `−${formatPrice(bundleDiscountCents(guideCents) + bundleDiscountCents(print!.priceCents))}` },
+        ]
+      : []),
   ];
 
   return (
@@ -108,7 +117,8 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
             imageUrl={work.imageUrl}
             filter={palette.previewFilter}
             format={config.format}
-            caption={`${palette.name} palette, ${formatLabel}`}
+            orientation={work.orientation}
+            caption={`${palette.name} palette, ${size}`}
             resultPhotoUrl={work.resultPhotoUrl}
             priority
           />
@@ -116,7 +126,10 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
         <div className="flex flex-col gap-22 lg:col-span-5 lg:gap-24">
           <div className="flex flex-col gap-6">
             <div className="flex justify-between">
-              <h1 className="text-xs tracking-normal">{work.number}</h1>
+              <h1 className="text-xs tracking-normal">
+                {work.number}
+                {work.signature && <span className="font-normal text-fg-muted"> · Signature</span>}
+              </h1>
               <span className="tabular-nums">{total}</span>
             </div>
             <p className="hidden text-fg-muted lg:block">{work.description}</p>
@@ -126,7 +139,9 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
             onChange={onChange}
             palettes={toConfiguratorPalettes(work)}
             formats={work.formats.filter((f) => f.active).map((f) => f.format)}
-            printAvailable={!!a3}
+            printAvailable={!!print}
+            orientation={work.orientation}
+            priceCents={totalCents}
             onAdd={add}
             added={added}
           />
@@ -151,7 +166,7 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
               },
               {
                 value: "included",
-                title: `Included · ${items.length} items`,
+                title: `Included · ${items.filter((it) => !("discount" in it)).length} items`,
                 content: (
                   <div className="flex flex-col gap-6 text-fg lg:gap-0">
                     {items.map((it, i) => (
@@ -182,7 +197,7 @@ function View({ work, a3, outlines, config, onChange }: Props & { config: GuideC
           />
         </div>
       </div>
-      <StickyBuyBar title={`${work.number} · ${formatLabel}`} detail={config.withPrint ? "Guide + list + print" : "Guide + list"} price={total} onAdd={add} added={added} />
+      <StickyBuyBar title={`${work.number} · ${size}`} detail={withPrint ? "Guide + list + print" : "Guide + list"} price={total} onAdd={add} added={added} />
     </div>
   );
 }

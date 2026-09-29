@@ -393,11 +393,16 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
     note: l.kind === "guide" ? l.note : null,
     receiptTitle: l.receiptTitle,
     imageUrl: l.imageUrl,
+    orientation: l.orientation,
     priceCents: l.unitPriceCents * l.quantity,
+    discountCents: l.discountCents,
+    bundleNote: l.bundleNote,
     issue: l.unavailable === "sold_out" ? "Sold out, not counted" : l.unavailable ? "Unavailable, not counted" : null,
   }));
   const totals = {
     subtotalCents: cart.totals.subtotalCents,
+    discountCents: cart.totals.discountCents,
+    discountLabel: cart.totals.discountLabel,
     shippingCents: cart.hasPhysical ? cart.totals.shippingCents : undefined,
     totalCents: cart.totals.totalCents,
     vatCents: cart.totals.taxIncludedCents,

@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, ButtonLink, Checkbox, Field, Input, PillButton, Popover, Select,
+  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Artwork, Button, ButtonLink, Checkbox, Field, Input, PillButton, Popover, Select,
   StatusChip, Textarea, UnderLink, fieldClass, useToast,
 } from "@/components";
 import { getAdminWork, type AdminWorkDetail, type LevelKey, type WorkStatus } from "@/lib/api";
@@ -19,7 +19,7 @@ import { useAdminQuery } from "@/lib/client";
 import { STATUS_LABEL, markStudioTested, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
-import { LEVELS } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, LEVELS, SIGNATURE_CENTS, formatLabel, printCm, type Orientation } from "@/lib/pricing";
 import { AdminPage } from "../../../_admin/AdminPage";
 import { useAdmin } from "../../../_admin/AdminFrame";
 
@@ -36,6 +36,8 @@ const smallField = fieldClass().replace("min-h-44", "min-h-32");
 
 interface Form {
   description: string;
+  orientation: Orientation;
+  signature: boolean;
   seoTitle: string;
   seoDescription: string;
   formats: Array<{ format: WorkDraft["formats"][number]["format"]; defaultLevel: LevelKey; price: string; active: boolean }>;
@@ -48,6 +50,8 @@ interface Form {
 
 const toForm = (w: AdminWorkDetail): Form => ({
   description: w.description,
+  orientation: w.orientation,
+  signature: w.signature,
   seoTitle: w.seoTitle,
   seoDescription: w.seoDescription,
   formats: w.formats.map((f) => ({ format: f.format, defaultLevel: f.defaultLevel, price: money(f.priceCents), active: f.active })),
@@ -103,6 +107,8 @@ function Editor({ work }: { work: AdminWorkDetail }) {
     try {
       const draft: WorkDraft = {
         description: form.description,
+        orientation: form.orientation,
+        signature: form.signature,
         seoTitle: form.seoTitle,
         seoDescription: form.seoDescription,
         formats: form.formats.map((f) => ({ format: f.format, defaultLevel: f.defaultLevel, priceCents: parseMoney(f.price), active: f.active })),
@@ -202,20 +208,27 @@ function General({ work, form, edit }: TabProps) {
   const replace = useRef<HTMLInputElement>(null);
   return (
     <div className="flex flex-col gap-14">
-      <div className={cn("grid gap-14", desktop ? "grid-cols-2" : "grid-cols-1")}>
+      <div className={cn("grid gap-14", desktop ? "grid-cols-3" : "grid-cols-1")}>
         <Field label="Number">
           <Input value={work.number} readOnly />
         </Field>
         <Field label="URL">
           <Input value={`geste.studio/works/${work.slug}`} readOnly />
         </Field>
+        {/* Landscape: the formats and prints are sold turned (40×30 … 100×80) and the work is shown landscape. */}
+        <Field label="Orientation">
+          <Select value={form.orientation} onChange={(e) => edit({ orientation: e.target.value as Orientation })}>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </Select>
+        </Field>
         {/* pb-6: the board's textarea sits on a text line, 6 px above the pictures' row. */}
-        <Field label="Description" className={desktop ? "col-span-2 pb-6" : "pb-6"}>
+        <Field label="Description" className={desktop ? "col-span-3 pb-6" : "pb-6"}>
           <Textarea rows={2} className="h-80 resize-y" value={form.description} onChange={(e) => edit({ description: e.target.value })} />
         </Field>
       </div>
       <div className={cn("grid gap-14", desktop ? "grid-cols-3" : "grid-cols-1")}>
-        <Slot label="Digital preview" picture={work.imageUrl ? <Image src={work.imageUrl} alt={`${work.number} · Digital preview`} width={400} height={500} sizes="200px" className="block h-250 w-200 shrink-0 object-cover" /> : <Missing>Missing</Missing>}>
+        <Slot label="Digital preview" picture={work.imageUrl ? <Artwork src={work.imageUrl} alt={`${work.number} · Digital preview`} orientation={form.orientation} className="w-200" sizes="200px" /> : <Missing>Missing</Missing>}>
           <PillButton onClick={() => replace.current?.click()}>Replace</PillButton>
           <input ref={replace} type="file" accept="image/*" hidden onChange={() => toast.show("Done · demo action")} />
         </Slot>
@@ -288,35 +301,40 @@ function ResultPicker({ work }: { work: AdminWorkDetail }) {
   );
 }
 
-const FORMAT_COLS = "90px 140px 110px 110px 1fr";
+const FORMAT_COLS = "90px 140px 110px 110px 90px 1fr";
 
 function Formats({ work, form, edit }: TabProps) {
   const set = (i: number, patch: Partial<Form["formats"][number]>) => edit({ formats: form.formats.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
   const [custom, setCustom] = useState(true);
   return (
     <div className="flex flex-col gap-14 overflow-x-auto">
-      <div role="table" aria-label="Formats and prices" className="min-w-560 flex flex-col gap-14">
+      <div role="table" aria-label="Formats and prices" className="min-w-640 flex flex-col gap-14">
         <AdminHeadRow cols={FORMAT_COLS}>
           <span role="columnheader">Format</span>
           <span role="columnheader">Default level</span>
           <span role="columnheader">Guide price</span>
+          <span role="columnheader">Customer pays</span>
           <span role="columnheader">Est. time</span>
           <span role="columnheader">Available</span>
         </AdminHeadRow>
         {form.formats.map((f, i) => {
           const base = work.formats[i]!;
-          const invalid = Number.isNaN(parseMoney(f.price));
+          // The form's orientation, so the labels turn before saving ("80×60" for a landscape work).
+          const label = formatLabel(f.format, form.orientation);
+          const cents = parseMoney(f.price);
+          const invalid = Number.isNaN(cents);
           return (
             <AdminRow key={f.format} cols={FORMAT_COLS}>
-              <span role="cell">{base.label}</span>
+              <span role="cell">{label}</span>
               <span role="cell">
-                <select aria-label={`Default level ${base.label}`} value={f.defaultLevel} onChange={(e) => set(i, { defaultLevel: e.target.value as LevelKey })} className={smallField}>
+                <select aria-label={`Default level ${label}`} value={f.defaultLevel} onChange={(e) => set(i, { defaultLevel: e.target.value as LevelKey })} className={smallField}>
                   {LEVEL_KEYS.map((l) => <option key={l} value={l}>{LEVELS[l].label}</option>)}
                 </select>
               </span>
               <span role="cell">
-                <input aria-label={`Price ${base.label}`} aria-invalid={invalid || undefined} value={f.price} onChange={(e) => set(i, { price: e.target.value })} className={fieldClass(invalid).replace("min-h-44", "min-h-32")} />
+                <input aria-label={`Price ${label}`} aria-invalid={invalid || undefined} value={f.price} onChange={(e) => set(i, { price: e.target.value })} className={fieldClass(invalid).replace("min-h-44", "min-h-32")} />
               </span>
+              <span role="cell" className="tabular-nums">{invalid ? "—" : money(cents + (form.signature ? SIGNATURE_CENTS : 0))}</span>
               <span role="cell">{f.defaultLevel === base.defaultLevel ? base.duration : "—"}</span>
               <span role="cell">
                 <Checkbox layout="setting" gap="gap-10" label="On sale" checked={f.active} onChange={(e) => set(i, { active: e.target.checked })} />
@@ -325,7 +343,11 @@ function Formats({ work, form, edit }: TabProps) {
           );
         })}
       </div>
-      <Checkbox layout="setting" gap="gap-10" className="-my-6" label="Allow “Custom” level (any level on any format) · +$2 per level above default" checked={custom} onChange={(e) => setCustom(e.target.checked)} />
+      <Checkbox layout="setting" gap="gap-10" className="-my-6" label={`Signature work · +${money(SIGNATURE_CENTS)} on every format`} checked={form.signature} onChange={(e) => edit({ signature: e.target.checked })} />
+      <Checkbox layout="setting" gap="gap-10" className="-my-6" label="Allow “Custom” level (any level on any format, same price)" checked={custom} onChange={(e) => setCustom(e.target.checked)} />
+      <AdminTitle>Prints</AdminTitle>
+      <PrintRows work={work} form={form} edit={edit} />
+      <p className="text-fg-muted">Guide + print of this work in one cart: −{BUNDLE_DISCOUNT_PCT}% on both lines.</p>
     </div>
   );
 }
@@ -394,38 +416,47 @@ function ShoppingList({ work, form, edit }: TabProps) {
   );
 }
 
-const PRINT_COLS = "100px 120px 120px 1fr";
+const PRINT_COLS = "160px 120px 120px 1fr";
 
-function Prints({ work, form, edit }: TabProps) {
+/** S, M, L of the work: edition size and price (Prints tab and Formats & prices, the same form fields). */
+function PrintRows({ work, form, edit }: TabProps) {
   const set = (i: number, patch: Partial<Form["editions"][number]>) => edit({ editions: form.editions.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
   return (
+    <div role="table" aria-label="Print editions" className="min-w-520 flex flex-col gap-14">
+      <AdminHeadRow cols={PRINT_COLS}>
+        <span role="columnheader">Size</span>
+        <span role="columnheader">Edition</span>
+        <span role="columnheader">Price</span>
+        <span role="columnheader">Status</span>
+      </AdminHeadRow>
+      {work.editions.map((e, i) => {
+        const f = form.editions[i]!;
+        const offered = !!e.editionId;
+        // The form's orientation, so the sizes turn before saving.
+        const dims = printCm(e.size, form.orientation);
+        return (
+          <AdminRow key={e.size} cols={PRINT_COLS}>
+            <span role="cell">{e.size} · {dims}</span>
+            <span role="cell">
+              <input aria-label={`Edition ${e.size}`} inputMode="numeric" value={f.editionSize} disabled={!offered} onChange={(ev) => set(i, { editionSize: ev.target.value.replace(/\D/g, "") })} className={fieldClass(false, !offered).replace("min-h-44", "min-h-32")} />
+            </span>
+            <span role="cell">
+              <input aria-label={`Price ${e.size}`} value={f.price} disabled={!offered} onChange={(ev) => set(i, { price: ev.target.value })} className={fieldClass(offered && Number.isNaN(parseMoney(f.price)), !offered).replace("min-h-44", "min-h-32")} />
+            </span>
+            <span role="cell">
+              {!offered ? <StatusChip state="off" label="Not offered" /> : e.open ? <StatusChip state="done" label={`On sale · ${e.sold} sold`} /> : <StatusChip state="todo" label={`Closed · ${e.sold} sold`} />}
+            </span>
+          </AdminRow>
+        );
+      })}
+    </div>
+  );
+}
+
+function Prints(props: TabProps) {
+  return (
     <div className="flex flex-col gap-14 overflow-x-auto">
-      <div role="table" aria-label="Print editions" className="min-w-480 flex flex-col gap-14">
-        <AdminHeadRow cols={PRINT_COLS}>
-          <span role="columnheader">Size</span>
-          <span role="columnheader">Edition</span>
-          <span role="columnheader">Price</span>
-          <span role="columnheader">Status</span>
-        </AdminHeadRow>
-        {work.editions.map((e, i) => {
-          const f = form.editions[i]!;
-          const offered = !!e.editionId;
-          return (
-            <AdminRow key={e.size} cols={PRINT_COLS}>
-              <span role="cell">{e.size}</span>
-              <span role="cell">
-                <input aria-label={`Edition ${e.size}`} inputMode="numeric" value={f.editionSize} disabled={!offered} onChange={(ev) => set(i, { editionSize: ev.target.value.replace(/\D/g, "") })} className={fieldClass(false, !offered).replace("min-h-44", "min-h-32")} />
-              </span>
-              <span role="cell">
-                <input aria-label={`Price ${e.size}`} value={f.price} disabled={!offered} onChange={(ev) => set(i, { price: ev.target.value })} className={fieldClass(offered && Number.isNaN(parseMoney(f.price)), !offered).replace("min-h-44", "min-h-32")} />
-              </span>
-              <span role="cell">
-                {!offered ? <StatusChip state="off" label="Not offered" /> : e.open ? <StatusChip state="done" label={`On sale · ${e.sold} sold`} /> : <StatusChip state="todo" label={`Closed · ${e.sold} sold`} />}
-              </span>
-            </AdminRow>
-          );
-        })}
-      </div>
+      <PrintRows {...props} />
       <Link href="/admin/editions" className="self-start underline underline-offset-3 hover:text-fg-muted">Edition stock</Link>
     </div>
   );

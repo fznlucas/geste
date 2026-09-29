@@ -97,6 +97,8 @@ export async function approveCandidate(id: string): Promise<string> {
     status: "draft",
     publishAt: null,
     defaultFormat: job?.params.format ?? "40x50",
+    orientation: "portrait",
+    signature: false,
     description: "",
     previewPath: c.imagePath,
     resultPhotoPath: null,

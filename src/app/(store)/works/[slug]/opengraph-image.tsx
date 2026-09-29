@@ -1,4 +1,4 @@
-/** Link preview of a work (BrandFavicon): "N°03" · "Intermediate · 60×80 · from $12" · the work. */
+/** Link preview of a work (BrandFavicon): "N°03" · "Intermediate · 60×80 · from $15" · the work (whole when landscape). */
 import { getWork, getWorks } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { OG_SIZE, linkPreview } from "@/lib/og";
@@ -16,5 +16,5 @@ export async function generateStaticParams() {
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const work = (await getWork((await params).slug))!;
   const card = work.formats.find((f) => f.format === work.defaultFormat)!;
-  return linkPreview({ title: work.number, detail: `${card.levelLabel} · ${card.label} · from ${formatPrice(work.minPriceCents)}`, imageUrl: work.imageUrl });
+  return linkPreview({ title: work.number, detail: `${card.levelLabel} · ${card.label} · from ${formatPrice(work.minPriceCents)}`, imageUrl: work.imageUrl, orientation: work.orientation });
 }

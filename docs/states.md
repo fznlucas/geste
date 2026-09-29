@@ -42,7 +42,7 @@ Every interactive element implements these states. The `/kit` page shows them; t
 | success | Step 04 Confirmation, summary hidden, "Your guide is in your library" + button, receipt sent |
 | declined | Modal "Payment declined. No money was taken." — "Use another card" / "Try again" |
 | 3ds | Bank challenge in place (Stripe), then success or declined |
-| soldout | The A3 edition sold out during payment: "12/50 went a second ago — you have 13/50" (next number assigned) or, if none left, refund offered |
+| soldout | The print edition sold out during payment: "12/100 went a second ago — you have 13/100" (next number assigned) or, if none left, refund offered |
 
 ## Forms
 

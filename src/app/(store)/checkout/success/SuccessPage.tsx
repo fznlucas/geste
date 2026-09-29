@@ -5,11 +5,12 @@
  * gone and no step is clickable. Mock: the order comes from this browser's purchases
  * (`@/lib/client` purchases → `getOrder` merges them).
  */
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ButtonLink, CheckoutStepper, Tooltip, type CheckoutStep } from "@/components";
+import { Artwork, ButtonLink, CheckoutStepper, Tooltip, type CheckoutStep } from "@/components";
+import { cn } from "@/lib/cn";
+import type { Orientation } from "@/lib/pricing";
 import { copyNumbersLabel as numbersLabel, getOrder, orderLineTitle as receiptTitle, type OrderDetail, type OrderItem } from "@/lib/api";
 import { useHydrated, usePurchases } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
@@ -104,7 +105,7 @@ export function SuccessPage() {
         <span>A receipt is on its way to {email}.</span>
         {guides.length > 0 && (
           <div className="flex gap-14 bg-surface-muted p-14">
-            <Thumb src={guides[0]!.imageUrl} w={72} h={90} />
+            <Thumb src={guides[0]!.imageUrl} orientation={guides[0]!.orientation} w={72} />
             <div className="flex flex-col gap-8">
               <span className="font-medium">{guideTitle}</span>
               <Link href="/account" className="self-start underline underline-offset-3 hover:text-fg-muted">Open my library</Link>
@@ -113,7 +114,7 @@ export function SuccessPage() {
         )}
         {prints.map((p) => (
           <div key={p.id} className="flex gap-14 border border-border p-14">
-            <Thumb src={p.imageUrl} w={72} h={90} />
+            <Thumb src={p.imageUrl} orientation={p.orientation} w={72} />
             <div className="flex flex-col gap-4">
               <span className="font-medium">Print {p.workNumber}, {numbersLabel(p)}</span>
               <span className="text-fg-muted">{shipName}</span>
@@ -140,7 +141,7 @@ export function SuccessPage() {
       </div>
       {guides.length > 0 && (
         <div className="flex gap-20 bg-surface-muted p-20">
-          <Thumb src={guides[0]!.imageUrl} w={96} h={120} />
+          <Thumb src={guides[0]!.imageUrl} orientation={guides[0]!.orientation} w={96} />
           <div className="flex flex-1 flex-col gap-6">
             <span className="font-medium">{guideTitle}</span>
             <span className="text-fg-muted">Open it once online and it works offline on your phone. Your shopping list is inside.</span>
@@ -150,7 +151,7 @@ export function SuccessPage() {
       )}
       {prints.map((p) => (
         <div key={p.id} className="flex gap-20 border border-border p-20">
-          <Thumb src={p.imageUrl} w={96} h={120} />
+          <Thumb src={p.imageUrl} orientation={p.orientation} w={96} />
           <div className="flex flex-1 flex-col gap-6">
             <span className="font-medium">Your print {p.workNumber}, {numbersLabel(p)}</span>
             <span className="text-fg-muted">{shipName}. Estimated delivery {eta}. We will email your tracking number.</span>
@@ -198,12 +199,10 @@ export function SuccessPage() {
   );
 }
 
-function Thumb({ src, w, h }: { src: string | null; w: number; h: number }) {
-  return (
-    <span className="relative block shrink-0 bg-surface-sunk" style={{ width: w, height: h }}>
-      {src && <Image src={src} alt="" fill sizes={`${w}px`} className="object-cover" />}
-    </span>
-  );
+/** The work whole, turned for a landscape work (72 or 96 px wide). */
+function Thumb({ src, orientation, w }: { src: string | null; orientation: Orientation; w: 72 | 96 }) {
+  const width = w === 72 ? "w-72" : "w-96";
+  return src ? <Artwork src={src} orientation={orientation} className={width} sizes={`${w}px`} /> : <span className={cn("block aspect-[4/5] shrink-0 bg-surface-muted", width)} />;
 }
 
 /** No board draws a gift card on the confirmation: a bordered row like the print's, without a picture. */

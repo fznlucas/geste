@@ -3,10 +3,13 @@
 import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import { Segmented } from "../primitives/Segmented";
-import type { FormatKey } from "@/lib/pricing";
+import type { FormatKey, Orientation } from "@/lib/pricing";
 
-/** Desktop preview height per format inside the 720 px Mist box (board Product): bigger canvas, bigger picture. */
-const PREVIEW_HEIGHT: Record<FormatKey, number> = { "30x40": 440, "40x50": 520, "60x80": 580, "80x100": 660 };
+/**
+ * Desktop preview size per format inside the 720 px Mist box (board Product): bigger canvas, bigger
+ * picture. The long side of the work: its height when portrait, its width when landscape.
+ */
+const PREVIEW_SIZE: Record<FormatKey, number> = { "30x40": 440, "40x50": 520, "60x80": 580, "80x100": 660 };
 
 export interface ProductGalleryProps {
   workNumber: string; // "N°03"
@@ -14,6 +17,7 @@ export interface ProductGalleryProps {
   /** CSS filter previewing the palette on the digital render (palettes.preview_filter). */
   filter: string | null;
   format: FormatKey;
+  orientation?: Orientation;
   /** "Original palette, 60×80" under the picture (desktop). */
   caption: string;
   /** Photo of the work painted by a first-time painter; null → dashed placeholder, as on the boards. */
@@ -23,12 +27,14 @@ export interface ProductGalleryProps {
 
 /**
  * Work page picture (boards Product, MProduct): Mist box with a "Digital preview" / "Real result" badge,
- * views "Preview · Real result" below. Desktop: 720 px box, the render's height follows the format and
- * its filter the palette (both animate 420 ms). Phone: full-width 358 × 440 crop.
+ * views "Preview · Real result" below. Desktop: 720 px box, the render's long side follows the format
+ * and its filter the palette (both animate 420 ms). Phone: full width, 358 × 440 (portrait) or 5:4
+ * (landscape). The work is always whole, never cropped.
  */
-export function ProductGallery({ workNumber, imageUrl, filter, format, caption, resultPhotoUrl, priority }: ProductGalleryProps) {
+export function ProductGallery({ workNumber, imageUrl, filter, format, orientation = "portrait", caption, resultPhotoUrl, priority }: ProductGalleryProps) {
   const [view, setView] = useState<"preview" | "result">("preview");
   const preview = view === "preview";
+  const landscape = orientation === "landscape";
   return (
     <div className="flex flex-col gap-22 lg:gap-14">
       <div className="relative flex items-center justify-center bg-surface-muted lg:h-720">
@@ -43,8 +49,12 @@ export function ProductGallery({ workNumber, imageUrl, filter, format, caption, 
             height={0}
             sizes="(min-width: 1200px) 560px, 100vw"
             priority={priority}
-            className="aspect-[358/440] w-full object-cover transition-[height,filter] duration-panel ease-standard lg:aspect-auto lg:h-(--preview-h) lg:w-auto"
-            style={{ filter: filter ?? "none", "--preview-h": `${PREVIEW_HEIGHT[format]}px` } as CSSProperties}
+            className={
+              landscape
+                ? "aspect-[5/4] w-full object-contain transition-[width,filter] duration-panel ease-standard lg:aspect-auto lg:h-auto lg:w-(--preview-size)"
+                : "aspect-[358/440] w-full object-contain transition-[height,filter] duration-panel ease-standard lg:aspect-auto lg:h-(--preview-size) lg:w-auto"
+            }
+            style={{ filter: filter ?? "none", "--preview-size": `${PREVIEW_SIZE[format]}px` } as CSSProperties}
           />
         ) : resultPhotoUrl ? (
           <Image src={resultPhotoUrl} alt={`${workNumber} painted by a first-time painter`} width={0} height={0} sizes="(min-width: 1200px) 560px, 100vw" className="aspect-[358/440] w-full object-cover lg:aspect-auto lg:h-520 lg:w-auto" />

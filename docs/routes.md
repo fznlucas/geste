@@ -10,7 +10,8 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/shop` | Shop | MShop | ISR + client filters | Filters `?level=&palette=` in the URL; 15 works, 5 × 3 |
 | `/works/[slug]` | Product, Product01–15 | MProduct, MProduct01–15 | ISR per work | Config `?format=&level=&palette=` in the URL |
 | `/works/[slug]/list` | ShoppingList | MShoppingList | ISR | Quantities from `shopping_items.quantity_rule[format]` |
-| `/prints` | Print | MPrint | dynamic stock | Limited editions (A3 45, A2 75, 50×70 95) |
+| `/prints` | — (Shop grid) | — (MShop grid) | dynamic stock | Gallery of every edition, filters orientation and size |
+| `/prints/[slug]` | Print | MPrint | dynamic stock | One work's print in S 55, M 95, L 145; to-scale preview |
 | `/prints/[slug]` | Print | MPrint | dynamic stock | One work's print |
 | Cart drawer (any page), `/cart` | Cart | MCart | client | Cookie cart for guests |
 | `/checkout` | Checkout (steps 1–3) | MCheckout | dynamic | contact → shipping (prints only) → payment |

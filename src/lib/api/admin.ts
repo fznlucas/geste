@@ -62,7 +62,7 @@ export interface AdminAlert {
   read: boolean;
 }
 
-/** The open edition closest to selling out, if 5 copies or fewer are left ("N°08 50×70 edition: 4 left"). */
+/** The open edition closest to selling out, if 5 copies or fewer are left ("N°08 L edition: 4 left"). */
 export async function getLowEdition(): Promise<{ label: string; left: number } | null> {
   const low = (await getEditions()).filter((e) => e.left > 0 && e.left <= 5).sort((a, b) => a.left - b.left)[0];
   return low ? { label: `${low.workNumber} ${low.size} edition: ${low.left} left`, left: low.left } : null;
@@ -86,7 +86,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
     { id: "alert-support", text: plural(c.support, "new support message", "new support messages"), when: "08:02", href: "/admin/support", roles: ["owner", "support"], phone: { rank: 2, text: "Sarah C.: “When will my print ship?”", href: "/admin/support" } },
     { id: "alert-reviews", text: `${plural(c.reviews, "review", "reviews")} waiting`, when: "yesterday", href: "/admin/reviews", roles: ["owner", "support", "content"], phone: { rank: 4, text: `${plural(c.reviews, "review", "reviews")} waiting`, href: "/admin/reviews" } },
     { id: "alert-ai", text: `${plural(c.ai, "AI candidate", "AI candidates")} to validate`, when: "yesterday", href: "/admin/ai", roles: ["owner", "content"], phone: null },
-    { id: "alert-payout", text: "Payout of $1,284 sent", when: "Mon", href: "/admin/finance", roles: ["owner"], phone: { rank: 5, text: "Payout of $1,284 scheduled", href: "/admin/finance" } },
+    { id: "alert-payout", text: "Payout of $1,668 sent", when: "Mon", href: "/admin/finance", roles: ["owner"], phone: { rank: 5, text: "Payout of $1,668 scheduled", href: "/admin/finance" } },
   ];
   return clone(raw.map((a) => ({ ...a, read: patched("alerts", { id: a.id, read: false }).read })));
 }

@@ -2,12 +2,14 @@
  * Mock tables. Each type mirrors one table of supabase/migrations/0001_init.sql, in camelCase,
  * with storage paths (not URLs). Only `src/lib/api` reads these files; pages never import them.
  */
+import type { Orientation } from "@/lib/pricing";
 import type {
   Address, DiagramStroke, FormatKey, FulfilmentStatus, ItemKind, LevelKey, OrderStatus, PaletteKey, PrintSize,
   ReviewStatus, ShippingMethod, Swatch, ThreadStatus, WorkStatus, GuidePrintContent,
 } from "@/lib/api/types";
 
 export type { ArticleRow } from "./articles";
+export type { Orientation };
 export type { GuidePrintContent, Address, FulfilmentStatus, ItemKind, OrderStatus, PaletteKey, ReviewStatus, Swatch, ThreadStatus, WorkStatus };
 export type CopyStatus = "available" | "reserved" | "sold" | "void";
 
@@ -18,6 +20,10 @@ export interface WorkRow {
   status: WorkStatus;
   publishAt: string | null;
   defaultFormat: FormatKey;
+  /** `works.orientation` (0003): a landscape work sells its formats turned and is shown landscape. */
+  orientation: Orientation;
+  /** `works.signature` (0003): the guide costs SIGNATURE_CENTS more, "Signature" on the card and page. */
+  signature: boolean;
   description: string;
   previewPath: string; // "mock/work-03.jpg"
   resultPhotoPath: string | null;
@@ -31,7 +37,7 @@ export interface WorkFormatRow {
   workId: string;
   format: FormatKey;
   defaultLevel: LevelKey;
-  guidePriceCents: number; // base, level surcharge added by pricing.ts
+  guidePriceCents: number; // any level; the Signature supplement is added by pricing.ts
   estMinutes: number;
   active: boolean;
 }
@@ -108,7 +114,7 @@ export interface PrintEditionRow {
 export interface PrintCopyRow {
   id: string;
   editionId: string;
-  number: number; // 12 in 12/50
+  number: number; // 12 in 12/100
   status: CopyStatus;
   orderItemId: string | null;
   fulfilment: FulfilmentStatus;
@@ -140,6 +146,8 @@ export interface OrderItemRow {
   detail: string; // "60×80 · Intermediate · Original"
   unitPriceCents: number;
   quantity: number;
+  /** `order_items.discount_cents` (0003): the guide + print bundle discount on this line, all copies. */
+  discountCents: number;
   fulfilment: FulfilmentStatus;
 }
 

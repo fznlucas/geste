@@ -9,8 +9,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import Image from "next/image";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Button, OrderStatusChip, PillButton, PillLink, useToast } from "@/components";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStatusChip, PillButton, PillLink, useToast } from "@/components";
 import { ORDERS_THIS_MONTH, copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
 import { markShipped } from "@/lib/client/admin/orders";
@@ -173,7 +172,7 @@ function DesktopOrders({ orders, q, onExport, exported }: { orders: Order[] | un
   );
 }
 
-/** "N°07 · A3 · 12/50" (AdminMOrders card). */
+/** "N°07 · S · 12/100" (AdminMOrders card). */
 function printLine(o: Order): string {
   const p = o.items.find((i) => i.kind === "print");
   return p ? `${p.workNumber} · ${p.edition?.size ?? ""} · ${copyNumbersLabel(p)}` : o.summary;
@@ -209,7 +208,7 @@ function PhoneOrders({ orders }: { orders: Order[] | undefined }) {
         return (
           <div key={o.number} className="flex flex-col gap-8 border border-border bg-surface p-14">
             <div className="flex gap-10">
-              {p?.imageUrl && <Image src={p.imageUrl} alt="" width={48} height={60} sizes="48px" className="h-60 w-48 object-cover" />}
+              {p?.imageUrl && <Artwork src={p.imageUrl} orientation={p.orientation} className="w-48" sizes="48px" />}
               <div className="flex flex-col">
                 <Link href={detailHref(o.number)} className="self-start underline underline-offset-3 hover:text-fg-muted">#{o.number}</Link>
                 <span>{printLine(o)}</span>

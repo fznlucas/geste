@@ -7,7 +7,7 @@ import { FORMATS, LEVELS } from "@/lib/pricing";
 import { createPersistentStore, isRecord, newId, useStore } from "./store";
 
 /**
- * Mock cart, kept in localStorage ("geste.cart.v1"). The functions have the names of the future
+ * Mock cart, kept in localStorage ("geste.cart.v2"). The functions have the names of the future
  * server actions in `src/actions/cart.ts` (signed cookie for guests, `carts` row when signed in):
  * swapping the backend changes their bodies, not their callers.
  * Only choices are stored; `useCart()` prices them with `priceCart` on every read.
@@ -40,7 +40,7 @@ function parseLine(raw: unknown): StoredCartLine | null {
 
 const EMPTY: StoredCartLine[] = [];
 
-export const cartStore = createPersistentStore<StoredCartLine[]>("cart", 1, EMPTY, (raw) =>
+export const cartStore = createPersistentStore<StoredCartLine[]>("cart", 2, EMPTY, (raw) =>
   Array.isArray(raw) ? raw.slice(0, MAX_LINES).map(parseLine).filter((l): l is StoredCartLine => l !== null) : null,
 );
 

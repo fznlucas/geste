@@ -10,8 +10,8 @@ Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the
 | --- | --- | --- |
 | People | `profiles` | id = auth.users.id, email, full_name, locale en/fr, newsletter, deleted_at |
 | | `staff_roles` | user_id, role owner/support/fulfilment/content |
-| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, preview/result/studio images, studio_tested, seo |
-| | `work_formats` | work_id, format 30x40…80x100, default_level, guide_price_cents (base), est_minutes, active |
+| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, orientation portrait/landscape, signature, preview/result/studio images, studio_tested, seo |
+| | `work_formats` | work_id, format 30x40…80x100 (turned for a landscape work), default_level, guide_price_cents (any level; Signature +$6 added by pricing.ts), est_minutes, active |
 | | `palettes` | work_id, key, name, swatches [{hex,name}], preview_filter |
 | Guides | `guides` | work × format × level, current_version |
 | | `guide_layers` | position, name, brush, plate, tip, minutes (painting time), dry_seconds, diagram (strokes) |
@@ -19,7 +19,7 @@ Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the
 | | `guide_print` | guide_id, content (the printed guide's copy, Guide01–08); staff-only draft, published into the version |
 | | `guide_versions` | immutable published snapshot (content jsonb: layers with minutes, steps with brush, print) — what buyers read |
 | Shopping | `shopping_items` | name, standard/budget label, price, affiliate URLs, quantity_rule per format |
-| Prints | `print_editions` | work, size, edition_size, price, open |
+| Prints | `print_editions` | work, size S/M/L, edition_size, price, open |
 | | `print_copies` | edition, number, status available/reserved/sold/void, order_item, fulfilment, certificate_no |
 | Orders | `carts` | user_id, items |
 | | `orders` | number GS-xxxx, user/email, status, subtotal/discount/shipping/tax/total, promo, gift card, address, stripe_payment_intent, withdrawal_waived, paid_at |

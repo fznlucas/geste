@@ -1,29 +1,51 @@
 "use client";
 
-import Image from "next/image";
 import { useId, useState } from "react";
+import { Artwork } from "./Artwork";
 import { Button } from "@/components/primitives/Button";
 import { Input } from "@/components/primitives/Input";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import type { Orientation } from "@/lib/pricing";
+
+/** "$95", or "$95" struck and "$80.75" for a bundled line. */
+function LinePrice({ line }: { line: OrderSummaryLine }) {
+  if (!line.issue && line.discountCents) {
+    return (
+      <span className="flex gap-8 whitespace-nowrap tabular-nums">
+        <s className="text-fg-muted" aria-label={`was ${formatPrice(line.priceCents)}`}>{formatPrice(line.priceCents)}</s>
+        <span>{formatPrice(line.priceCents - line.discountCents)}</span>
+      </span>
+    );
+  }
+  return <span className={cn("tabular-nums", line.issue && "text-fg-muted line-through")}>{formatPrice(line.priceCents)}</span>;
+}
 
 export interface OrderSummaryLine {
   id: string;
   title: string; // "N°03 — Guide"
-  /** "60×80 · Intermediate", "A3 · Edition 12/50" */
+  /** "60×80 · Intermediate", "S · Edition 12/100" */
   detail: string;
   /** "+ shopping list" */
   note?: string | null;
   /** "N°03 — Guide, 60×80" (phone summary) */
   receiptTitle: string;
   imageUrl?: string;
+  orientation?: Orientation;
   priceCents: number;
+  /** Bundle discount on the line; the price shows struck with the discounted one. */
+  discountCents?: number;
+  /** "−15% with the print" */
+  bundleNote?: string | null;
   /** Sold out or unavailable: not counted, Signal text. */
   issue?: string | null;
 }
 
 export interface OrderSummaryTotals {
   subtotalCents: number;
+  /** Guide + print bundles: "Guide + print −15%" under the subtotal. */
+  discountCents?: number;
+  discountLabel?: string;
   /** null = no carrier chosen yet → "Next step". undefined = nothing to ship. */
   shippingCents: number | null | undefined;
   totalCents: number;
@@ -54,9 +76,11 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
       <span className="text-fg-muted">Order summary</span>
       {lines.map((l) => (
         <div key={l.id} className="flex gap-14">
-          <span className="relative block h-70 w-56 shrink-0 bg-surface-muted">
-            {l.imageUrl && <Image src={l.imageUrl} alt="" fill sizes="56px" className={cn("object-cover", l.issue && "opacity-40")} />}
-          </span>
+          {l.imageUrl ? (
+            <Artwork src={l.imageUrl} orientation={l.orientation} className="w-56" sizes="56px" imgClassName={l.issue ? "opacity-40" : undefined} />
+          ) : (
+            <span className="block h-70 w-56 shrink-0 bg-surface-muted" />
+          )}
           <div className="flex flex-1 justify-between gap-12">
             <span>
               {l.title}
@@ -70,6 +94,12 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
                   </>
                 )}
               </span>
+              {!l.issue && !!l.discountCents && l.bundleNote && (
+                <>
+                  <br />
+                  {l.bundleNote}
+                </>
+              )}
               {l.issue && (
                 <>
                   <br />
@@ -77,7 +107,7 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
                 </>
               )}
             </span>
-            <span className={cn("tabular-nums", l.issue && "text-fg-muted line-through")}>{formatPrice(l.priceCents)}</span>
+            <LinePrice line={l} />
           </div>
         </div>
       ))}
@@ -112,6 +142,9 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
       </form>
       <div className="flex flex-col gap-8 border-t border-border pt-14">
         <div className="flex justify-between"><span className="text-fg-muted">Subtotal</span><span className="tabular-nums">{formatPrice(totals.subtotalCents)}</span></div>
+        {!!totals.discountCents && (
+          <div className="flex justify-between"><span className="text-fg-muted">{totals.discountLabel ?? "Discount"}</span><span className="tabular-nums">−{formatPrice(totals.discountCents)}</span></div>
+        )}
         <div className="flex justify-between"><span className="text-fg-muted">Shipping</span><span className="tabular-nums">{shippingText(totals.shippingCents)}</span></div>
         <div className="flex justify-between border-t border-border pt-8 font-medium"><span>Total</span><span className="tabular-nums">{formatPrice(totals.totalCents)}</span></div>
         {!!totals.vatCents && <span className="text-fg-muted">Including VAT {formatPrice(totals.vatCents)}</span>}
@@ -144,9 +177,12 @@ export function OrderSummaryToggle({ lines, totals }: Pick<OrderSummaryProps, "l
                 {l.receiptTitle}
                 {l.issue && <span className="text-danger"> · {l.issue}</span>}
               </span>
-              <span className={cn("tabular-nums", l.issue && "text-fg-muted line-through")}>{formatPrice(l.priceCents)}</span>
+              <LinePrice line={l} />
             </div>
           ))}
+          {!!totals.discountCents && (
+            <div className="flex justify-between text-fg-muted"><span>{totals.discountLabel ?? "Discount"}</span><span className="tabular-nums">−{formatPrice(totals.discountCents)}</span></div>
+          )}
           <div className="flex justify-between text-fg-muted"><span>Shipping</span><span className="tabular-nums">{shippingText(totals.shippingCents)}</span></div>
         </div>
       )}

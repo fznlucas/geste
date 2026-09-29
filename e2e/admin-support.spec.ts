@@ -64,7 +64,7 @@ test("support: open, reply with a saved reply, mark as done", async ({ page }) =
   await expectNoAxeViolations(page);
 
   // The reply is in the audit log (Settings › Security).
-  const audit = await page.evaluate(() => JSON.parse(localStorage.getItem("geste.admin.v1")!).audit.map((a: { summary: string }) => a.summary));
+  const audit = await page.evaluate(() => JSON.parse(localStorage.getItem("geste.admin.v2")!).audit.map((a: { summary: string }) => a.summary));
   expect(audit).toEqual(expect.arrayContaining(["Lucas replied to Yanis Benali", expect.stringMatching(/^Lucas closed “Refund for N°04\?”/)]));
 });
 
@@ -116,7 +116,7 @@ test("content: journal, new article, home, translations, legal", async ({ page }
   await expect(journal).toContainText("Untitled article");
 
   await page.getByRole("button", { name: "Home page", exact: true }).click();
-  await expect(page.getByLabel("Hero work")).toHaveValue("n03");
+  await expect(page.getByLabel("Hero work")).toHaveValue("n06");
   await page.getByLabel("Hero work").selectOption("n10");
   await page.getByRole("button", { name: "Publish home" }).click();
   await expect(page.getByRole("button", { name: /^Published/ })).toBeVisible();

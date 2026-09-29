@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import type { CartItem } from "@/lib/types";
+import { Artwork } from "./Artwork";
 
 export interface CartLineProps {
   item: CartItem;
@@ -11,6 +11,8 @@ export interface CartLineProps {
   href?: string | null;
   /** Second grey line: "+ shopping list", "Signed, with certificate". Not shown on the phone cart page. */
   note?: string | null;
+  /** "−15% with the print": the line is in a guide + print bundle (`item.discountCents`). Always shown. */
+  bundleNote?: string | null;
   /** Why the line is not counted ("Sold out, not counted"). Signal text, never colour alone. */
   issue?: string | null;
   onRemove: () => void;
@@ -23,16 +25,21 @@ export interface CartLineProps {
 }
 
 /**
- * Cart row (boards Cart, MCart): thumb, title link + price on one line, detail and note in Stone,
- * "Remove" text button. Guides and gift cards have quantity 1; prints get a stepper up to the stock.
+ * Cart row (boards Cart, MCart): thumb (turned for a landscape work), title link + price on one line,
+ * detail and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a
+ * stepper up to the stock. A bundled line shows its full price struck, the discounted price and why.
  */
-export function CartLine({ item, href, note, issue, onRemove, onQuantity, maxQuantity, size = "md", onNavigate }: CartLineProps) {
+export function CartLine({ item, href, note, bundleNote, issue, onRemove, onQuantity, maxQuantity, size = "md", onNavigate }: CartLineProps) {
   const lg = size === "lg";
+  const full = item.unitPriceCents * item.quantity;
+  const discount = !issue && item.discountCents ? item.discountCents : 0;
   return (
     <div className={lg ? "flex gap-14 border-b border-border py-14" : "flex gap-16 border-b border-border py-16"}>
-      <span className={lg ? "relative block h-90 w-72 shrink-0 bg-surface-muted" : "relative block h-80 w-64 shrink-0 bg-surface-muted"}>
-        {item.imageUrl && <Image src={item.imageUrl} alt="" fill sizes={lg ? "72px" : "64px"} className={issue ? "object-cover opacity-40" : "object-cover"} />}
-      </span>
+      {item.imageUrl ? (
+        <Artwork src={item.imageUrl} orientation={item.orientation} className={lg ? "w-72" : "w-64"} sizes={lg ? "72px" : "64px"} imgClassName={issue ? "opacity-40" : undefined} />
+      ) : (
+        <span className={lg ? "block h-90 w-72 shrink-0 bg-surface-muted" : "block h-80 w-64 shrink-0 bg-surface-muted"} />
+      )}
       <span className="flex flex-1 flex-col gap-2">
         <span className="flex justify-between gap-12">
           {href ? (
@@ -40,10 +47,18 @@ export function CartLine({ item, href, note, issue, onRemove, onQuantity, maxQua
           ) : (
             <span>{item.title}</span>
           )}
-          <span className={issue ? "tabular-nums text-fg-muted line-through" : "tabular-nums"}>{formatPrice(item.unitPriceCents * item.quantity)}</span>
+          {discount ? (
+            <span className="flex gap-8 whitespace-nowrap tabular-nums">
+              <s className="text-fg-muted" aria-label={`was ${formatPrice(full)}`}>{formatPrice(full)}</s>
+              <span>{formatPrice(full - discount)}</span>
+            </span>
+          ) : (
+            <span className={issue ? "tabular-nums text-fg-muted line-through" : "tabular-nums"}>{formatPrice(full)}</span>
+          )}
         </span>
         {item.detail && <span className="text-fg-muted">{item.detail}</span>}
         {note && !lg && <span className="text-fg-muted">{note}</span>}
+        {discount > 0 && bundleNote && <span>{bundleNote}</span>}
         {issue && <span role="status" className="text-danger">{issue}</span>}
         <span className={lg ? "flex items-center gap-14" : "mt-4 flex items-center gap-14"}>
           {item.kind === "print" && onQuantity && !issue && (

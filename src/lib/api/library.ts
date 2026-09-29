@@ -1,6 +1,6 @@
 /** A customer's guides (Account › Library) and the entitlement the reader opens. */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS } from "@/lib/pricing";
+import { LEVELS, formatLabel } from "@/lib/pricing";
 import { guides } from "@/data/guides";
 import type { EntitlementRow } from "@/data/types";
 import { palettes, works } from "@/data/works";
@@ -20,12 +20,12 @@ export function mapLibraryItem(row: EntitlementRow): LibraryItem {
     entitlementId: row.id,
     stepIds: flattenSteps(guide).map((s) => s.id),
     guideId: row.guideId,
-    work: { id: work.id, number: work.number, slug: work.slug, imageUrl: asset(work.previewPath) },
+    work: { id: work.id, number: work.number, slug: work.slug, imageUrl: asset(work.previewPath), orientation: work.orientation },
     format: guideRow.format,
     level: guideRow.level,
     paletteKey: row.paletteKey,
     paletteName,
-    detail: `${FORMATS[guideRow.format].label} · ${LEVELS[guideRow.level].label} · ${paletteName} palette`,
+    detail: `${formatLabel(guideRow.format, work.orientation)} · ${LEVELS[guideRow.level].label} · ${paletteName} palette`,
     printsLeft: row.printsLeft,
     step: row.progress.step,
     currentLayer: Number.parseInt(row.progress.step, 10) || 1,

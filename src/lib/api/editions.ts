@@ -1,5 +1,6 @@
 /** Limited print editions and numbered copies. */
 import { asset } from "@/lib/asset";
+import { printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
@@ -17,7 +18,9 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
     workNumber: work.number,
     workSlug: work.slug,
     imageUrl: asset(work.previewPath),
+    orientation: work.orientation,
     size: row.size,
+    dimensions: printCm(row.size, work.orientation),
     editionSize: row.editionSize,
     priceCents: row.priceCents,
     open: row.open,
@@ -66,6 +69,7 @@ export async function getPrintCopies(query: { fulfilment?: FulfilmentStatus | Fu
           workNumber: work.number,
           size: edition.size,
           imageUrl: asset(work.previewPath),
+          orientation: work.orientation,
           orderNumber: order?.number ?? null,
           orderPaidAt: order?.paidAt ?? null,
           customerId: customer?.id ?? null,

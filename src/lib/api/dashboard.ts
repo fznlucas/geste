@@ -5,6 +5,7 @@
  * Later: `v_daily_revenue`, PostHog and the affiliate stats, cached 5 min.
  */
 import { asset } from "@/lib/asset";
+import type { Orientation } from "@/lib/pricing";
 import { MOCK_NOW } from "@/data/customers";
 import { chartNotes, dailyRevenue, guidesSold30d, last30d, today } from "@/data/dashboard";
 import { clone } from "./clone";
@@ -32,6 +33,7 @@ export interface DashboardTopWork {
   slug: string;
   number: string;
   imageUrl: string;
+  orientation: Orientation;
   guides: number;
 }
 
@@ -128,7 +130,7 @@ export async function getDashboard(): Promise<Dashboard> {
     topWorks: [...guides.entries()]
       .map(([slug, n]) => {
         const w = allWorks().find((x) => x.slug === slug)!;
-        return { slug, number: w.number, imageUrl: asset(w.previewPath), guides: n };
+        return { slug, number: w.number, imageUrl: asset(w.previewPath), orientation: w.orientation ?? "portrait", guides: n };
       })
       .sort((a, b) => b.guides - a.guides || a.number.localeCompare(b.number)),
   });

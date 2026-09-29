@@ -5,14 +5,14 @@ import { expect, test, type Page } from "@playwright/test";
 
 const CART = [
   { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", format: "60x80", level: "match", palette: "original" },
-  { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-a3", quantity: 1 },
+  { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-s", quantity: 1 },
 ];
 
 async function open(page: Page, query = "") {
   await page.goto("/");
   await page.evaluate((cart) => {
     localStorage.clear();
-    localStorage.setItem("geste.cart.v1", JSON.stringify(cart));
+    localStorage.setItem("geste.cart.v2", JSON.stringify(cart));
   }, CART);
   await page.goto(`/checkout/${query}`);
 }
@@ -76,9 +76,9 @@ test("declined card, then 3D Secure, then paid", async ({ page }) => {
   await page.getByRole("button", { name: /Complete/ }).click();
   await expect(page).toHaveURL(/\/checkout\/success\/\?order=GS-2042/);
   await expect(page.getByRole("heading", { name: "Thank you, Sarah." })).toBeVisible();
-  await expect(page.getByText(/N°07, 12\/50/).first()).toBeVisible();
+  await expect(page.getByText(/N°07, 12\/100/).first()).toBeVisible();
   await expectNoAxeViolations(page);
-  const stored = await page.evaluate(() => ({ cart: localStorage.getItem("geste.cart.v1"), purchases: JSON.parse(localStorage.getItem("geste.purchases.v1") ?? "{}") }));
+  const stored = await page.evaluate(() => ({ cart: localStorage.getItem("geste.cart.v2"), purchases: JSON.parse(localStorage.getItem("geste.purchases.v2") ?? "{}") }));
   expect(stored.cart).toBeNull();
   expect(stored.purchases.orders).toHaveLength(1);
   expect(stored.purchases.entitlements[0].id).toMatch(/^local-/);
@@ -90,7 +90,7 @@ test("a double click on Pay places one order", async ({ page }) => {
   await fillCard(page, "4242 4242 4242 4242");
   await page.getByRole("button", { name: /^Pay now/ }).dblclick();
   await expect(page).toHaveURL(/checkout\/success/);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("geste.purchases.v1")!).orders.length)).toBe(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("geste.purchases.v2")!).orders.length)).toBe(1);
 });
 
 test("sold-out number: take the next one and pay", async ({ page }) => {
@@ -98,10 +98,10 @@ test("sold-out number: take the next one and pay", async ({ page }) => {
   await toPayment(page);
   await fillCard(page, "4242 4242 4242 4242");
   await pay(page);
-  await expect(page.locator("main").getByRole("alert")).toContainText("Edition 12/50 of N°07 just sold out");
-  await page.getByRole("button", { name: /Take 13\/50 and pay/ }).click();
+  await expect(page.locator("main").getByRole("alert")).toContainText("Edition 12/100 of N°07 just sold out");
+  await page.getByRole("button", { name: /Take 13\/100 and pay/ }).click();
   await expect(page).toHaveURL(/checkout\/success/);
-  await expect(page.getByText(/N°07, 13\/50/).first()).toBeVisible();
+  await expect(page.getByText(/N°07, 13\/100/).first()).toBeVisible();
 });
 
 test("express checkout goes straight to the confirmation", async ({ page }) => {

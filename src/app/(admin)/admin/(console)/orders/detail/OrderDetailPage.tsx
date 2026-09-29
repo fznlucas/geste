@@ -6,12 +6,11 @@
  * notify), Timeline + internal notes, Customer, Actions (resend access / receipt, invoice, refund
  * modal), Risk. What a role cannot do is not offered (docs/admin.md).
  */
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTitle, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, Tooltip, UnderLink,
+  AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, Tooltip, UnderLink,
   fulfilmentLabel, useToast,
 } from "@/components";
 import { copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
@@ -23,7 +22,7 @@ import {
 import { adminDateTime } from "@/lib/dates";
 import { COUNTRIES, carrierOf, formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
-import { SHIPPING } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, SHIPPING } from "@/lib/pricing";
 import { AdminPage } from "../../../_admin/AdminPage";
 import { useAdmin } from "../../../_admin/AdminFrame";
 
@@ -91,7 +90,7 @@ function riskLine(o: OrderDetail): { state: "done" | "todo" | "issue"; text: str
   return { state: "done", text: `Low · 3DS passed, ${who}` };
 }
 
-/** Guide N°03 · 60×80 · Intermediate · Original / Print N°07 · A3 · edition 12/50 */
+/** Guide N°03 · 60×80 · Intermediate · Original / Print N°07 · S · edition 12/100 */
 function ItemText({ item }: { item: OrderItem }) {
   if (item.kind === "print") {
     return (
@@ -173,7 +172,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
               const f = fulfilmentLabel(i.kind, i.fulfilment, i.accessRevoked);
               return (
                 <AdminRow key={i.id} cols={ITEM_COLS} className="min-h-72">
-                  <span role="cell">{i.imageUrl && <Image src={i.imageUrl} alt="" width={40} height={50} sizes="40px" className="h-50 w-40 object-cover" />}</span>
+                  <span role="cell">{i.imageUrl && <Artwork src={i.imageUrl} orientation={i.orientation} className="w-40" sizes="40px" />}</span>
                   <span role="cell"><ItemText item={i} /></span>
                   <span role="cell"><OrderStatusChip status={f} /></span>
                   <span role="cell" className="tabular-nums">{formatPrice(i.unitPriceCents * i.quantity)}</span>
@@ -184,7 +183,8 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
           <div className="grid grid-cols-[1fr_70px] justify-items-end gap-y-4 tabular-nums">
             {o.discountCents > 0 && (
               <>
-                <span className="text-fg-muted">Discount</span>
+                {/* The mock's only discount: guide + print of the same work. */}
+                <span className="text-fg-muted">Guide + print −{BUNDLE_DISCOUNT_PCT}%</span>
                 <span>−{formatPrice(o.discountCents)}</span>
               </>
             )}
@@ -315,7 +315,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
 }
 
 function defaultParcel(o: OrderDetail) {
-  return o.items.some((i) => i.kind === "print" && i.edition && i.edition.size !== "A3") ? PARCELS[1] : PARCELS[0];
+  return o.items.some((i) => i.kind === "print" && i.edition && i.edition.size !== "S") ? PARCELS[1] : PARCELS[0];
 }
 
 function ShipBox({ order: o, canShip, cert, onCert, run }: { order: OrderDetail; canShip: boolean; cert?: string; onCert: (c: string) => void; run: (fn: () => Promise<unknown>, ok: string) => Promise<void> }) {
@@ -403,7 +403,7 @@ function PhoneOrder({ order: o }: { order: OrderDetail }) {
       {/* The phone is for shipping: the prints only, or every line when there is none. */}
       {(o.items.some((i) => i.kind === "print") ? o.items.filter((i) => i.kind === "print") : o.items).map((i) => (
         <div key={i.id} className="flex gap-10 border border-border bg-surface p-14">
-          {i.imageUrl && <Image src={i.imageUrl} alt="" width={60} height={75} sizes="60px" className="h-75 w-60 shrink-0 object-cover" />}
+          {i.imageUrl && <Artwork src={i.imageUrl} orientation={i.orientation} className="w-60" sizes="60px" />}
           <span>
             {i.kind === "print" ? `${i.title} · ${i.edition?.size} · ${copyNumbersLabel(i)}` : `${i.title} · ${i.detail}`}
             <br />

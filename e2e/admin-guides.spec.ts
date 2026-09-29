@@ -104,9 +104,9 @@ test("AI pipeline: start a job, approve and reject, the badge follows", async ({
   // This month's spend near the budget (set away from the page: its worker writes the same store).
   await page.goto("/");
   await page.evaluate(() => {
-    const raw = JSON.parse(localStorage.getItem("geste.admin.v1") ?? "{}");
+    const raw = JSON.parse(localStorage.getItem("geste.admin.v2") ?? "{}");
     raw.inserts.ai_jobs[0].costCents = 4000;
-    localStorage.setItem("geste.admin.v1", JSON.stringify(raw));
+    localStorage.setItem("geste.admin.v2", JSON.stringify(raw));
   });
   await page.goto("/admin/ai/");
   await page.getByLabel("Candidates").fill("24");

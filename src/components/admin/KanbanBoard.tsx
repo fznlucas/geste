@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import type { Orientation } from "@/lib/pricing";
+import { Artwork } from "../commerce/Artwork";
 import { Button } from "../primitives/Button";
 import { PillButton } from "./AdminUI";
 
@@ -9,9 +11,11 @@ export interface KanbanCard {
   id: string;
   /** Underlined link text: the order number ("#GS-2041"). Defaults to `id`. */
   label?: string;
-  title: string; // "N°07 · A3 · 12/50"
+  title: string; // "N°07 · S · 12/100"
   subtitle: string; // "Camille Martin · Lyon"
   imageUrl: string;
+  /** Of the work: a landscape thumbnail is turned (40 × 32). */
+  orientation?: Orientation;
   href: string;
 }
 
@@ -41,8 +45,7 @@ export function KanbanBoard({ columns, onMove, busy }: { columns: KanbanColumn[]
             return (
               <article key={k.id} aria-label={`${label} · ${k.title}`} className="flex flex-col gap-8 border border-border bg-surface p-14">
                 <div className="flex gap-10">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- 40 × 50 thumbnail, as drawn */}
-                  <img src={k.imageUrl} alt="" className="block h-50 w-40 shrink-0 object-cover" />
+                  <Artwork src={k.imageUrl} orientation={k.orientation} className="w-40" sizes="40px" />
                   <span className="flex flex-col">
                     <Link href={k.href} className="self-start underline underline-offset-3 hover:text-fg-muted">{label}</Link>
                     <span>{k.title}</span>

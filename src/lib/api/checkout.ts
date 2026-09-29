@@ -67,7 +67,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     const id = `item-local-${n}-${index + 1}`;
     const stored = input.lines.find((l) => l.id === line.id)!;
     if (stored.kind === "gift_card") {
-      items.push({ id, kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: `Gift card $${line.unitPriceCents / 100}`, detail: "Sent by email", unitPriceCents: line.unitPriceCents, quantity: 1, fulfilment: "not_required" });
+      items.push({ id, kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: `Gift card $${line.unitPriceCents / 100}`, detail: "Sent by email", unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: 0, fulfilment: "not_required" });
       return;
     }
     if (stored.kind === "print" && line.edition) {
@@ -80,7 +80,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
         id, kind: "print", workId: work.id, guideId: null, editionId: edition.id, config: {},
         title: `Print ${work.number}`,
         detail: `${line.edition.size} · edition ${numbers.join(", ")}/${line.edition.editionSize}`,
-        unitPriceCents: line.unitPriceCents, quantity: line.quantity, fulfilment: "to_print",
+        unitPriceCents: line.unitPriceCents, quantity: line.quantity, discountCents: line.discountCents ?? 0, fulfilment: "to_print",
       });
       const workPart = line.edition.id.split("-")[1];
       for (const num of numbers) {
@@ -97,7 +97,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
         id, kind: "guide", workId: work.id, guideId: gid, editionId: null,
         config: { format, level, palette: stored.palette },
         title: `Guide ${work.number}`, detail: line.detail,
-        unitPriceCents: line.unitPriceCents, quantity: 1, fulfilment: "not_required",
+        unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: line.discountCents ?? 0, fulfilment: "not_required",
       });
       // A guide is bought once: a second purchase of the same guide keeps the first entitlement.
       if (!owned.some((e) => e.guideId === gid) && !entitlements.some((e) => e.guideId === gid)) {
@@ -110,12 +110,13 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
   const shippingMethod = hasPrint ? (input.shippingMethod ?? "colissimo") : null;
   const shippingCents = shippingMethod ? SHIPPING[shippingMethod].cents : 0;
   const subtotalCents = items.reduce((s, i) => s + i.unitPriceCents * i.quantity, 0);
-  const totalCents = subtotalCents + shippingCents;
+  const discountCents = items.reduce((s, i) => s + i.discountCents, 0);
+  const totalCents = subtotalCents - discountCents + shippingCents;
   return {
     number,
     orders: [{
       id: orderId, number, userId: input.customerId, email: input.email, status: "paid",
-      subtotalCents, discountCents: 0, shippingCents, shippingMethod,
+      subtotalCents, discountCents, shippingCents, shippingMethod,
       taxCents: includedVatCents(totalCents, input.country), totalCents,
       shippingAddress: hasPrint ? input.shippingAddress : null,
       stripePaymentIntent: `pi_3Px${n}L9aQ`, cardLast4: input.cardLast4, risk: "low",

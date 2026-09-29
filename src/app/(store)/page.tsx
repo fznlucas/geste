@@ -5,10 +5,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ButtonLink, CanvasDiagram, WorkCard } from "@/components";
+import { Artwork, ButtonLink, CanvasDiagram, WorkCard } from "@/components";
 import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
 import { fromPrice, formatPrice } from "@/lib/format";
-import { FORMATS } from "@/lib/pricing";
+import { FORMATS, PRINT_WITH_GUIDE } from "@/lib/pricing";
 
 const STEPS = [
   { n: "01", title: "Choose", text: "A work, a format, a palette. The size sets the level.", short: "A work, a format, a palette." },
@@ -97,7 +97,7 @@ export default async function HomePage() {
         <section className="flex flex-col gap-14 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-40">
           <div className="flex justify-between lg:col-span-4 lg:flex-col lg:justify-start lg:gap-10">
             <span className="font-medium">Limited prints</span>
-            <span className="hidden text-fg-muted lg:block">Only want to hang it? Our studio paintings, printed on cotton paper in editions of 50. Signed, numbered, with a certificate.</span>
+            <span className="hidden text-fg-muted lg:block">Only want to hang it? Our studio paintings, printed on cotton paper in editions of 25 to 100. Signed, numbered, with a certificate.</span>
             <Link href="/prints" className="self-start underline underline-offset-3 hover:text-fg-muted">
               <span className="lg:hidden">See prints</span>
               <span className="hidden lg:inline">See the prints</span>
@@ -107,10 +107,8 @@ export default async function HomePage() {
             {prints.map((e, i) => (
               <Link key={e.id} href={`/prints/${e.workSlug}`} className={`group flex-col gap-8 lg:flex lg:gap-10 ${i === 0 ? "flex" : "hidden"}`}>
                 <span className="flex justify-center bg-surface-sunk p-32 lg:block lg:p-24">
-                  {/* Fixed sizes as drawn (desktop 197 × 246, a little wider than its column; phone 220 × 275). */}
-                  <span className="relative block h-275 w-220 lg:h-246 lg:w-197">
-                    <Image src={e.imageUrl} alt="" fill sizes="(min-width: 1200px) 200px, 220px" className="object-cover" />
-                  </span>
+                  {/* Fixed sizes as drawn (desktop 197 × 246, a little wider than its column; phone 220 × 275); the work whole on the mat. */}
+                  <Artwork src={e.imageUrl} orientation={e.orientation} frame="card" ground="none" className="w-220 lg:w-197" sizes="(min-width: 1200px) 200px, 220px" />
                 </span>
                 <span className="flex justify-between">
                   <span className="underline-offset-3 group-hover:underline">
@@ -167,12 +165,12 @@ function SectionHead({ title, href, link, shortLink }: { title: string; href: st
   );
 }
 
-/** Home board: the first three A3 editions with copies left, in the editions' order (N°07, N°01, N°08). */
+/** Home board: the first three S editions with copies left, in the editions' order (N°07, N°01, N°08). */
 function featuredPrints(editions: PrintEdition[]): PrintEdition[] {
-  return editions.filter((e) => e.size === "A3" && !e.soldOut).slice(0, 3);
+  return editions.filter((e) => e.size === PRINT_WITH_GUIDE && !e.soldOut).slice(0, 3);
 }
 
-/** "Edition 12/50" (desktop), "12/50" (phone), or "Sold out". */
+/** "Edition 12/100" (desktop), "12/100" (phone), or "Sold out". */
 function editionLabel(e: PrintEdition, short: boolean): string {
   if (e.nextNumber === null) return "Sold out";
   return `${short ? "" : "Edition "}${e.nextNumber}/${e.editionSize}`;

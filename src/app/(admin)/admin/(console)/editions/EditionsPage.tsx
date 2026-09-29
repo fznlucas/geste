@@ -6,7 +6,7 @@
  * local checkout copies included). Owner and Fulfilment (docs/admin.md).
  */
 import { useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, PillButton, PillLink, UnderLink, useToast } from "@/components";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, useToast } from "@/components";
 import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { setEditionOpen } from "@/lib/client/admin/fulfilment";
@@ -15,10 +15,10 @@ import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
 
-const COLS = "56px 80px 80px 1fr 90px 90px 90px 200px";
+const COLS = "56px 80px 120px 1fr 90px 90px 90px 200px";
 const LOG_COLS = "120px 1fr 90px";
 
-/** Grouped by work, in the order the works first appear (N°07's sizes, then N°01's…), as on the board. */
+/** Grouped by work, in the order the works first appear (N°07's S, M, L, then N°01's…), as on the board. */
 function byWork(list: PrintEdition[]): PrintEdition[] {
   const order = [...new Set(list.map((e) => e.workId))];
   return [...list].sort((a, b) => order.indexOf(a.workId) - order.indexOf(b.workId));
@@ -44,7 +44,7 @@ export function EditionsPage() {
   return (
     <AdminPage title="Print editions" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment"]} desktopHref="/admin/editions">
       <div className="relative overflow-x-auto">
-        <div role="table" aria-label="Print editions" aria-busy={data.status === "loading"} className="relative flex min-w-880 flex-col gap-14 border border-border bg-surface px-20">
+        <div role="table" aria-label="Print editions" aria-busy={data.status === "loading"} className="relative flex min-w-920 flex-col gap-14 border border-border bg-surface px-20">
           <AdminHeadRow cols={COLS}>
             <span role="columnheader"><span className="sr-only">Image</span></span>
             <span role="columnheader">Work</span>
@@ -79,11 +79,10 @@ function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onT
   return (
     <AdminRow cols={COLS} className="min-h-60">
       <span role="cell">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 36 × 45 thumbnail, as drawn */}
-        <img src={e.imageUrl} alt="" className="block h-45 w-36 object-cover" />
+        <Artwork src={e.imageUrl} orientation={e.orientation} className="w-36" sizes="36px" />
       </span>
       <span role="cell"><UnderLink href={`/admin/works/${e.workSlug}`}>{e.workNumber}</UnderLink></span>
-      <span role="cell">{e.size}</span>
+      <span role="cell">{e.size} <span className="text-fg-muted">· {e.dimensions.replace(" cm", "")}</span></span>
       <span role="cell" className="flex items-center gap-10">
         <span aria-hidden="true" className="relative h-8 grow bg-surface-muted">
           <span className="absolute inset-y-0 left-0 rounded-r-bar bg-fg" style={{ width: `${Math.round((e.sold / e.editionSize) * 100)}%` }} />

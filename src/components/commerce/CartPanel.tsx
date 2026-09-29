@@ -6,6 +6,7 @@ import { N03_STROKES } from "../reader/sampleN03";
 import { CartLine } from "./CartLine";
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import { BUNDLE_DISCOUNT_PCT } from "@/lib/pricing";
 import type { PricedCart, PricedCartLine } from "@/lib/api/types";
 
 export interface CartPanelProps {
@@ -59,6 +60,7 @@ export function CartPanel({ cart, variant, onRemove, onUndo, onNavigate }: CartP
             item={l}
             href={l.href}
             note={l.note}
+            bundleNote={l.bundleNote}
             issue={l.unavailable && ISSUES[l.unavailable]}
             size={drawer ? "md" : "lg"}
             // No quantity stepper: none is drawn on Cart / MCart (adding the same print again adds a copy).
@@ -70,7 +72,7 @@ export function CartPanel({ cart, variant, onRemove, onUndo, onNavigate }: CartP
 
       {drawer && cart.crossSell && (
         <p className="bg-surface-muted px-16 py-14">
-          Paint {cart.crossSell.workNumber} yourself instead? Guide from {formatPrice(cart.crossSell.fromPriceCents)}.{" "}
+          Paint {cart.crossSell.workNumber} yourself instead? Guide from {formatPrice(cart.crossSell.fromPriceCents)}, −{BUNDLE_DISCOUNT_PCT}% on both.{" "}
           <Link href={cart.crossSell.href} onClick={onNavigate} className="underline underline-offset-3 hover:text-fg-muted">See it</Link>
         </p>
       )}
@@ -78,6 +80,9 @@ export function CartPanel({ cart, variant, onRemove, onUndo, onNavigate }: CartP
       <div className={drawer ? "mt-auto flex flex-col gap-10" : "contents"}>
         <dl className={drawer ? "contents" : "flex flex-col gap-8"}>
           <div className="flex justify-between"><dt className="text-fg-muted">Subtotal</dt><dd className="tabular-nums">{formatPrice(totals.subtotalCents)}</dd></div>
+          {!!totals.discountCents && (
+            <div className="flex justify-between"><dt className="text-fg-muted">{totals.discountLabel ?? "Discount"}</dt><dd className="tabular-nums">−{formatPrice(totals.discountCents)}</dd></div>
+          )}
           <div className="flex justify-between"><dt className="text-fg-muted">Shipping</dt><dd className="tabular-nums">{shipping}</dd></div>
           <div className={drawer ? "flex justify-between border-t border-border pt-10 font-medium" : "flex justify-between border-t border-border pt-8 font-medium"}>
             <dt>Estimated total</dt><dd className="tabular-nums">{formatPrice(totals.totalCents)}</dd>

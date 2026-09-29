@@ -88,6 +88,7 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
       key={i.entitlementId}
       variant={phone ? "phone" : "desktop"}
       imageUrl={i.work.imageUrl}
+      orientation={i.work.orientation}
       number={i.work.number}
       detail={phone ? `${FORMATS[i.format].label} · ${LEVELS[i.level].label}` : i.detail}
       progress={libraryProgress(i)}

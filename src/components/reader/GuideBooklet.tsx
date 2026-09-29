@@ -115,8 +115,17 @@ export function GuideBooklet({ guide, license, paletteName, only }: GuideBooklet
         1,
         <div className="flex grow flex-col justify-between pt-56">
           <div className="flex flex-col items-center gap-12">
-            <div className="relative h-680 w-510 overflow-hidden">
-              <Image src={guide.imageUrl} alt={`${guide.workNumber}, digital preview`} fill priority sizes="510px" className="object-cover" />
+            {/* The work whole, at its own ratio: up to 510 × 680, or 680 × 510 for a landscape work. */}
+            <div className="relative">
+              <Image
+                src={guide.imageUrl}
+                alt={`${guide.workNumber}, digital preview`}
+                width={0}
+                height={0}
+                priority
+                sizes="680px"
+                className={cn("block h-auto w-auto", guide.orientation === "landscape" ? "max-h-510 max-w-680" : "max-h-680 max-w-510")}
+              />
               <span className="absolute left-12 top-12 bg-bg px-8 py-4 text-print-sm">Digital preview</span>
             </div>
           </div>

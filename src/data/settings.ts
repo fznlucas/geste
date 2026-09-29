@@ -49,5 +49,5 @@ export const pastAudit = [
   { id: "audit-mock-4", at: "2026-10-02T09:02:00Z", summary: "Lucas edited guide N°03 step 2c (v4)" },
   { id: "audit-mock-3", at: "2026-10-01T08:15:00Z", summary: "Login from Lyon · Mac · passkey" },
   { id: "audit-mock-2", at: "2026-09-29T16:00:00Z", summary: "Lucas marked #GS-2033 as shipped" },
-  { id: "audit-mock-1", at: "2026-09-24T17:00:00Z", summary: "Lucas refunded #GS-2025 · $25" },
+  { id: "audit-mock-1", at: "2026-09-24T17:00:00Z", summary: "Lucas refunded #GS-2025 · $35" },
 ];

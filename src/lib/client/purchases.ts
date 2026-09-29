@@ -6,7 +6,7 @@ import { signIn } from "./session";
 import { createPersistentStore, isRecord, useStore } from "./store";
 
 /**
- * Mock purchases, kept in localStorage ("geste.purchases.v1"): what the Stripe webhook will write
+ * Mock purchases, kept in localStorage ("geste.purchases.v2"): what the Stripe webhook will write
  * (order, numbered print copies, one entitlement per guide). `@/lib/api` merges these rows into
  * getOrders / getOrder / getLibrary / getEntitlement and into the stock of the cart.
  * Also keeps what the confirmation page shows that the order row does not hold (first name,
@@ -28,7 +28,7 @@ const EMPTY: PurchasesState = { orders: [], entitlements: [], copies: [], receip
 
 const records = (v: unknown) => (Array.isArray(v) ? v.filter((r) => isRecord(r) && typeof r.id === "string") : null);
 
-export const purchasesStore = createPersistentStore<PurchasesState>("purchases", 1, EMPTY, (raw) => {
+export const purchasesStore = createPersistentStore<PurchasesState>("purchases", 2, EMPTY, (raw) => {
   if (!isRecord(raw)) return null;
   const orders = records(raw.orders), entitlements = records(raw.entitlements), copies = records(raw.copies);
   const receipts = Array.isArray(raw.receipts) ? raw.receipts.filter((r) => isRecord(r) && typeof r.number === "string" && typeof r.email === "string") : null;

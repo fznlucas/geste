@@ -6,9 +6,8 @@
  * to-do list shows the modules the role can open, with the sidebar's live counts; latest orders come
  * from getOrders, so an order paid at checkout in this browser tops the list and moves the numbers.
  */
-import Image from "next/image";
 import { useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
 import { getDashboard, getLowEdition, getOrders, type Dashboard, type Order } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
@@ -218,7 +217,7 @@ function TopWorks({ works, wide, links }: { works: Dashboard["topWorks"]; wide: 
         {works.map((w) => {
           const body = (
             <>
-              <Image src={w.imageUrl} alt="" width={32} height={40} sizes="32px" className="block h-40 w-32 object-cover" />
+              <Artwork src={w.imageUrl} orientation={w.orientation} className="w-32" sizes="32px" />
               <span>{w.number}</span>
               <span className="relative h-8 bg-surface-muted" role="img" aria-label={`${w.guides} guides sold`}>
                 <span className="absolute inset-y-0 left-0 rounded-r-bar bg-fg" style={{ width: `${Math.floor((w.guides / max) * 100)}%` }} />

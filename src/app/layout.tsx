@@ -7,7 +7,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variab
 
 export const metadata: Metadata = {
   title: { default: "Geste — Paint it yourself", template: "%s · Geste" },
-  description: "Step-by-step guides to paint gallery-level abstract works at home. From $12.",
+  description: "Step-by-step guides to paint gallery-level abstract works at home. From $15.",
   metadataBase: new URL("https://geste.studio"),
   // Mock phase on GitHub Pages: keep every page out of search engines. Remove at launch.
   robots: { index: false, follow: false, googleBot: { index: false, follow: false } },

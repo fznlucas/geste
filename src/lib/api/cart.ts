@@ -5,12 +5,12 @@
  * for display. Isomorphic and synchronous so the drawer can price on every change.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, SHIPPING, guidePriceCents, resolveLevel, type ShippingMethod } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, LEVELS, SHIPPING, bundleDiscountCents, formatLabel, guidePriceCents, printCm, resolveLevel, type ShippingMethod } from "@/lib/pricing";
 import { printEditions } from "@/data/editions";
 import { includedVatCents } from "@/data/tax";
 import { palettes, workFormats, works } from "@/data/works";
 import { localSoldCount } from "./local";
-import { minGuidePriceCents } from "./works";
+import { minGuidePriceCents, workPricing } from "./works";
 import type { CartLineInput, CartTotals, PricedCart, PricedCartLine, StoredCartLine } from "./types";
 
 /** Gift card amounts (GiftCard board): $15 / $30 / $50 / $100 / $150. Min/max guard stored lines. */
@@ -23,13 +23,13 @@ function soldCount(edition: { id: string; soldCount: number }) {
   return edition.soldCount + localSoldCount(edition.id);
 }
 
-/** Number the next buyer of an edition gets ("Edition 12/50"). */
+/** Number the next buyer of an edition gets ("Edition 12/100"). */
 function nextEditionNumber(sold: number, reserved: number) {
   return sold + reserved + 1;
 }
 
-function priceLine(line: StoredCartLine): PricedCartLine {
-  const base = { id: line.id, quantity: 1, unavailable: null } as const;
+function priceLine(line: StoredCartLine): PricedCartLine & { workId: string | null } {
+  const base = { id: line.id, quantity: 1, unavailable: null, bundleNote: null, workId: null } as const;
 
   if (line.kind === "gift_card") {
     const valid = Number.isInteger(line.amountCents) && line.amountCents >= GIFT_CARD_MIN && line.amountCents <= GIFT_CARD_MAX;
@@ -63,16 +63,18 @@ function priceLine(line: StoredCartLine): PricedCartLine {
     const numbers = left === 0 ? "Sold out" : `${quantity > 1 ? "Editions" : "Edition"} ${range}/${edition.editionSize}`;
     return {
       ...base,
+      workId: work.id,
       kind: "print",
       title: `${work.number} — Print`,
-      detail: `${edition.size} · Cotton paper · ${numbers}`,
-      // Checkout board: "A3 · Edition 12/50" in the summary, "N°07 — Print A3, 12/50" on the receipt.
+      detail: `${edition.size} · ${printCm(edition.size, work.orientation)} · ${numbers}`,
+      // Checkout board: "S · Edition 12/100" in the summary, "N°07 — Print S, 12/100" on the receipt.
       shortDetail: `${edition.size} · ${numbers}`,
       receiptTitle: `${work.number} — Print ${edition.size}${left === 0 ? "" : `, ${range}/${edition.editionSize}`}`,
       edition: { id: edition.id, size: edition.size, editionSize: edition.editionSize, firstNumber: first, left },
       note: "Signed, with certificate",
       imageUrl: asset(work.previewPath),
-      href: `/prints/${work.slug}`,
+      orientation: work.orientation,
+      href: `/prints/${work.slug}?size=${edition.size.toLowerCase()}`,
       unitPriceCents: edition.priceCents,
       quantity,
       maxQuantity: left,
@@ -87,23 +89,42 @@ function priceLine(line: StoredCartLine): PricedCartLine {
     const title = work ? `${work.number} — Guide` : "Guide";
     return { ...base, kind: "guide", title, detail: "", shortDetail: "", receiptTitle: title, note: null, href: null, unitPriceCents: 0, maxQuantity: 1, unavailable: "unknown" };
   }
-  const config = { format: line.format, level: line.level, palette: line.palette };
-  const level = resolveLevel(config);
+  const level = resolveLevel(line);
   const query = new URLSearchParams({ format: line.format, level: line.level, palette: line.palette });
+  const size = formatLabel(line.format, work.orientation);
   return {
     ...base,
+    workId: work.id,
     kind: "guide",
     title: `${work.number} — Guide`,
-    detail: `${FORMATS[line.format].label} · ${LEVELS[level].label} · ${palette.name}`,
+    detail: `${size} · ${LEVELS[level].label} · ${palette.name}`,
     // Checkout board: "60×80 · Intermediate" in the summary, "N°03 — Guide, 60×80" on the receipt.
-    shortDetail: `${FORMATS[line.format].label} · ${LEVELS[level].label}`,
-    receiptTitle: `${work.number} — Guide, ${FORMATS[line.format].label}`,
+    shortDetail: `${size} · ${LEVELS[level].label}`,
+    receiptTitle: `${work.number} — Guide, ${size}`,
     note: "+ shopping list",
     imageUrl: asset(work.previewPath),
+    orientation: work.orientation,
     href: `/works/${work.slug}?${query}`,
-    unitPriceCents: guidePriceCents(config),
+    unitPriceCents: guidePriceCents(line.format, workPricing(work)),
     maxQuantity: 1,
   };
+}
+
+/**
+ * Guide and print of the same work: −15 % on both lines (every guide line and every copy of that
+ * work's prints), shown on each line and as one "Guide + print" row in the totals.
+ */
+function applyBundles(lines: Array<PricedCartLine & { workId: string | null }>): PricedCartLine[] {
+  const payable = lines.filter((l) => l.unavailable === null);
+  const bundled = new Set(payable.filter((l) => l.kind === "guide" && payable.some((p) => p.kind === "print" && p.workId === l.workId)).map((l) => l.workId));
+  return lines.map(({ workId, ...l }) => {
+    if (l.unavailable !== null || !workId || !bundled.has(workId) || l.kind === "gift_card") return l;
+    return {
+      ...l,
+      discountCents: bundleDiscountCents(l.unitPriceCents * l.quantity),
+      bundleNote: `−${BUNDLE_DISCOUNT_PCT}% with the ${l.kind === "guide" ? "print" : "guide"}`,
+    };
+  });
 }
 
 export interface PriceCartOptions {
@@ -115,20 +136,22 @@ export interface PriceCartOptions {
 
 /** Prices a cart. Unavailable lines (unpublished work, sold-out edition) are returned but not counted. */
 export function priceCart(lines: StoredCartLine[], opts: PriceCartOptions = {}): PricedCart {
-  const priced = lines.map(priceLine);
+  const priced = applyBundles(lines.map(priceLine));
   const payable = priced.filter((l) => l.unavailable === null);
   const subtotalCents = payable.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
+  const discountCents = payable.reduce((s, l) => s + (l.discountCents ?? 0), 0);
   const hasPhysical = payable.some((l) => l.kind === "print");
   const shippingCents = !hasPhysical ? 0 : opts.shippingMethod ? SHIPPING[opts.shippingMethod].cents : null;
-  const totalCents = subtotalCents + (shippingCents ?? 0);
+  const totalCents = subtotalCents - discountCents + (shippingCents ?? 0);
   const totals: CartTotals = {
     subtotalCents,
+    ...(discountCents ? { discountCents, discountLabel: `Guide + print −${BUNDLE_DISCOUNT_PCT}%` } : {}),
     shippingCents,
     totalCents,
     taxIncludedCents: opts.country ? includedVatCents(totalCents, opts.country) : undefined,
   };
 
-  // "Paint N°07 yourself instead? Guide from $12. See it": first print whose work has no guide in the cart.
+  // "Paint N°07 yourself instead? Guide from $15. See it": first print whose work has no guide in the cart.
   const guideWorks = new Set(lines.flatMap((l) => (l.kind === "guide" ? [l.workId] : [])));
   const printLine = lines.find((l): l is Extract<StoredCartLine, { kind: "print" }> => {
     if (l.kind !== "print") return false;

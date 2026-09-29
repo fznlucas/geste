@@ -62,6 +62,7 @@ function columns(copies: PrintCopy[]): KanbanColumn[] {
         title: `${c.workNumber} · ${c.size} · ${c.label}`,
         subtitle: [c.customerName, c.city].filter(Boolean).join(" · "),
         imageUrl: c.imageUrl,
+        orientation: c.orientation,
         href: c.orderNumber ? `/admin/orders/detail?number=${c.orderNumber}` : "/admin/editions",
       })),
   }));

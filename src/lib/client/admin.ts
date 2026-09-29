@@ -8,7 +8,7 @@ import { sessionStore } from "./session";
 import { createPersistentStore, isRecord, newId, useStore } from "./store";
 
 /**
- * Admin mutations of the mock (docs/mock-plan.md M6), kept in localStorage ("geste.admin.v1"):
+ * Admin mutations of the mock (docs/mock-plan.md M6), kept in localStorage ("geste.admin.v2"):
  * patches keyed by table and row id, rows inserted in this browser (refunds, shipments, notes…)
  * and the audit log shown on Settings › Security. `@/lib/api` merges them into every read, so the
  * admin pages see their own changes. The store pages are built at deploy time and ignore them.
@@ -37,7 +37,7 @@ interface AdminState extends AdminOverlay {
 
 const EMPTY: AdminState = { patches: {}, inserts: {}, audit: [] };
 
-export const adminStore = createPersistentStore<AdminState>("admin", 1, EMPTY, (raw) => {
+export const adminStore = createPersistentStore<AdminState>("admin", 2, EMPTY, (raw) => {
   if (!isRecord(raw) || !isRecord(raw.patches) || !isRecord(raw.inserts) || !Array.isArray(raw.audit)) return null;
   return raw as unknown as AdminState;
 });

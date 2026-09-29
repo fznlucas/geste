@@ -5,11 +5,10 @@
  * Mock: a query parameter instead of `/track/[orderId]?t=`, so orders paid in this browser have a
  * page too; no token check (docs/decisions.md "Account (M4)").
  */
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ButtonLink, TrackingSteps } from "@/components";
+import { Artwork, ButtonLink, TrackingSteps } from "@/components";
 import { copyNumbersLabel, getOrderTracking, trackingCarrierLine, type OrderTracking } from "@/lib/api";
 import { useHydrated, usePurchases } from "@/lib/client";
 import { dateTime, weekdayDate } from "@/lib/dates";
@@ -115,9 +114,7 @@ export function TrackingPage() {
         <span className="text-fg-muted">In this parcel</span>
         {t.prints.map((p) => (
           <div key={p.id} className="flex gap-14">
-            <span className="relative block h-70 w-56 shrink-0 bg-surface-sunk">
-              {p.imageUrl && <Image src={p.imageUrl} alt="" fill sizes="56px" className="object-cover" />}
-            </span>
+            {p.imageUrl ? <Artwork src={p.imageUrl} orientation={p.orientation} className="w-56" sizes="56px" /> : <span className="block h-70 w-56 shrink-0 bg-surface-muted" />}
             <span>
               {p.workNumber} — Print {p.edition?.size}
               <br />

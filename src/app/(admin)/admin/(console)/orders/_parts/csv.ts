@@ -7,8 +7,9 @@ const cell = (v: string | number) => {
 
 /** "Export CSV": one line per order, amounts in dollars, dates in ISO (for the accountant's sheet). */
 export function ordersCsv(orders: Order[]): string {
-  const head = ["Order", "Date", "Customer", "Email", "Items", "Total", "VAT included", "Status"];
-  const lines = orders.map((o) => [`#${o.number}`, o.createdAt.slice(0, 10), o.customer.fullName, o.customer.email, o.summary, (o.totalCents / 100).toFixed(2), (o.taxCents / 100).toFixed(2), o.displayStatus]);
+  const head = ["Order", "Date", "Customer", "Email", "Items", "Discount", "Total", "VAT included", "Status"];
+  // Total is what was paid: net of the guide + print discount, shipping included.
+  const lines = orders.map((o) => [`#${o.number}`, o.createdAt.slice(0, 10), o.customer.fullName, o.customer.email, o.summary, (o.discountCents / 100).toFixed(2), (o.totalCents / 100).toFixed(2), (o.taxCents / 100).toFixed(2), o.displayStatus]);
   return [head, ...lines].map((l) => l.map(cell).join(",")).join("\n") + "\n";
 }
 

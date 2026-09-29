@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { Button, Segmented, WorkCard } from "@/components";
+import { Button, GridFilter, WorkCard } from "@/components";
 import type { LevelKey, PaletteKey } from "@/lib/api";
 import type { Work } from "@/lib/types";
 
@@ -68,8 +68,8 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
     <>
       <div className="flex flex-col gap-20 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-40">
-          <Filter label="Level" value={level} options={LEVELS} onChange={(v) => onChange({ level: v })} />
-          <Filter label="Palette" value={palette} options={PALETTES} onChange={(v) => onChange({ palette: v })} />
+          <GridFilter label="Level" value={level} options={LEVELS} onChange={(v) => onChange({ level: v })} />
+          <GridFilter label="Palette" value={palette} options={PALETTES} onChange={(v) => onChange({ palette: v })} />
         </div>
         <span className="text-fg-muted" aria-live="polite">{shown.length} works</span>
       </div>
@@ -89,11 +89,3 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
   );
 }
 
-function Filter<V extends string>({ label, value, options, onChange }: { label: string; value: V; options: Array<{ value: V; label: string }>; onChange: (v: V) => void }) {
-  return (
-    <div className="flex items-center gap-12 lg:gap-14">
-      <span className="w-56 shrink-0 text-fg-muted lg:w-auto">{label}</span>
-      <Segmented<V> label={label} value={value} options={options} onChange={onChange} gap="gap-x-12 lg:gap-x-14" />
-    </div>
-  );
-}

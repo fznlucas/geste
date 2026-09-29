@@ -15,7 +15,7 @@ function State({ label, children }: { label: string; children: React.ReactNode }
 const SEPT = [58, 47, 84, 45, 79, 69, 49, 83, 51, 81, 57, 60, 85, 115, 68, 76, 107, 131, 106, 96, 138, 310, 133, 95, 86, 86, 101, 139, 96, 126];
 const ALERTS = [
   { id: "a1", text: "3 prints to ship today", when: "09:12", href: "#" },
-  { id: "a2", text: "N°08 50×70 edition: 4 left", when: "08:40", href: "#" },
+  { id: "a2", text: "N°08 L edition: 4 left", when: "08:40", href: "#" },
   { id: "a3", text: "2 new support messages", when: "08:02", href: "#", read: true },
 ];
 
@@ -24,14 +24,14 @@ export function DashboardKit() {
     <div className="flex flex-col gap-24">
       <State label="KpiTile · md linked (hover: Line-field border) · md without link (role cannot open the module)">
         <div className="grid grid-cols-3 gap-12">
-          <KpiTile label="Revenue · 30 d" value="$4,212" context="+38% vs Aug" href="#" />
-          <KpiTile label="Avg. order" value="$22.5" context="−2%" href="#" />
+          <KpiTile label="Revenue · 30 d" value="$5,472" context="+38% vs Aug" href="#" />
+          <KpiTile label="Avg. order" value="$29.3" context="−2%" href="#" />
           <KpiTile label="Conversion" value="2.8%" context="+0.6 pt" />
         </div>
       </State>
       <State label="KpiTile · sm (AdminMToday)">
         <div className="grid w-358 grid-cols-2 gap-10">
-          <KpiTile size="sm" label="Revenue" value="$214" context="+22% vs Tue" />
+          <KpiTile size="sm" label="Revenue" value="$278" context="+22% vs Tue" />
           <KpiTile size="sm" label="Orders" value="11" context="8 guides · 3 prints" />
         </div>
       </State>

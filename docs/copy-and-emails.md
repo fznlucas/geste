@@ -13,7 +13,7 @@ Geste talks like a calm studio assistant standing next to you: short, concrete, 
 | Honest | "Yours will not look like the preview." | "Get a gallery painting guaranteed." |
 
 - Sentence case everywhere. No exclamation marks. Numbers as digits ("3 layers", "45 min").
-- Works are named "N°03". Formats "60×80" (× sign), sizes "A3".
+- Works are named "N°03". Formats "60×80" (× sign), turned for a landscape work ("80×60"); print sizes "S", "M", "L" with their dimensions ("30 × 42 cm · A3"). "Signature" for the Signature works.
 - Prices "$19", "from $12". Durations "3h30", "1h".
 - Errors say what to do: "Check your postcode", "Enter your postcode".
 - Buttons are verbs: "Add to cart", "Continue to shipping", "Open my library", "Next step".

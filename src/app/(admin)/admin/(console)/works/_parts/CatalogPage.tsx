@@ -8,8 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image";
-import { AdminHeadRow, AdminRow, AdminTabs, Button, ButtonLink, PillButton, StatusChip, useToast } from "@/components";
+import { AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, ButtonLink, PillButton, StatusChip, useToast } from "@/components";
 import { getAdminWorks, type AdminWork } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { createWork } from "@/lib/client/admin/catalog";
@@ -95,12 +94,12 @@ export function CatalogPage() {
             <li key={w.id}>
               <Link href={w.editorHref} className="group flex flex-col gap-6 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-fg">
                 {w.imageUrl ? (
-                  <Image src={w.imageUrl} alt="" width={400} height={500} sizes="(min-width: 768px) 211px, 50vw" className={cn("block aspect-[4/5] w-full object-cover group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
+                  <Artwork src={w.imageUrl} orientation={w.orientation} frame="card" className="w-full" sizes="(min-width: 768px) 211px, 50vw" imgClassName={cn("group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
                 ) : (
                   <span className="flex aspect-[4/5] w-full items-center justify-center border border-dashed border-border-dashed text-fg-muted">No preview yet</span>
                 )}
                 <span className="flex justify-between gap-8">
-                  <span className="font-medium">{w.number}</span>
+                  <span className="font-medium">{w.number}{w.signature && <span className="font-normal text-fg-muted"> · Signature</span>}</span>
                   <WorkStatus work={w} />
                 </span>
                 <span className="text-fg-muted">{w.formatLabel} · {w.levelLabel} · {w.soldCount} sold</span>
@@ -124,7 +123,7 @@ export function CatalogPage() {
             {works.map((w) => (
               // The whole row opens the editor: the work number's link is stretched over the row.
               <AdminRow key={w.id} cols={LIST_COLS} className="relative last:border-b-0 hover:bg-surface-hover">
-                <span role="cell">{w.imageUrl ? <Image src={w.imageUrl} alt="" width={72} height={90} sizes="36px" className="block h-45 w-36 object-cover" /> : <span className="block h-45 w-36 border border-dashed border-border-dashed" />}</span>
+                <span role="cell">{w.imageUrl ? <Artwork src={w.imageUrl} orientation={w.orientation} className="w-36" sizes="36px" /> : <span className="block h-45 w-36 border border-dashed border-border-dashed" />}</span>
                 <span role="cell"><Link href={w.editorHref} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-1 focus-visible:after:-outline-offset-1 focus-visible:after:outline-fg">{w.number}</Link></span>
                 <span role="cell">{workStatusLabel(w)}</span>
                 <span role="cell">{w.formatLabel}</span>

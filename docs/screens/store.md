@@ -20,8 +20,8 @@
 ## Shop — `/shop`
 
 - **Boards:** Shop (1440 × 1760), MShop.
-- **Layout:** title line "“Paint it yourself.” Each work comes with its method, materials and step-by-step guide." · filters "Level: All Beginner Intermediate Advanced" and "Palette: All Warm Cool Earth" (Segmented, in the URL) · count "15 works" · grid 5 × 208 px (40 px gaps, 64 px row gap), all images the same 4:5 size; phone 2 columns with meta always visible.
-- **Card:** WorkCard — image only, meta line "Level · time" left and "from $X" right appears with the price morph on hover/focus. No image hover.
+- **Layout:** title line "“Paint it yourself.” Each work comes with its method, materials and step-by-step guide." · filters "Level: All Beginner Intermediate Advanced" and "Palette: All Warm Cool Earth" (Segmented, in the URL) · count "15 works" · grid 5 × 208 px (40 px gaps, 64 px row gap), all frames the same 4:5 size, the work whole and centred on Mist (landscape works included, never cropped); phone 2 columns with meta always visible.
+- **Card:** WorkCard — image only, meta line "Level · time" left and "from $X" right appears with the price morph on hover/focus. No image hover. Signature works carry "Signature" on the frame.
 - **Empty:** "No work matches these filters. Clear filters."
 - **Acceptance:** filters keep scroll position and are shareable; keyboard focus shows the meta line.
 
@@ -29,7 +29,7 @@
 
 - **Boards:** Product (template), Product01–15, MProduct, MProduct01–15.
 - **Layout desktop:** breadcrumb "Shop / N°03" · left: ProductGallery (Preview · Real result, caption "Original palette, 60×80") · right: N°03, price, description, GuideConfigurator, then Accordion ("The guide · 4 steps", "Included · 2 items", "Shipping & returns").
-- **Configurator:** see `src/components/commerce/GuideConfigurator.tsx` doc comment. Price = `pricing.ts`. Palette changes the preview with `palettes.preview_filter`.
+- **Configurator:** see `src/components/commerce/GuideConfigurator.tsx` doc comment. Price = `pricing.ts`: by format only (Small $15, Medium $19, Large $25, Extra large $29), level included, Custom free; Signature works +$6 ("N°06 · Signature" next to the title); "Guide + list + print" adds the S print with −15% on both. A landscape work sells the formats turned (40×30 … 100×80) and its preview is landscape. Palette changes the preview with `palettes.preview_filter`.
 - **Phone:** gallery, title/price on one line, configurator, and StickyBuyBar always pinned to the bottom ("N°03 · 60×80 / Guide + list · Add $19", board MProduct), so Buy is visible without scrolling at 390 × 844.
 - **Copy under the button:** "Digital preview. A similar original sells from $600: yours will be signed by you. Guide unlocks instantly, prints ship in 3–5 days."
 - **Data:** work, active formats, palettes, published guide summary (steps count), edition stock (for the print option).
@@ -45,11 +45,10 @@
 
 ## Prints — `/prints`, `/prints/[slug]`
 
-- `/prints` has no board: it shows the leading print (N°07).
-
-- **Boards:** Print (1440 × 2000), MPrint.
-- **Layout:** artwork on a Sand mat · size choice (A3 $45, A2 $75, 50×70 $95) · EditionCounter ("12 of 50 left", Signal when ≤ 5) · paper, signature and certificate details · "Add to cart" · cross-sell "Paint it yourself instead? Guide from $12".
-- **Acceptance:** stock is live (not cached); sold-out sizes are disabled with "Sold out".
+- **`/prints` (gallery, no board of its own):** the Shop's page built for prints — title line "Limited prints. Our studio paintings on cotton paper, signed and numbered, in S, M and L." · filters "Orientation: All Portrait Landscape" and "Size: All S M L" (GridFilter, in the URL: `?orientation=&size=`) · count "45 prints" · the Shop's grid (5 × 208 px, 40 px gaps, 64 px rows; phone 2 columns) of PrintEditionCard, one per edition (work × size): S, then M, then L, each in catalog order, sold-out editions last. Empty: "No print matches these filters. Clear filters".
+- **`/prints/[slug]` boards:** Print (1440 × 2000), MPrint. The work in its orientation on the Sand mat (400 × 500, 500 × 400 landscape) · views "Print · To scale" under the panel, caption right ("30 × 42 cm · A3") · To scale: PrintScale, the framed print at its real size above a 160 cm sideboard, the frame follows the size (420 ms) · size choice S / M / L with the dimensions in cm (turned for a landscape work) · EditionCounter ("89 of 100 left", Signal when ≤ 5) · details (Edition "12 of 100", paper, inks, with it, delivery) · "Add to cart   $55" · "Paint N°07 yourself instead   Guide from $15" · Other editions (4 PrintCards, "All prints"). `?size=s|m|l` preselects a size.
+- **Prices (pricing.ts, per edition in the admin):** S (A3, 30 × 42 cm) $55 in 100 copies, M (A2, 42 × 59 cm) $95 in 50, L (50 × 70 cm) $145 in 25.
+- **Acceptance:** stock is live (not cached); sold-out sizes are disabled with "Sold out"; a landscape work is shown landscape on the mat, to scale and in the gallery (whole, never cropped).
 
 ## Gift cards — `/gift-cards`
 

@@ -60,6 +60,10 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `ShoppingListItem` | `src/components/commerce/ShoppingListItem.tsx` | ShoppingList |
 | Commerce | `StickyBuyBar` | `src/components/commerce/StickyBuyBar.tsx` | MProduct |
 | Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
+| Commerce | `PrintEditionCard` | `src/components/commerce/WorkCard.tsx` | /prints (Shop card) |
+| Commerce | `Artwork` | `src/components/commerce/Artwork.tsx` | every work image |
+| Commerce | `GridFilter` | `src/components/commerce/GridFilter.tsx` | Shop, /prints |
+| Commerce | `PrintScale` | `src/components/commerce/PrintScale.tsx` | /prints/[slug] "To scale" |
 | Guide reader | `CanvasDiagram` | `src/components/reader/CanvasDiagram.tsx` | GuideReader, Guide01–08, AdminGuideEditor |
 | Guide reader | `DryingTimer` | `src/components/reader/DryingTimer.tsx` | GuideReader timer, AppTimer |
 | Guide reader | `GuideBooklet` / `GuideSheet` | `src/components/reader/GuideBooklet.tsx` | Guide01–08 |
@@ -618,7 +622,7 @@ export interface CookieSettingsProps { value: { audience: boolean; ads: boolean 
 
 `src/components/commerce/CartLine.tsx` · used on Cart, MCart, Checkout
 
-**CartLine** — Cart row (boards Cart, MCart): thumb, title link + price on one line, detail and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a stepper up to the stock. A line that cannot be bought shows its reason in Signal text and a struck price.
+**CartLine** — Cart row (boards Cart, MCart): thumb, title link + price on one line, detail and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a stepper up to the stock. A line that cannot be bought shows its reason in Signal text and a struck price. A bundled line (guide + print of the same work) shows its full price struck in Stone, the price after −15 %, and `bundleNote` ("−15% with the print") in Ink; the totals add a "Guide + print −15%" row (CartSummary, CartPanel, OrderSummary). Thumbs use Artwork (turned 5:4 for a landscape work).
 
 ```ts
 export interface CartLineProps {
@@ -694,7 +698,7 @@ export interface CheckoutStepperProps {
 
 `src/components/commerce/EditionCounter.tsx` · used on Print
 
-**EditionCounter** — "12 of 50 left" with a thin bar; ≤ 5 left turns the words Signal (urgency, stated honestly).
+**EditionCounter** — "Edition of 100 · S" and "89 of 100 left" with a thin bar; ≤ 5 left turns the words Signal (urgency, stated honestly).
 
 
 ## ExpressPay
@@ -731,7 +735,9 @@ export interface GuideConfiguratorProps {
   onChange: (next: GuideConfig) => void;
   palettes: Palette[];
   formats?: FormatKey[];       // formats the work sells (default: all four)
-  printAvailable?: boolean;    // an A3 edition with copies left; false disables "+ print"
+  printAvailable?: boolean;    // an S edition with copies left; false disables "+ print"
+  orientation?: Orientation;   // landscape: formats turned (40×30 … 100×80)
+  priceCents: number;          // the configuration's total, from the page (Signature, bundle)
   onAdd: () => void;
   adding?: boolean;
   added?: boolean;             // "Added   ✓" for 1.6 s (docs/motion.md §5)
@@ -796,11 +802,39 @@ export interface StickyBuyBarProps {
 }
 ```
 
+## Artwork
+
+`src/components/commerce/Artwork.tsx` · used for every work image (cards, thumbnails, admin)
+
+**Artwork** — A work's image, always whole: `object-contain`, centred on Mist (`ground="none"` on a mat), never cropped or stretched. `frame="card"`: the grids' 4:5 frame whatever the orientation. `frame="turn"` (default): 4:5 portrait, 5:4 landscape at the same width, so list columns stay aligned. Width comes from `className` ("w-64"); `self-start` so a flex row cannot stretch it.
+
+```ts
+interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "landscape"; frame?: "card" | "turn"; className?: string; imgClassName?: string; imgStyle?: CSSProperties; sizes: string; priority?: boolean; ground?: "mist" | "none" }
+```
+
+## GridFilter
+
+`src/components/commerce/GridFilter.tsx` · used on Shop, MShop, /prints
+
+**GridFilter** — One filter row: Stone label, then Segmented text choices. Phones use a fixed label column (`labelWidth` "w-56", "w-88" for "Orientation") so the rows align.
+
+## PrintEditionCard
+
+`src/components/commerce/WorkCard.tsx` · used on /prints
+
+**PrintEditionCard** — The Shop card for one print edition: same frame, grid, hover morph and phone line. Meta "N°07 · S · 12/100", price "$55"; sold out: image at 60 %, "Sold out".
+
+## PrintScale
+
+`src/components/commerce/PrintScale.tsx` · used on /prints/[slug] ("To scale")
+
+**PrintScale** — The print framed at its real size on a Sand wall above a 160 cm sideboard silhouette (Line-field colour), scene in centimetres (200 × 220 cm). The frame (2 px Ink, white paper, 9 % margin, `shadow-mat-sm`) animates its size 420 ms when S / M / L changes; no transition under reduced motion. Landscape works hang turned.
+
 ## WorkCard
 
 `src/components/commerce/WorkCard.tsx` · used on Shop, MShop, Home, MHome
 
-**WorkCard** — Work tile: 4:5 crop (208 × 260 on desktop), no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
+**WorkCard** — Work tile: 4:5 frame (208 × 260 on desktop) with the work whole on Mist (Artwork `frame="card"`, landscape included), "Signature" on the frame for Signature works, no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
 
 ```ts
 export interface WorkCardProps {
@@ -1042,7 +1076,7 @@ export interface DataTableProps<T> {
 ```ts
 export interface KanbanCard {
   id: string; // order number
-  title: string; // "N°07 · A3 · 12/50"
+  title: string; // "N°07 · S · 12/100"
   subtitle: string; // "Camille Martin · Lyon"
   imageUrl: string;
   href: string;
@@ -1130,14 +1164,14 @@ export interface ShoppingListTableProps {
 
 `src/components/commerce/PrintMat.tsx` · used on Print, MPrint
 
-**PrintMat** — A print on its white mat over Sand. Desktop: 760 px panel, mat padding 36 36 64, 400 × 500 picture, `shadow-mat`, caption "N°07 · 12/50 · Geste Studio". Phone: 36 px Sand padding, mat 16 16 32, 220 × 275, `shadow-mat-sm`, no caption.
+**PrintMat** — A print on its white mat over Sand. Desktop: 760 px panel, mat padding 36 36 64, 400 × 500 picture (500 × 400 for a landscape work), `shadow-mat`, caption "N°07 · 12/100 · Geste Studio". Phone: 36 px Sand padding, mat 16 16 32, 220 × 275 (250 × 200 landscape), `shadow-mat-sm`, no caption. The work is whole (`object-contain`): another ratio only widens the white margin.
 
 
 ## PrintCard
 
 `src/components/commerce/PrintCard.tsx` · used on Print ("Other editions")
 
-**PrintCard** — Sand mat with 24 px padding and a fixed 212 × 265 picture (as drawn, the mat is wider than the picture), title + price, edition number in Stone.
+**PrintCard** — Sand mat with 24 px padding and a fixed 212 × 265 frame (as drawn, the mat is wider than the picture) holding the work whole, landscape included; title + price, edition number in Stone.
 
 
 ## GiftCardPreview

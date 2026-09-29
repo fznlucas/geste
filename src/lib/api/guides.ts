@@ -5,7 +5,7 @@
  * reader of this browser follows a publish. On Supabase: guide_versions, guide_layers/steps, guide_print.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, estimatedTime, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { LEVELS, estimatedTime, formatLabel, type FormatKey, type LevelKey } from "@/lib/pricing";
 import type { GuideStep } from "@/lib/types";
 import { N03_GUIDE_ID, guideVersions, guides } from "@/data/guides";
 import type { GuideRow, GuideVersionContent } from "@/data/types";
@@ -63,8 +63,9 @@ export function mapGuide(raw: GuideRow): Guide {
     workNumber: work.number,
     workSlug: work.slug,
     imageUrl: asset(work.previewPath),
+    orientation: work.orientation,
     format: row.format,
-    formatLabel: FORMATS[row.format].label,
+    formatLabel: formatLabel(row.format, work.orientation),
     level: row.level,
     levelLabel: LEVELS[row.level].label,
     version: row.currentVersion,
@@ -163,10 +164,11 @@ export async function getGuideEditorParams(): Promise<Array<{ slug: string; guid
 
 /** The guides of a work (editor header, work editor links), newest formats first as in FORMATS. */
 export async function getWorkGuides(workId: string): Promise<Array<{ id: string; format: FormatKey; level: LevelKey; label: string; version: number }>> {
+  const work = works.find((w) => w.id === workId);
   return clone(
     guides
       .filter((g) => g.workId === workId)
       .map(guideRow)
-      .map((g) => ({ id: g.id, format: g.format, level: g.level, label: `${FORMATS[g.format].label} · ${LEVELS[g.level].label}`, version: g.currentVersion })),
+      .map((g) => ({ id: g.id, format: g.format, level: g.level, label: `${formatLabel(g.format, work?.orientation)} · ${LEVELS[g.level].label}`, version: g.currentVersion })),
   );
 }

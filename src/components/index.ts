@@ -39,7 +39,10 @@ export * from "./layout/InfoPage";
 export * from "./layout/CookieSettings";
 
 export * from "./commerce/PriceMorph";
+export * from "./commerce/Artwork";
 export * from "./commerce/WorkCard";
+export * from "./commerce/GridFilter";
+export * from "./commerce/PrintScale";
 export * from "./commerce/ProductGallery";
 export * from "./commerce/GuideConfigurator";
 export * from "./commerce/StickyBuyBar";

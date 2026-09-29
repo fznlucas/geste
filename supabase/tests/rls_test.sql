@@ -22,13 +22,13 @@ do $$ begin if (select count(*) from works) <> 1 then raise exception 'anon sees
 reset role;
 
 -- 3. Print numbering: edition of 3, four buyers → 1, 2, 3, then null
-insert into print_editions (id, work_id, size, edition_size, price_cents) values ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'A2', 3, 7500);
-insert into orders (id, user_id, email, status, subtotal_cents, total_cents) values ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'camille@mail.com', 'paid', 30000, 30000);
+insert into print_editions (id, work_id, size, edition_size, price_cents) values ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'M', 3, 9500);
+insert into orders (id, user_id, email, status, subtotal_cents, total_cents) values ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'camille@mail.com', 'paid', 38000, 38000);
 insert into order_items (id, order_id, kind, edition_id, title, unit_price_cents) values
-  ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 A2', 7500),
-  ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 A2', 7500),
-  ('40000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 A2', 7500),
-  ('40000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 A2', 7500);
+  ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 M', 9500),
+  ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 M', 9500),
+  ('40000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 M', 9500),
+  ('40000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000001', 'print', '20000000-0000-0000-0000-000000000001', 'Print N°03 M', 9500);
 do $$ declare a int; b int; c int; d int; begin
   a := assign_print_copy('20000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001');
   b := assign_print_copy('20000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002');
@@ -50,7 +50,7 @@ set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
 insert into refunds (order_id, amount_cents, reason) values ('30000000-0000-0000-0000-000000000001', 5000, 'Damaged print');
 do $$ begin
   begin
-    insert into refunds (order_id, amount_cents, reason) values ('30000000-0000-0000-0000-000000000001', 7500, 'Too much');
+    insert into refunds (order_id, amount_cents, reason) values ('30000000-0000-0000-0000-000000000001', 9500, 'Too much');
     raise exception 'support refunded above limit';
   exception when insufficient_privilege then null; end;
 end $$;

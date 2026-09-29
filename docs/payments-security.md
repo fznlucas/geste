@@ -13,8 +13,9 @@
 | Topic | Rule |
 | --- | --- |
 | Currency | USD displayed; Stripe account in EUR settles automatically |
-| Guide price | `pricing.ts`: format base (12/13/17/21) + level surcharge (0/2/4) |
-| Print price | `print_editions.price_cents` (A3 45, A2 75, 50×70 95) |
+| Guide price | `pricing.ts`: `work_formats.guide_price_cents` (defaults 15/19/25/29 by format, any level) + $6 for a Signature work |
+| Print price | `print_editions.price_cents` (defaults S 55, M 95, L 145) |
+| Bundle | Guide and print of the same work in one order: −15 % on both lines (`order_items.discount_cents`, `orders.discount_cents` = sum) |
 | Shipping | Prints only. France from $4, Europe $12, Switzerland $18 (duties), world off at launch |
 | Tax | Stripe Tax. Digital guides: buyer's country rate (EU OSS). Prints: French VAT, OSS for EU buyers. Prices shown tax included |
 | Promo | One code per order; scope guides/prints/everything; cannot reduce below $1 |

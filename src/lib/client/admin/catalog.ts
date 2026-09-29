@@ -6,11 +6,15 @@
  * The store pages are built at deploy time and do not show these edits (docs/mock-plan.md §6).
  */
 import { MOCK_NOW, formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
-import { LEVELS } from "@/lib/pricing";
+import type { Orientation } from "@/lib/pricing";
 import { insertRow, patchRow, requireStaff } from "../admin";
 
 export interface WorkDraft {
   description: string;
+  /** Landscape: formats and prints sold turned, the work shown landscape (General). */
+  orientation: Orientation;
+  /** Signature work: SIGNATURE_CENTS more on every format (Formats & prices). */
+  signature: boolean;
   seoTitle: string;
   seoDescription: string;
   formats: Array<{ format: FormatKey; defaultLevel: LevelKey; priceCents: number; active: boolean }>;
@@ -24,8 +28,8 @@ export const STATUS_LABEL: Record<WorkStatus, string> = { live: "Live", draft: "
 /** Tabs whose fields differ from the saved work ("General", "Formats & prices"…), for the audit line. */
 function changedTabs(before: AdminWorkDetail, d: WorkDraft): string[] {
   const tabs: string[] = [];
-  if (d.description !== before.description) tabs.push("General");
-  if (d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format)!; return b.defaultLevel !== f.defaultLevel || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
+  if (d.description !== before.description || d.orientation !== before.orientation) tabs.push("General");
+  if (d.signature !== before.signature || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format)!; return b.defaultLevel !== f.defaultLevel || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
   if (d.palettes.some((p) => before.palettes.find((x) => x.key === p.key)?.active !== p.active)) tabs.push("Palettes");
   if (d.shoppingList.some((i) => before.shoppingList.find((x) => x.position === i.position)?.url !== i.url)) tabs.push("Shopping list");
   if (d.editions.some((e) => { const b = before.editions.find((x) => x.size === e.size)!; return e.editionId && (b.editionSize !== e.editionSize || b.priceCents !== e.priceCents); })) tabs.push("Prints");
@@ -47,10 +51,10 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   const tabs = changedTabs(before, draft);
   if (!tabs.length) return [];
   const id = before.id;
-  patchRow("works", id, { description: draft.description.trim(), seoTitle: draft.seoTitle.trim(), seoDescription: draft.seoDescription.trim() });
+  patchRow("works", id, { description: draft.description.trim(), orientation: draft.orientation, signature: draft.signature, seoTitle: draft.seoTitle.trim(), seoDescription: draft.seoDescription.trim() });
   for (const f of draft.formats) {
-    // Stored as the base price; the level surcharge is added by pricing.ts.
-    patchRow("work_formats", formatRowId(id, f.format), { defaultLevel: f.defaultLevel, guidePriceCents: f.priceCents - LEVELS[f.defaultLevel].surcharge, active: f.active });
+    // Stored for any level; the Signature supplement is added by pricing.ts.
+    patchRow("work_formats", formatRowId(id, f.format), { defaultLevel: f.defaultLevel, guidePriceCents: f.priceCents, active: f.active });
   }
   for (const p of draft.palettes) patchRow("palettes", paletteRowId(id, p.key), { active: p.active });
   for (const i of draft.shoppingList) patchRow("shopping_items", listRowId(id, i.position), { url: i.url.trim() });
@@ -109,6 +113,8 @@ export async function createWork(): Promise<string> {
       status: "draft",
       publishAt: null,
       defaultFormat: "40x50",
+      orientation: "portrait",
+      signature: false,
       description: "",
       previewPath: "",
       resultPhotoPath: null,

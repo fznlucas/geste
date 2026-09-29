@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getEditions, getGuideOutline, getWork, getWorks, type GuideOutlineStep, type LevelKey } from "@/lib/api";
-import { LEVELS, guidePriceCents } from "@/lib/pricing";
+import { LEVELS, PRINT_WITH_GUIDE } from "@/lib/pricing";
 import { WorkPage } from "./WorkPage";
 
 export const dynamicParams = false;
@@ -25,8 +25,8 @@ export default async function Page({ params }: Props) {
   const work = await getWork(slug);
   if (!work) notFound();
 
-  // The print option is the work's A3 edition, if it still has copies.
-  const a3 = (await getEditions({ workId: work.id })).find((e) => e.size === "A3" && !e.soldOut) ?? null;
+  // The print option is the work's S edition, if it still has copies.
+  const print = (await getEditions({ workId: work.id })).find((e) => e.size === PRINT_WITH_GUIDE && !e.soldOut) ?? null;
 
   // Outline of every level × palette, so the accordion follows the configurator without a request.
   const outlines: Record<string, GuideOutlineStep[]> = {};
@@ -45,7 +45,7 @@ export default async function Page({ params }: Props) {
       "@type": "AggregateOffer",
       priceCurrency: "USD",
       lowPrice: (work.minPriceCents / 100).toFixed(2),
-      highPrice: (Math.max(...work.formats.filter((f) => f.active).map((f) => guidePriceCents({ format: f.format, level: "advanced", palette: "original" }))) / 100).toFixed(2),
+      highPrice: (Math.max(...work.formats.filter((f) => f.active).map((f) => f.priceCents)) / 100).toFixed(2),
       availability: "https://schema.org/InStock",
     },
   };
@@ -54,8 +54,8 @@ export default async function Page({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* The configuration lives in the URL (read in the browser); the fallback is the default configuration. */}
-      <Suspense fallback={<WorkPage work={work} a3={a3} outlines={outlines} static />}>
-        <WorkPage work={work} a3={a3} outlines={outlines} />
+      <Suspense fallback={<WorkPage work={work} print={print} outlines={outlines} static />}>
+        <WorkPage work={work} print={print} outlines={outlines} />
       </Suspense>
     </>
   );

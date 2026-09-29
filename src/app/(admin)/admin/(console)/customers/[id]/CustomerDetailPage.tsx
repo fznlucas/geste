@@ -6,7 +6,7 @@
  * Owner and Support. Nothing is emailed or deleted in the mock; every action is audited.
  */
 import { useState, type ReactNode } from "react";
-import { AdminBox, AdminRow, AdminTitle, Button, ButtonLink, StatusChip, UnderLink, useToast } from "@/components";
+import { AdminBox, AdminRow, AdminTitle, Artwork, Button, ButtonLink, StatusChip, UnderLink, useToast } from "@/components";
 import { getCustomer, libraryProgress, type CustomerDetail, type LibraryItem, type Order } from "@/lib/api";
 import { useAdminQuery, useLibraryProgress } from "@/lib/client";
 import { exportCustomerData, resetPrintCredits, scheduleDeletion, sendLoginLink } from "@/lib/client/admin/customers";
@@ -172,8 +172,7 @@ function LibraryLine({ l }: { l: LibraryItem }) {
   return (
     <AdminRow cols="50px 80px 1fr 160px 120px">
       <span role="cell">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 36 × 45 thumbnail, as drawn */}
-        <img src={l.work.imageUrl} alt="" className="block h-45 w-36 object-cover" />
+        <Artwork src={l.work.imageUrl} orientation={l.work.orientation} className="w-36" sizes="36px" />
       </span>
       <span role="cell">{l.work.number}</span>
       <span role="cell">

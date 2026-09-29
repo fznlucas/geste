@@ -50,7 +50,7 @@ test("a print bought at checkout lands in To print and in the edition stock", as
   await page.goto("/");
   await page.evaluate(() => {
     localStorage.clear();
-    localStorage.setItem("geste.cart.v1", JSON.stringify([{ id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-a3", quantity: 1 }]));
+    localStorage.setItem("geste.cart.v2", JSON.stringify([{ id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-s", quantity: 1 }]));
   });
   await page.goto("/checkout/");
   await page.getByRole("button", { name: "Apple Pay" }).click();
@@ -58,21 +58,21 @@ test("a print bought at checkout lands in To print and in the edition stock", as
   await signIn(page, "fulfilment", true);
   await page.goto("/admin/fulfilment/");
   const card = column(page, "To print").getByRole("article", { name: /#GS-2042/ });
-  await expect(card).toContainText("N°07 · A3 · 12/50");
+  await expect(card).toContainText("N°07 · S · 12/100");
   await expect(card).toContainText("Camille Martin · Lyon");
   await page.goto("/admin/editions/");
-  await expect(page.getByRole("row", { name: /N°07 A3/ })).toContainText("12/50");
+  await expect(page.getByRole("row", { name: /N°07 S ·/ })).toContainText("12/100");
 });
 
 test("close and reopen an edition", async ({ page }) => {
   await signIn(page);
   await page.goto("/admin/editions/");
-  const row = page.getByRole("row", { name: /N°07 A2/ });
-  await row.getByRole("button", { name: "Close edition N°07 A2" }).click();
+  const row = page.getByRole("row", { name: /N°07 M ·/ });
+  await row.getByRole("button", { name: "Close edition N°07 M" }).click();
   await expect(row).toContainText("closed");
-  await row.getByRole("button", { name: "Reopen N°07 A2" }).click();
-  await expect(row).toContainText("18");
-  await expect(page.getByRole("row", { name: /N°08 50×70/ }).getByRole("cell").nth(5)).toHaveClass(/text-danger/);
+  await row.getByRole("button", { name: "Reopen N°07 M" }).click();
+  await expect(row).toContainText("38");
+  await expect(page.getByRole("row", { name: /N°08 L ·/ }).getByRole("cell").nth(5)).toHaveClass(/text-danger/);
   await expectNoAxeViolations(page);
 });
 

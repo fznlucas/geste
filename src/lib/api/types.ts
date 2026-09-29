@@ -2,12 +2,12 @@
  * What the API returns. Pages depend on these types only, never on `src/data`: when the API moves
  * to Supabase, these stay and the pages do not change. Images are ready-to-use URLs.
  */
-import type { FormatKey, LevelKey, PrintSize, ShippingMethod } from "@/lib/pricing";
+import type { FormatKey, LevelKey, Orientation, PrintSize, ShippingMethod } from "@/lib/pricing";
 import type { DiagramStroke } from "@/components/reader/CanvasDiagram";
 import type { CartTotals } from "@/components/commerce/CartSummary";
 import type { CartItem, StaffRole } from "@/lib/types";
 
-export type { FormatKey, LevelKey, PrintSize, ShippingMethod, DiagramStroke, CartTotals, StaffRole };
+export type { FormatKey, LevelKey, Orientation, PrintSize, ShippingMethod, DiagramStroke, CartTotals, StaffRole };
 
 export type WorkStatus = "draft" | "scheduled" | "live" | "archived";
 export type PaletteKey = "original" | "warm" | "cool" | "earth";
@@ -36,11 +36,11 @@ export interface Address {
 
 export interface WorkFormat {
   format: FormatKey;
-  label: string; // "60×80"
+  label: string; // "60×80", "80×60" for a landscape work
   defaultLevel: LevelKey;
   levelLabel: string; // "Intermediate"
   layers: number;
-  priceCents: number; // at the default level
+  priceCents: number; // any level, Signature included
   duration: string; // "3h30"
   active: boolean;
 }
@@ -61,6 +61,9 @@ export interface CatalogWork {
   description: string;
   imageUrl: string;
   imageAlt: string;
+  orientation: Orientation;
+  /** "Signature" work: SIGNATURE_CENTS more on every format. */
+  signature: boolean;
   resultPhotoUrl: string | null;
   studioTested: boolean;
   seoTitle: string;
@@ -69,9 +72,9 @@ export interface CatalogWork {
   defaultFormat: FormatKey;
   formats: WorkFormat[];
   palettes: WorkPalette[];
-  /** Card line (Home/Shop): the default format at its default level. */
+  /** Card line (Home/Shop): the default format's price, shown with its level and time. */
   fromPriceCents: number;
-  /** Cheapest guide of the work (any active format, Beginner): "Start with N°03   from $12". */
+  /** Cheapest guide of the work (any active format): "Start with N°06   from $21". */
   minPriceCents: number;
   levelLabel: string;
   duration: string;
@@ -159,7 +162,9 @@ export interface Guide {
   workNumber: string;
   workSlug: string;
   imageUrl: string;
+  orientation: Orientation;
   format: FormatKey;
+  /** "60×80", "80×60" for a landscape work. */
   formatLabel: string;
   level: LevelKey;
   levelLabel: string;
@@ -212,7 +217,10 @@ export interface PrintEdition {
   workNumber: string;
   workSlug: string;
   imageUrl: string;
+  orientation: Orientation;
   size: PrintSize;
+  /** "30 × 42 cm", turned for a landscape work. */
+  dimensions: string;
   editionSize: number;
   priceCents: number;
   open: boolean;
@@ -220,7 +228,7 @@ export interface PrintEdition {
   reserved: number;
   left: number;
   soldOut: boolean;
-  /** Number the next buyer gets ("Edition 12/50"); null when sold out. */
+  /** Number the next buyer gets ("Edition 12/100"); null when sold out. */
   nextNumber: number | null;
 }
 
@@ -228,13 +236,14 @@ export interface PrintCopy {
   id: string;
   editionId: string;
   number: number;
-  label: string; // "12/50"
+  label: string; // "12/100"
   certificateNo: string | null;
   fulfilment: FulfilmentStatus;
   printedAt: string | null;
   workNumber: string;
   size: PrintSize;
   imageUrl: string;
+  orientation: Orientation;
   orderNumber: string | null;
   /** Payment date of the order: cards of a fulfilment column, newest first. */
   orderPaidAt: string | null;
@@ -256,14 +265,16 @@ export type CartLineInput =
 export type StoredCartLine = CartLineInput & { id: string; addedAt: string };
 
 export interface PricedCartLine extends CartItem {
-  /** Checkout summary: "60×80 · Intermediate", "A3 · Edition 12/50". */
+  /** Checkout summary: "60×80 · Intermediate", "S · Edition 12/100". */
   shortDetail: string;
-  /** Receipt and phone summary: "N°03 — Guide, 60×80", "N°07 — Print A3, 12/50". */
+  /** Receipt and phone summary: "N°03 — Guide, 60×80", "N°07 — Print S, 12/100". */
   receiptTitle: string;
   /** Prints: the edition and the first number this line gets. */
   edition?: { id: string; size: string; editionSize: number; firstNumber: number; left: number };
   /** Second line under the detail: "+ shopping list", "Signed, with certificate". */
   note: string | null;
+  /** "−15% with the print" / "−15% with the guide" when the line is in a bundle. */
+  bundleNote: string | null;
   /** Where the title links (the work page with the same config), null when unknown. */
   href: string | null;
   /** Stepper limit: 1 for guides and gift cards, copies left for prints. */
@@ -312,13 +323,17 @@ export interface OrderItem {
   title: string; // "Guide N°03"
   detail: string; // "60×80 · Intermediate · Original"
   imageUrl: string | null;
+  /** Of the work (landscape thumbnails are turned); "portrait" for gift cards. */
+  orientation: Orientation;
   unitPriceCents: number;
   quantity: number;
+  /** Bundle discount on the whole line (guide + print of the same work, −15 %). */
+  discountCents: number;
   fulfilment: FulfilmentStatus;
   certificateNo: string | null;
-  /** Prints: the numbered copies of this line (12 in 12/50), lowest first. */
+  /** Prints: the numbered copies of this line (12 in 12/100), lowest first. */
   copyNumbers: number[];
-  /** Prints: "A3", 50. */
+  /** Prints: "S", 100. */
   edition: { size: string; editionSize: number } | null;
   /** Prints: when the copy was printed and signed (Tracking board). */
   printedAt: string | null;
@@ -387,7 +402,7 @@ export interface Order {
   status: OrderStatus;
   displayStatus: OrderDisplayStatus;
   customer: { id: string; fullName: string; email: string };
-  /** "Guide N°03 · Print N°07 A3" (AdminOrders "Items" column). */
+  /** "Guide N°03 · Print N°07 S" (AdminOrders "Items" column). */
   summary: string;
   items: OrderItem[];
   subtotalCents: number;
@@ -465,7 +480,7 @@ export interface LibraryItem {
   /** Every step id of the guide in reading order ("1a" … "3e"): progress = position of `step`. */
   stepIds: string[];
   guideId: string;
-  work: { id: string; number: string; slug: string; imageUrl: string };
+  work: { id: string; number: string; slug: string; imageUrl: string; orientation: Orientation };
   format: FormatKey;
   level: LevelKey;
   paletteKey: PaletteKey;

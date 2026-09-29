@@ -3,7 +3,7 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, PRINT_PRICES, estimatedTime, guidePriceCents, type FormatKey, type LevelKey, type PrintSize } from "@/lib/pricing";
+import { FORMATS, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, estimatedTime, formatLabel, guidePriceCents, printCm, type FormatKey, type LevelKey, type Orientation, type PrintSize, type WorkPricing } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
 import { guides } from "@/data/guides";
@@ -14,25 +14,32 @@ import { getGuideEditor } from "./guides";
 import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, inserted, localSoldCount, patched } from "./local";
 import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorkStatus, WorksQuery } from "./types";
 
-/** Cheapest guide of a work: its active formats at Beginner level ("from $12"). */
+/** What the price of a work's guide depends on: its Signature flag and its own format prices. */
+export function workPricing(row: Pick<WorkRow, "id" | "signature">): WorkPricing {
+  return {
+    signature: row.signature,
+    formatCents: Object.fromEntries(workFormats.filter((f) => f.workId === row.id).map((f) => [f.format, f.guidePriceCents])),
+  };
+}
+
+/** Cheapest guide of a work: its cheapest active format ("from $15"; a Signature work from $21). */
 export function minGuidePriceCents(workId: string): number {
-  return Math.min(
-    ...workFormats
-      .filter((f) => f.workId === workId && f.active)
-      .map((f) => guidePriceCents({ format: f.format, level: "beginner", palette: "original" })),
-  );
+  const row = works.find((w) => w.id === workId)!;
+  const pricing = workPricing(row);
+  return Math.min(...workFormats.filter((f) => f.workId === workId && f.active).map((f) => guidePriceCents(f.format, pricing)));
 }
 
 export function mapWork(row: WorkRow): CatalogWork {
+  const pricing = workPricing(row);
   const formats: WorkFormat[] = workFormats
     .filter((f) => f.workId === row.id)
     .map((f) => ({
       format: f.format,
-      label: FORMATS[f.format].label,
+      label: formatLabel(f.format, row.orientation),
       defaultLevel: f.defaultLevel,
       levelLabel: LEVELS[f.defaultLevel].label,
       layers: LEVELS[f.defaultLevel].layers,
-      priceCents: guidePriceCents({ format: f.format, level: "match", palette: "original" }),
+      priceCents: guidePriceCents(f.format, pricing),
       duration: estimatedTime({ format: f.format, level: "match", palette: "original" }),
       active: f.active,
     }));
@@ -50,6 +57,8 @@ export function mapWork(row: WorkRow): CatalogWork {
     description: row.description,
     imageUrl: asset(row.previewPath),
     imageAlt: `${row.number} · Digital preview`,
+    orientation: row.orientation,
+    signature: row.signature,
     resultPhotoUrl: row.resultPhotoPath ? asset(row.resultPhotoPath) : null,
     studioTested: row.studioTested,
     seoTitle: row.seoTitle,
@@ -122,6 +131,8 @@ export function toWorkCard(work: CatalogWork): WorkCardData {
     slug: work.slug,
     imageUrl: work.imageUrl,
     imageAlt: work.imageAlt,
+    orientation: work.orientation,
+    signature: work.signature,
     fromPriceCents: work.fromPriceCents,
     defaultFormat: work.defaultFormat,
     levelLabel: work.levelLabel,
@@ -171,9 +182,6 @@ export async function getGuideOutline(workId: string, level: LevelKey, palette: 
 // Reads through the admin overlay (`allWorks`, `patched`): the admin sees its own edits and the
 // drafts it created. The store functions above read the mock tables as built, like the deployed site.
 
-const PRINT_SIZES: PrintSize[] = ["A3", "A2", "50×70"];
-/** Edition size offered by default when a size is not on sale yet. */
-const DEFAULT_EDITION_SIZE: Record<PrintSize, number> = { A3: 50, A2: 30, "50×70": 25 };
 /** How a palette's preview is tinted, in words (Palettes tab). */
 const FILTER_NOTE: Record<PaletteKey, string> = { original: "Tubes: 4 + white", warm: "Preview filter: warm", cool: "Preview filter: hue 150°", earth: "Preview filter: sepia" };
 
@@ -184,9 +192,10 @@ export const listRowId = (workId: string, position: number) => `${workId}:${posi
 
 export interface AdminWorkFormat {
   format: FormatKey;
+  /** "60×80", "80×60" for a landscape work. */
   label: string;
   defaultLevel: LevelKey;
-  /** Guide price at the default level ("$19"): stored base + level surcharge. */
+  /** Stored guide price for any level (`work_formats.guide_price_cents`), before the Signature supplement. */
   priceCents: number;
   /** "~3h30" at the default level */
   duration: string;
@@ -216,6 +225,8 @@ export interface AdminListItem {
 
 export interface AdminWorkEdition {
   size: PrintSize;
+  /** "30 × 42 cm", turned for a landscape work. */
+  dimensions: string;
   editionId: string | null;
   editionSize: number;
   priceCents: number;
@@ -246,6 +257,8 @@ export interface AdminWork {
   seoDescription: string;
   sortOrder: number;
   defaultFormat: FormatKey;
+  orientation: Orientation;
+  signature: boolean;
   formatLabel: string;
   levelLabel: string;
   soldCount: number;
@@ -270,16 +283,16 @@ const workFormatRows = (workId: string) => {
   const own = workFormats.filter((f) => f.workId === workId);
   const rows = own.length
     ? own
-    : (Object.keys(FORMATS) as FormatKey[]).map((format) => ({ workId, format, defaultLevel: FORMATS[format].defaultLevel as LevelKey, guidePriceCents: FORMATS[format].guideBase as number, estMinutes: 0, active: true }));
+    : (Object.keys(FORMATS) as FormatKey[]).map((format) => ({ workId, format, defaultLevel: FORMATS[format].defaultLevel as LevelKey, guidePriceCents: FORMATS[format].guideCents as number, estMinutes: 0, active: true }));
   return rows.map((r) => patched("work_formats", { ...r, id: formatRowId(workId, r.format) }));
 };
 
-function adminFormats(workId: string): AdminWorkFormat[] {
+function adminFormats(workId: string, orientation: Orientation): AdminWorkFormat[] {
   return workFormatRows(workId).map((f) => ({
     format: f.format,
-    label: FORMATS[f.format].label,
+    label: formatLabel(f.format, orientation),
     defaultLevel: f.defaultLevel,
-    priceCents: f.guidePriceCents + LEVELS[f.defaultLevel].surcharge,
+    priceCents: f.guidePriceCents,
     duration: `~${estimatedTime({ format: f.format, level: f.defaultLevel, palette: "original" })}`,
     active: f.active,
   }));
@@ -307,7 +320,9 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     seoDescription: row.seoDescription ?? "",
     sortOrder: row.sortOrder,
     defaultFormat: row.defaultFormat,
-    formatLabel: FORMATS[row.defaultFormat].label,
+    orientation: row.orientation ?? "portrait",
+    signature: !!row.signature,
+    formatLabel: formatLabel(row.defaultFormat, row.orientation ?? "portrait"),
     levelLabel: LEVELS[level].label,
     soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
     isDraftCreated,
@@ -328,7 +343,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
   const row = allWorks().find((w) => w.slug === slug);
   if (!row) return null;
   const work = mapAdminWork(row, createdWorkIds());
-  const formats = adminFormats(row.id);
+  const formats = adminFormats(row.id, work.orientation);
   const def = formats.find((f) => f.format === row.defaultFormat)!;
 
   const paletteRows = palettes.filter((p) => p.workId === row.id);
@@ -347,11 +362,12 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
     });
 
   const editionRows = allPrintEditions().filter((e) => e.workId === row.id);
-  const editions: AdminWorkEdition[] = PRINT_SIZES.map((size) => {
+  const editions: AdminWorkEdition[] = PRINT_SIZE_ORDER.map((size) => {
     const e = editionRows.find((x) => x.size === size);
+    const dimensions = printCm(size, work.orientation);
     return e
-      ? { size, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: e.soldCount + localSoldCount(e.id) }
-      : { size, editionId: null, editionSize: DEFAULT_EDITION_SIZE[size], priceCents: PRINT_PRICES[size], open: false, sold: 0 };
+      ? { size, dimensions, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: e.soldCount + localSoldCount(e.id) }
+      : { size, dimensions, editionId: null, editionSize: PRINT_SIZES[size].editionSize, priceCents: PRINT_SIZES[size].priceCents, open: false, sold: 0 };
   });
 
   const guideRow = guides.find((g) => g.workId === row.id && g.format === row.defaultFormat && g.level === def.defaultLevel);
