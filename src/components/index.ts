@@ -1,6 +1,7 @@
 // Geste component library — import from "@/components".
 export * from "./brand/Logo";
 export * from "./brand/Icon";
+export * from "./brand/AppIcon";
 
 export * from "./primitives/Button";
 export * from "./primitives/IconButton";
@@ -34,6 +35,8 @@ export * from "./layout/SiteFooter";
 export * from "./layout/Structure";
 export * from "./layout/ArticleCard";
 export * from "./layout/AccountNav";
+export * from "./layout/InfoPage";
+export * from "./layout/CookieSettings";
 
 export * from "./commerce/PriceMorph";
 export * from "./commerce/WorkCard";

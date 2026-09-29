@@ -24,8 +24,10 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Primitives | `Segmented` | `src/components/primitives/Segmented.tsx` | Product (format, level), Shop filters |
 | Primitives | `StatusChip` | `src/components/primitives/StatusChip.tsx` | Orders, Admin |
 | Primitives | `Switch` | `src/components/primitives/Switch.tsx` | Settings, AdminMAlerts |
-| Primitives | `Tabs` | `src/components/primitives/Tabs.tsx` | Help, Account, Admin |
+| Primitives | `Tabs` | `src/components/primitives/Tabs.tsx` | Account, Admin |
 | Layout | `AccountNav` | `src/components/layout/AccountNav.tsx` | Account, Orders, Settings, MAccount, MOrders, MSettings |
+| Layout | `InfoSideNav`, `InfoSection`, `InfoNote` | `src/components/layout/InfoPage.tsx` | Help, Legal |
+| Layout | `CookieSettings` | `src/components/layout/CookieSettings.tsx` | Legal, MLegal |
 | Commerce | `LibraryRow` | `src/components/commerce/LibraryRow.tsx` | Account, MAccount |
 | Commerce | `AccountOrderRow` | `src/components/commerce/AccountOrderRow.tsx` | Orders, MOrders |
 | Commerce | `TrackingSteps` | `src/components/commerce/TrackingSteps.tsx` | Tracking, MTracking |
@@ -111,9 +113,9 @@ export interface LogoProps {
 
 ## Accordion
 
-`src/components/primitives/Accordion.tsx` · used on Product details, Help
+`src/components/primitives/Accordion.tsx` · used on Product details, Method, Help and Legal (phone)
 
-**Accordion** — Rows of 44 px with a Line rule; plus → minus; panel height animates 240 ms (off under reduced motion).
+**Accordion** — Rows of 44 px with a Line rule; plus → minus; panel height animates 240 ms (off under reduced motion). `variant="product"` (default; Product, MProduct): 44 / 48 px rows rules included, 16 px under an open panel. `variant="faq"` (MMethod, MHelp, MLegal): 48 px rows plus their rule, 12 px under an open panel. `value` / `onValueChange` make a single accordion controlled, so the URL opens a row (`/help#faq`, `/legal/terms`). The Radix header is an h3: the row labels keep the body weight and tracking, as every board draws them (the product rows were 500 before, docs/decisions.md "Accordion rows").
 
 ```ts
 export interface AccordionItem {
@@ -129,6 +131,7 @@ export interface AccordionProps {
   /** Product page: "single" so the Buy button stays above the fold. FAQ: "multiple". */
   type?: "single" | "multiple";
   defaultValue?: string[];
+  variant?: "product" | "faq";
 }
 ```
 
@@ -167,13 +170,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 `src/components/primitives/Checkbox.tsx` · used on Checkout, Admin
 
-**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area: 44 px tall by default; `layout="inline"` (checkout, register) is the label's height, box top-aligned, text 23 px from the left edge as drawn; `layout="setting"` (Settings, Login "Keep me logged in") is a 32 px row (36 on phones), text where the boards' native boxes put it (`gap` = board gap + 2 px).
+**Checkbox** — 14 px square, 1 px Ink border, Ink fill + Paper check when on. Whole row is the hit area: 44 px tall by default; `layout="inline"` (checkout, register) is the label's height, box top-aligned, text 23 px from the left edge as drawn; `layout="setting"` (Settings, Login "Keep me logged in") is a 32 px row (36 on phones), text where the boards' native boxes put it (`gap` = board gap + 2 px); `layout="end"` (Legal cookie rows) puts the text left and the box right, 16 px from the edge like the boards' native box, the row height coming from `className`.
 
 ```ts
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label: ReactNode;
   invalid?: boolean;
-  layout?: "row" | "inline" | "setting";
+  layout?: "row" | "inline" | "setting" | "end";
   /** setting only, default "gap-12". */
   gap?: string;
 }
@@ -573,6 +576,31 @@ export interface SiteHeaderProps {
 ```
 
 
+## InfoPage
+
+`src/components/layout/InfoPage.tsx` · used on Help, Legal
+
+**InfoSideNav** — Desktop side column (3 of 12 columns): eyebrow in Stone, the 28 px h1 16 px above the topics, 32 px topic rows 4 px apart; the current one underlined (offset 4), the others Stone. Items with `href` are links in a `nav` (`aria-current="page"`, Legal); without, buttons in a group (`aria-pressed`, Help).
+**InfoSection** — A topic or document: 500 title (h2) 12 px above the rows; each row is a `dt` label and a Stone `dd`, 14 px above and below, Line rule on top. Children go after the rows (gift card button, contact form, cookie rows).
+**InfoNote** — Mist line above a Legal document ("Template — …"); the page sets its padding (14 px desktop, 12 px phone).
+
+```ts
+export interface InfoSideNavProps { eyebrow: string; title: string; label: string; items: { key: string; label: string; href?: string }[]; current: string; onPick?: (key: string) => void }
+export interface InfoSectionProps { title: string; rows?: { label: string; text: ReactNode }[]; children?: ReactNode; className?: string }
+```
+
+
+## CookieSettings
+
+`src/components/layout/CookieSettings.tsx` · used on Legal (`/legal/cookies`), MLegal (every legal page)
+
+**CookieSettings** — "Essential · cart, login  Always on", "Audience measurement" and "Social media and ads" checkboxes (`Checkbox layout="end"`), then "Save my choices →", which reads "Saved" until the next change. Desktop: 57 px ruled rows (the board's 56 px content-box plus the rule; 58 px for the last, ruled below too), 320 px button 16 px below. Phone: "Essential", "Audience", "Ads" in 44 px rows 20 px apart, full-width button. Stateless: the page keeps the choice (`useCookieConsent`, `saveCookieConsent`).
+
+```ts
+export interface CookieSettingsProps { value: { audience: boolean; ads: boolean }; onChange: (next: CookieChoice) => void; saved: boolean; onSave: () => void; variant?: "desktop" | "phone" }
+```
+
+
 ## Structure
 
 `src/components/layout/Structure.tsx` · used on all pages
@@ -896,7 +924,7 @@ export interface StepCardProps {
 
 `src/components/reader/StepProgress.tsx` · used on GuideReader, AppStep
 
-**StepProgress** — As drawn: 2 px segments, 4 px apart, Ink up to and including the current step, Line after (hover: Line-field). Desktop shows every layer (12 px between layers, 20 px-tall buttons); the phone shows the current layer's segments only. Each segment is a button ("Layer 02, step c", `aria-current="step"` on the current one) inside a `role="list"`; a pseudo-element stretches the hit area to 44 px without moving the layout (phone buttons are 24 px boxes with negative margins, for axe's target size). The reader's ← → keys and swipes move one step.
+**StepProgress** — As drawn: 2 px segments, 4 px apart, Ink up to and including the current step, Line after (hover: Line-field). Desktop shows every layer (12 px between layers); the phone shows the current layer's segments only. The bar is one `role="slider"` ("Steps", value text "Layer 02, step c · 7 of 15"): a click goes to the nearest segment, ← → ↑ ↓ move one step, Page Up / Page Down one layer, Home / End the first and last step (the reader's own ← → listener skips the keys the bar handled). One 24 px-tall target whatever the width, drawn as its 2 px bars with negative margins (desktop 20 px in the layout, phone 2 px), so axe's target size passes even when 15 segments share 358 px (docs/decisions.md "Reader step bar"). The reader's ← → keys and swipes move one step.
 
 ```ts
 export interface StepProgressProps {

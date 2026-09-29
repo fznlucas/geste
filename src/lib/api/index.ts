@@ -20,7 +20,7 @@ export { setLocalRowsSource, setAdminOverlaySource, type LocalRows, type AdminOv
 export { getStaffMember } from "./staff";
 export { getAdminCounts, getAdminAlerts, getLowEdition, getPushSettings, PUSH_TOPICS, getOrderNotes, setAiToReviewSource, type AdminCounts, type AdminAlert, type OrderNote } from "./admin";
 export { getSupportThreads, getSupportThread, getSavedReplies } from "./support";
-export { getAdminArticles, getHomeSettings, getTranslationProgress, getLegalDocs, type AdminArticle, type HomeSettings, type LegalDoc } from "./content";
+export { getAdminArticles, getHomeSettings, getTranslationProgress, getLegalDocs, getLegalDocuments, getLegalDocument, LEGAL_KINDS, type AdminArticle, type HomeSettings, type LegalDoc, type LegalDocument, type LegalKind } from "./content";
 export { getAnalytics, getFinance, financeCsv, ANALYTICS_RANGES, type Analytics, type AnalyticsRange, type Finance, type PnlRow } from "./insights";
 export { getPromoCodes, promoCodeExists, getGiftCards, getCampaigns, getAffiliates, getSocialWeek, type PromoCode, type GiftCard, type Campaign, type PromoKind, type PromoScope } from "./marketing";
 export { getStoreSettings, getShippingZones, getPaymentProviders, getSecuritySettings, getIntegrations, getTeam, getPastAudit, TEAM_ROLE_LABEL, type StoreSetting, type TeamMember, type SettingStatus } from "./settings";

@@ -21,7 +21,9 @@ export function ShellKit() {
   return (
     <div className="flex flex-col gap-24">
       <span className="text-fg-muted">Sidebar per role (switch with the “Demo data” menu) · top bar</span>
-      <div className="flex border border-border">
+      {/* The console is a desktop layout (phones get the admin's own phone header): it scrolls sideways below 1100 px. */}
+      <div role="region" aria-label="Admin shell at desktop width" tabIndex={0} className="relative overflow-x-auto focus-visible:outline focus-visible:outline-1 focus-visible:outline-fg">
+      <div className="flex min-w-1100 border border-border">
         <AdminSidebar role={role} userName="Lucas" activeHref="/admin/orders" counts={COUNTS} onLogOut={() => {}} />
         <div className="relative flex min-w-0 flex-1 flex-col">
           <AdminTopBar
@@ -55,6 +57,7 @@ export function ShellKit() {
             </AdminBox>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

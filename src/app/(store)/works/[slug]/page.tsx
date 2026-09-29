@@ -17,7 +17,7 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const work = await getWork((await params).slug);
   if (!work) return {};
-  return { title: { absolute: work.seoTitle }, description: work.seoDescription, openGraph: { images: [work.imageUrl] } };
+  return { title: { absolute: work.seoTitle }, description: work.seoDescription };
 }
 
 export default async function Page({ params }: Props) {

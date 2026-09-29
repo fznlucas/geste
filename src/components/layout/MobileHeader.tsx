@@ -26,7 +26,7 @@ export function MobileHeader({ cartCount, signedIn, onCartClick, locale, onLocal
         <Link href={signedIn ? "/account" : "/login"} aria-label={signedIn ? "Account" : "Log in"} className="flex size-44 items-center justify-center">
           <Icon name="account" />
         </Link>
-        <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} items`} className="flex min-h-44 min-w-44 items-center justify-center gap-5">
+        <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`} className="flex min-h-44 min-w-44 items-center justify-center gap-5">
           <Icon name="cart" />
           <span key={cartCount} aria-hidden="true" className="tabular-nums motion-safe:animate-[fade-in_150ms_var(--ease-standard)]">({cartCount})</span>
         </button>

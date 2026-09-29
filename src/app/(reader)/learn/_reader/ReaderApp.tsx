@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { ButtonLink } from "@/components";
 import { getEntitlement, type Guide, type GuideLicense, type LibraryItem } from "@/lib/api";
-import { useHydrated, usePurchases, useRequireCustomer } from "@/lib/client";
+import { keepGuideOffline, useHydrated, useInstallPrompt, usePurchases, useRequireCustomer } from "@/lib/client";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { PrintView } from "./PrintView";
 import { StepView } from "./StepView";
@@ -69,11 +69,27 @@ export function ReaderApp({ id, route }: { id: string; route: ReaderRoute }) {
 function Reader({ data, route }: { data: ReaderData; route: ReaderRoute }) {
   const wide = useMediaQuery(WIDE);
   const online = useOnline();
+  const install = useInstallPrompt();
+  const id = data.item.entitlementId;
+  // Once a guide is open online, its step, timer and print pages are kept for offline use (M8).
+  useEffect(() => {
+    void keepGuideOffline(id);
+  }, [id]);
   return (
     <>
       {!online && (
         <p role="status" className="m-0 bg-surface-muted px-16 py-8 text-center print:hidden">
           Offline — your guides are saved on this device
+        </p>
+      )}
+      {/* Phone, once a guide is open: a quiet line, never a modal (docs/screens/reader.md §PWA). */}
+      {online && install && !wide && (
+        <p className="m-0 flex items-center justify-between gap-12 bg-surface-muted pl-16 print:hidden">
+          <span>Install Geste to paint offline</span>
+          <span className="flex">
+            <button type="button" onClick={install.dismiss} className="min-h-44 px-12 text-fg-muted hover:text-fg">Not now</button>
+            <button type="button" onClick={() => void install.install()} className="min-h-44 px-16 underline underline-offset-3 hover:text-fg-muted">Install</button>
+          </span>
         </p>
       )}
       {route === "step" && <StepView data={data} wide={wide} />}

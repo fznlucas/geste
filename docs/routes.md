@@ -80,4 +80,4 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/api/guides/[entitlementId]/pdf` | GET | PDF generation (owner, credit check, watermark) |
 | `/api/cron/[job]` | GET | Vercel cron: release-scheduled-works, send-scheduled-gift-cards, abandoned-cart, sync-stripe-balance (header `CRON_SECRET`) |
 
-Brand boards (Logo, Colour, Type, Icons, Voice, Packaging, Social, Favicon, Emails) are not routes: emails → `src/emails/*`, favicon → `app/icon.png`, OG → `app/opengraph-image.tsx` and `app/works/[slug]/opengraph-image.tsx`.
+Brand boards (Logo, Colour, Type, Icons, Voice, Packaging, Social, Favicon, Emails) are not routes: emails → `src/emails/*`, favicon → `app/icon.svg` + `app/favicon.ico` + `app/apple-icon.png` and the manifest icons in `public/icons/` (all from `scripts/brand-icons.ts`), OG → `app/opengraph-image.tsx` and `app/(store)/works/[slug]/opengraph-image.tsx` (`src/lib/og.tsx`).

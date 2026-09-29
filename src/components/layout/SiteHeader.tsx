@@ -46,7 +46,7 @@ export function SiteHeader({ active, cartCount, signedIn, onCartClick }: SiteHea
           <Link href={signedIn ? "/account" : "/login"} aria-label={signedIn ? "Account" : "Log in"} className="flex size-44 items-center justify-center hover:text-fg-muted">
             <Icon name="account" />
           </Link>
-          <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} items`} className="flex min-h-44 min-w-44 items-center justify-center gap-5 hover:text-fg-muted">
+          <button type="button" onClick={onCartClick} aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`} className="flex min-h-44 min-w-44 items-center justify-center gap-5 hover:text-fg-muted">
             <Icon name="cart" />
             <span key={cartCount} aria-hidden="true" className="tabular-nums motion-safe:animate-[fade-in_150ms_var(--ease-standard)]">({cartCount})</span>
           </button>

@@ -6,7 +6,7 @@ import "./globals.css";
 const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Geste — paint it yourself", template: "%s · Geste" },
+  title: { default: "Geste — Paint it yourself", template: "%s · Geste" },
   description: "Step-by-step guides to paint gallery-level abstract works at home. From $12.",
   metadataBase: new URL("https://geste.studio"),
   // Mock phase on GitHub Pages: keep every page out of search engines. Remove at launch.

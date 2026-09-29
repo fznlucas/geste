@@ -4,7 +4,7 @@
  * made here in the mock shows in the admin only.
  */
 import { articles } from "@/data/articles";
-import { ARTICLE_VIEWS, articleDrafts, homeSettings, legalDocs, translationAreas, type ArticleDraftRow, type HomeSettingsRow } from "@/data/content";
+import { ARTICLE_VIEWS, articleDrafts, homeSettings, legalDocs, legalDocuments, translationAreas, type ArticleDraftRow, type HomeSettingsRow } from "@/data/content";
 import { works } from "@/data/works";
 import { clone } from "./clone";
 import { merged, patched } from "./local";
@@ -67,4 +67,59 @@ export interface LegalDoc {
 
 export async function getLegalDocs(): Promise<LegalDoc[]> {
   return clone(legalDocs);
+}
+
+// ── Store: /legal/[doc] ──────────────────────────────────────────────────────
+
+export type LegalKind = "notice" | "terms" | "privacy" | "cookies" | "accessibility";
+
+/** Order and names of the Legal board's side nav (desktop) and accordion (phone: `short`). */
+export const LEGAL_KINDS: Array<{ kind: LegalKind; title: string; short: string }> = [
+  { kind: "notice", title: "Legal notice", short: "Legal notice" },
+  { kind: "terms", title: "Terms of sale", short: "Terms of sale" },
+  { kind: "privacy", title: "Privacy policy", short: "Privacy" },
+  { kind: "cookies", title: "Cookie settings", short: "Cookie settings" },
+  { kind: "accessibility", title: "Accessibility", short: "Accessibility" },
+];
+
+export interface LegalDocument {
+  kind: LegalKind;
+  /** "Terms of sale" (side nav, section title, page title). */
+  title: string;
+  /** Phone accordion row: "Privacy". */
+  short: string;
+  version: number;
+  publishedAt: string;
+  /** One row per "## Heading" of `body_md`. */
+  sections: Array<{ heading: string; text: string }>;
+  /** Phone accordion text (MLegal); null for cookie settings. */
+  summary: string | null;
+}
+
+/** "## Heading\ntext\n\n## …" → rows. The legal text is plain: no other markdown is used. */
+function legalSections(md: string): LegalDocument["sections"] {
+  return md
+    .split(/^## /m)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [heading = "", ...rest] = part.split("\n");
+      return { heading: heading.trim(), text: rest.join(" ").replace(/\s+/g, " ").trim() };
+    });
+}
+
+/** The latest published version of each document, in the board's order. */
+export async function getLegalDocuments(locale: "en" | "fr" = "en"): Promise<LegalDocument[]> {
+  return clone(
+    LEGAL_KINDS.flatMap(({ kind, title, short }) => {
+      const row = legalDocuments
+        .filter((d) => d.kind === kind && d.locale === locale && d.publishedAt)
+        .sort((a, b) => b.version - a.version)[0];
+      return row ? [{ kind, title, short, version: row.version, publishedAt: row.publishedAt!, sections: legalSections(row.bodyMd), summary: row.summary }] : [];
+    }),
+  );
+}
+
+export async function getLegalDocument(kind: string, locale: "en" | "fr" = "en"): Promise<LegalDocument | null> {
+  return (await getLegalDocuments(locale)).find((d) => d.kind === kind) ?? null;
 }

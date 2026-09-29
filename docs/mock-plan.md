@@ -29,6 +29,7 @@ All keys start with `geste.` and end with a version (`.v1`). Bump the version wh
 | `geste.cart.v1` | `src/lib/client/cart.ts` | `StoredCartLine[]`: guide (work, format, level or `match`, palette), print (edition, quantity), gift card (amount, recipient, message, send date) | `addToCart`, `updateCartLine`, `removeCartLine`, `clearCart`, `useCart(opts)` |
 | `geste.session.v1` | `src/lib/client/session.ts` | `{ customer, staff }` | `signIn`, `signOut`, `signInStaff`, `signOutStaff`, `useSession`, `useStaffSession`, `useRequireCustomer`, `useRequireStaff(role)`, `safeNext` |
 | `geste.progress.v1` | `src/lib/client/progress.ts` | `{ [entitlementId]: { step, openedAt, completedAt, drying: { layer, seconds, until, pausedLeft } \| null, updatedAt } }` | `markOpened`, `saveProgress`, `completeGuide`, `startDrying`, `toggleDrying`, `dryingLeft`, `stopDrying`, `restartGuide`, `useLibraryProgress`, `useProgressEntry`, `applyProgress` |
+| `geste.cookies.v1` | `src/lib/client/cookies.ts` | `{ audience, ads, savedAt }` (essential cookies are always on) | `saveCookieConsent`, `cookieConsent`, `useCookieConsent` |
 | `geste.admin.v1` | `src/lib/client/admin.ts` + `src/lib/client/admin/*.ts` | `{ patches: { [table]: { [id]: columns } }, inserts: { [table]: rows[] }, audit: AuditEntry[] }` | `patchRow`, `insertRow`, `audit`, `useAdminQuery`, `requireStaff`, `setDemoRole`; domain actions `markShipped`, `refundOrder`, `moveCopy`, `saveWork`, `publishGuide`, `reply`, `setReviewStatus`, `createPromo`, `inviteStaff`… |
 
 `resetMockState()` (`src/lib/client/store.ts`) empties all of them: wire it to a discreet "Reset demo" link in the footer and on `/kit`.
@@ -87,6 +88,8 @@ Render: **S** = server component at build, **S+c** = server shell with client is
 | `/checkout/success?order=` | C | local purchase | "Thank you, Camille." · "Open your guide" |
 | `/gift-cards` | S+c | `GIFT_CARD_PRESETS`, min/max | `addToCart({ kind: "gift_card", … })` |
 | `/method`, `/about`, `/help`, `/legal/[doc]`, `/journal`, `/journal/[slug]` | S | copy from `reference/copy/`; articles and legal docs as mock tables if needed | Static |
+| `/help` | S+c | topics in the page (board copy) | Topic from the URL hash; the contact form adds a `support_threads` row to this browser's admin overlay (`contactSupport`), nothing is sent |
+| `/legal/[doc]` | S+c | `getLegalDocuments` (mock `legal_documents`) | notice, terms, privacy, cookies, accessibility; cookie choices in `geste.cookies.v1` (`saveCookieConsent`) |
 | `/track?order=` | C | `getOrderTracking` (mock and local orders with a print) | No token check in the mock; a query instead of `/track/[orderId]` so local orders have a page |
 | `/login`, `/register`, forgot, reset | C | `signIn` | See "What the fakes do"; forgot/reset only change screens |
 | `/account` | C | `getLibrary(userId)` + `useLibraryProgress` | Upload opens the photo picker and keeps nothing (board's "Photo received"); Continue / Start / Open → the reader, Print → its print sheet |
@@ -95,6 +98,7 @@ Render: **S** = server component at build, **S+c** = server shell with client is
 | `/learn/[entitlementId]` | C | `getEntitlement(id, userId)`, `flattenSteps` | `markOpened` on open, `saveProgress` on each step, `completeGuide` on the last; stand-in guides show a quiet "Preview content" note |
 | `/learn/[id]/timer` | C | same | `startDrying` / `toggleDrying` / `stopDrying`; no notification permission in the mock |
 | `/learn/[id]/print` | C | same | Watermarked preview only; credits not spent |
+| `/learn` | C | `getLibrary` + `progress` | The installed app's start page: opens the last guide touched on this device, else the Library. Service worker scope `<base>/learn/` (§4 M8) |
 | `/admin/login` | C | `signInStaff` | |
 | `/admin/**` | C | admin reads of `@/lib/api` through `useAdminQuery` | Role-filtered nav from the staff session; mutations in `geste.admin.v1`. Order detail is `/admin/orders/detail?number=` and new works open at `/admin/works/draft?slug=` (no prebuilt page for rows created in the browser) |
 
@@ -118,9 +122,11 @@ Each step is one prompt / one commit, like `docs/build-plan.md`, and ends with `
 
 - M6 Admin: `src/app/(admin)/admin`: `/admin/login` (password → TOTP, passkey), the console layout (`_admin/AdminFrame.tsx`: staff guard, 257 px sidebar with live counts, toasts; `_admin/AdminPage.tsx`: top bar with search, "Demo data" role menu, alerts; phone header + Today · Orders · Alerts tabs below 768 px) and every admin board: dashboard (+ AdminMToday), alerts (+ AdminMAlerts), orders (+ AdminMOrders), order detail with the refund dialog (+ AdminMOrder, barcode scan), fulfilment, editions, customers + detail, works, work editor (+ drafts), guide editor (180 static guides), AI pipeline, support, reviews, content, analytics, finance, marketing, settings. Roles per docs/admin.md: the nav, the pages (no-access notice) and the actions (revenue owner-only, Support refunds ≤ $50, Fulfilment ships, Content edits the catalog) follow the role. A checkout order in this browser appears in Orders, its detail, Fulfilment, Editions, the customer and the dashboard, and can be shipped and refunded (the refund revokes the guide in the Library). Publishing a guide version is read by the reader in the same browser. Migration 0002 adds the reader's guide fields (minutes, step brush, printed copy). Playwright `e2e/admin-*.spec.ts` (7 files), axe clean; every board measured (decisions "Admin (M6)" rows).
 
+- M7 Tests + static pages: `/method`, `/about`, `/help` (topics in the URL hash, contact form → a support thread in this browser's admin), `/legal/[doc]` (notice, terms, privacy, cookies with the cookie settings, accessibility; `getLegalDocuments`) from their boards (decisions "Method page", "About page", "Help page", "Legal pages"). Playwright: `e2e/journey.spec.ts` (work page → cart → checkout → success → Library → reader → the Library continues where the painter stopped), `e2e/a11y.spec.ts` (axe on every exported route, one per dynamic family, at 1440 and 390, signed in as customer and staff), `e2e/pages.spec.ts`. The tests serve out/ with `scripts/serve-out.mjs` (GitHub Pages behaviour; Python's server dropped connections under load). Brand: favicon, app icons and link previews from BrandFavicon (`scripts/brand-icons.ts`, `src/lib/og.tsx`). The /kit reader board works at 390 (StepProgress is one slider; boards scroll inside themselves).
+- M8 (PWA): `src/app/manifest.ts` (start_url and scope `<base>/learn/`), `/learn` start page (opens the last guide), service worker `src/sw/sw.ts` built by `serwist build` (`serwist.config.mjs`, chained in `npm run build`): a guide opened once online works offline, timer and print sheet included; the install line on phones. `e2e/pwa.spec.ts` runs it offline.
+
 **Next**
-7. **M7 · Tests.** Playwright on the built export (`npx serve out`): add a guide → checkout success → open the guide → progress in the Library (admin flows are covered since M6). Axe on every route.
-8. **M8 · Optional before the backend.** PWA manifest + Serwist with `scope` under the basePath; French under `/fr` with next-intl static params; `/dev/emails` previews of the React Email templates.
+8. **M8 · rest, optional before the backend.** French under `/fr` with next-intl static params (translation files in `messages/`, none written yet); `/dev/emails` previews of the React Email templates (`emails/` is empty).
 
 ---
 

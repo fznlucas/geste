@@ -44,14 +44,21 @@ test("Continue resumes the guide, every way of moving saves the step, the Librar
   if (isPhone(page)) {
     await swipe(page, 320, 80);
     await expect(page).toHaveURL(/step=2c$/);
-    await page.getByRole("button", { name: "Layer 02, step e" }).click();
+    await page.getByRole("slider", { name: "Steps" }).locator('[data-step="2e"]').click();
     await expect(page).toHaveURL(/step=2e$/);
     await page.keyboard.press("ArrowRight");
   } else {
-    await page.getByRole("button", { name: "Layer 03, step a" }).click();
+    await page.getByRole("slider", { name: "Steps" }).locator('[data-step="3a"]').click();
   }
   await expect(page).toHaveURL(/step=3a$/);
-  await expect(page.getByRole("button", { name: "Layer 03, step a" })).toHaveAttribute("aria-current", "step");
+  const bar = page.getByRole("slider", { name: "Steps" });
+  await expect(bar).toHaveAttribute("aria-valuetext", /^Layer 03, step a · 11 of 15$/);
+  // The bar's own keys move one step (and one layer with Page Up / Page Down) without the reader's listener doubling them.
+  await bar.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page).toHaveURL(/step=2e$/);
+  await page.keyboard.press("PageUp");
+  await expect(page).toHaveURL(/step=3a$/);
 
   // Reopening resumes, and the Library shows the new layer.
   await page.goto("/account/");

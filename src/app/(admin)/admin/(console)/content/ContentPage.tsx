@@ -190,7 +190,10 @@ function Legal() {
     <div role="table" aria-label="Legal pages" className="flex flex-col gap-14 border border-border bg-surface p-20">
       {(docs.data ?? []).map((d) => (
         <AdminRow key={d.id} cols={cols}>
-          <span role="cell">{d.title}</span>
+          <span role="cell">
+            {/* The store page of the document (drawn as plain text; kept looking like it until hovered). */}
+            <Link href={`/legal/${d.slug}`} className="hover:underline hover:underline-offset-3">{d.title}</Link>
+          </span>
           <span role="cell" className="text-fg-muted">v{d.version} · {articleDate(d.updatedAt)}</span>
           <span role="cell">
             <StatusChip state={d.status === "blocked" ? "issue" : d.status === "live" ? "done" : "todo"} label={d.note ?? (d.status === "live" ? "Live" : "Draft")} />

@@ -152,7 +152,7 @@ export function AdminTopBar({ breadcrumbs, title, search, demo, alerts, actions 
         <nav aria-label="Breadcrumb" className="flex gap-8 text-fg-muted">
           {breadcrumbs.map((b) => (
             <span key={b.href + b.label} className="flex gap-8">
-              <Link href={b.href} className="hover:text-fg">{b.label}</Link>
+              <Link href={b.href} className="-my-2 inline-flex min-h-24 items-center hover:text-fg">{b.label}</Link>
               <span aria-hidden="true">/</span>
             </span>
           ))}

@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 const COLS = [
   { title: "Shop", links: [["All works", "/shop"], ["Prints", "/prints"], ["Shopping lists", "/method#materials"], ["Gift cards", "/gift-cards"]] },
-  { title: "Help", links: [["How it works", "/method"], ["Shipping", "/help#shipping"], ["Returns & refunds", "/help#returns"], ["FAQ", "/help"], ["Contact", "/help#contact"]] },
+  { title: "Help", links: [["How it works", "/method"], ["Shipping", "/help#shipping"], ["Returns & refunds", "/help#returns"], ["FAQ", "/help#faq"], ["Contact", "/help#contact"]] },
   { title: "Studio", links: [["About", "/about"], ["Journal", "/journal"], ["Instagram", "https://www.instagram.com/"], ["TikTok", "https://www.tiktok.com/"]] },
   { title: "Legal", links: [["Legal notice", "/legal/notice"], ["Terms of sale", "/legal/terms"], ["Privacy policy", "/legal/privacy"], ["Cookie settings", "/legal/cookies"], ["Accessibility", "/legal/accessibility"]] },
 ] as const;
@@ -14,7 +14,7 @@ const COLS = [
 /** Phone (< 768 px, board MHome): three links per column, merged labels. */
 const PHONE_COLS = [
   { title: "Shop", links: [["All works", "/shop"], ["Prints", "/prints"], ["Gift cards", "/gift-cards"]] },
-  { title: "Help", links: [["How it works", "/method"], ["Shipping & returns", "/help#shipping"], ["FAQ & contact", "/help"]] },
+  { title: "Help", links: [["How it works", "/method"], ["Shipping & returns", "/help#shipping"], ["FAQ & contact", "/help#faq"]] },
   { title: "Studio", links: [["About", "/about"], ["Journal", "/journal"], ["Instagram", "https://www.instagram.com/"]] },
   { title: "Legal", links: [["Legal notice", "/legal/notice"], ["Terms & privacy", "/legal/terms"], ["Cookies", "/legal/cookies"]] },
 ] as const;

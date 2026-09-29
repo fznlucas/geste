@@ -7,13 +7,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Accordion, BarChart, Button, ButtonLink, CanvasDiagram, CartLine, CartPanel, CartSummary, Checkbox, CheckoutStepper, DataTable, DryingTimer, OrderSummary, OrderSummaryToggle, RadioRows,
-  ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
+  AppIcon, ArticleCard, EditionCounter, ExpressPay, Field, GiftCardPreview, GuideConfigurator, PrintCard, PrintMat, ProductGallery, ShoppingListTable, StickyBuyBar, HBar, Icon, ICON_NAMES, Input, KanbanBoard, KpiTile, Logo, Modal,
   AccountNav, AccountOrderRow, LibraryRow, OrDivider, PasswordField, PasswordRules, passwordRules, TrackingSteps,
   OtpInput, PasswordInput, PermissionMatrix, Pill, PriceMorph, ProgressBar, Segmented, Select, ShoppingListItem,
   StatusChip, StepCard, StepProgress, Plate, PrintSheet, GuideBooklet, type PrintScope, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
 import { ShellKit } from "./_admin/ShellKit";
+import { InfoKit } from "./_store/InfoKit";
 import { DashboardKit } from "./_admin/DashboardKit";
 import { OrdersKit } from "./_admin/OrdersKit";
 import { FulfilmentKit } from "./_admin/FulfilmentKit";
@@ -86,7 +87,10 @@ function Board({ n, title, children }: { n: string; title: string; children: Rea
         <span className="text-fg-muted">{n}</span>
         <h2 className="text-lg">{title}</h2>
       </div>
-      {children}
+      {/* States keep their drawn widths: on a phone a board scrolls sideways instead of the page. */}
+      <div role="region" aria-label={title} tabIndex={0} className="relative -m-4 overflow-x-auto p-4 focus-visible:outline focus-visible:outline-1 focus-visible:outline-fg">
+        <div className="flex flex-col gap-24">{children}</div>
+      </div>
     </section>
   );
 }
@@ -151,6 +155,12 @@ export default function KitPage() {
             <Logo size={40} variant="short" />
             <span className="bg-fg p-24"><Logo size={24} tone="paper" /></span>
           </div>
+          <State label="Favicon and app icon · 16, 32, 64, 128 px, home screen (BrandFavicon)">
+            <div className="flex flex-wrap items-end gap-48">
+              {([16, 32, 64, 128] as const).map((s) => <AppIcon key={s} size={s} />)}
+              <AppIcon size={128} rounded />
+            </div>
+          </State>
           <div className="grid grid-cols-10 gap-16">
             {ICON_NAMES.map((n) => (
               <div key={n} className="flex flex-col gap-8">
@@ -201,10 +211,12 @@ export default function KitPage() {
             <State label="Status chips"><div className="flex gap-16"><StatusChip state="done" label="Delivered" /><StatusChip state="todo" label="Printed" /><StatusChip state="issue" label="To ship" /><StatusChip state="off" label="Off" /></div></State>
             <Tabs label="Help topics" items={[{ value: "a", label: "Orders", content: <p className="text-fg-muted">Tab panel content.</p> }, { value: "b", label: "Guides", count: 12, content: <p>Guides</p> }, { value: "c", label: "Prints", content: <p>Prints</p> }]} />
             <Accordion items={[{ value: "a", title: "What’s in the guide", content: "15 steps, 3 layers, a drying timer and a printable PDF." }, { value: "b", title: "Materials", content: "Shopping list with standard and budget options." }]} defaultValue={["a"]} />
+            <State label="Accordion · faq, rows plus their rule (MMethod)"><Accordion variant="faq" items={[{ value: "a", title: "I have never painted.", content: "That is who Geste is for. Start with a Beginner work." }, { value: "b", title: "Offline?", content: "Yes: open the guide once online." }]} defaultValue={["a"]} /></State>
             <State label="Progress"><ProgressBar value={55} label="Guide progress" /></State>
             <State label="Progress · line (Library)"><div className="flex flex-col gap-12"><ProgressBar variant="line" value={33} label="N°03 progress" /><ProgressBar variant="line" value={0} label="N°01 progress" /><ProgressBar variant="line" value={100} label="N°07 progress" /></div></State>
             <EditionCounter left={5} total={50} size="A3" />
           </div>
+          <InfoKit />
         </Board>
 
         <Board n="05" title="Commerce">
@@ -299,28 +311,29 @@ export default function KitPage() {
 
         <Board n="06" title="Guide reader">
           <State label="Step progress · desktop, click a segment (GuideReader)"><StepProgress layers={STEP_LAYERS} current={STEP_IDS[step]!} onGo={(id) => setStep(STEP_IDS.indexOf(id))} /></State>
-          <div className="w-358"><State label="Step progress · phone, current layer (AppStep)"><StepProgress variant="phone" layers={STEP_LAYERS} current={STEP_IDS[step]!} onGo={(id) => setStep(STEP_IDS.indexOf(id))} /></State></div>
-          <div className="grid grid-cols-2 gap-40">
+          <div className="w-full max-w-358"><State label="Step progress · phone, current layer (AppStep)"><StepProgress variant="phone" layers={STEP_LAYERS} current={STEP_IDS[step]!} onGo={(id) => setStep(STEP_IDS.indexOf(id))} /></State></div>
+          {/* Desktop reader parts side by side from 768 px; stacked on a phone, where the reader uses AppStep. */}
+          <div className="grid grid-cols-1 gap-40 md:grid-cols-2">
             <div className="flex justify-center bg-surface-muted p-24"><CanvasDiagram strokes={N03_STROKES} upTo={Math.floor(step / 5) + 1} current={Math.floor(step / 5) + 1} width={360} /></div>
-            <div className="flex flex-col justify-center gap-24 px-48">
+            <div className="flex flex-col justify-center gap-24 md:px-48">
               <StepCard id={STEP_IDS[step]!} lastLetter="e" brush={layer.brush} text={layer.steps[step % 5]!} plate={layer.plate.map(([hex, name]) => ({ hex, name }))} tip={layer.tip} />
               <div className="flex gap-10"><Button variant="ghost" className="min-h-56 min-w-120" disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))}>Back</Button><Button className="min-h-56 flex-1" trailing="→" onClick={() => setStep(Math.min(14, step + 1))}>{step % 5 === 4 && step < 14 ? "Start drying timer" : step === 14 ? "I signed it. Finish" : "Next step"}</Button></div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-40">
+          <div className="grid grid-cols-1 gap-40 md:grid-cols-3">
             <State label="Step card · phone (AppStep)"><StepCard variant="phone" id="2c" lastLetter="e" brush="50 mm flat" text="Top right: fill a large block with ultramarine, then drag night down in two vertical strokes over it." /></State>
             <State label="Plate"><Plate colours={layer.plate.map(([hex, name]) => ({ hex, name }))} /></State>
             <State label="Print sheet (AppPrint) · panel on desktop"><Button variant="ghost" onClick={() => setPrintOpen(true)}>Open the print sheet</Button></State>
           </div>
-          <div className="grid grid-cols-3 gap-40">
+          <div className="grid grid-cols-1 gap-40 md:grid-cols-3">
             <State label="Drying · running (GuideReader)"><DryingTimer left={1452} total={2700} layer="02" running onToggle={() => {}} /></State>
             <State label="Drying · paused"><DryingTimer left={2700} total={2700} layer="02" running={false} onToggle={() => {}} /></State>
             <State label="Drying · dry (00:00, toggle disabled)"><DryingTimer left={0} total={2700} layer="02" running={false} onToggle={() => {}} /></State>
           </div>
-          <div className="w-358"><State label="Drying · phone (AppTimer)"><DryingTimer variant="phone" left={1452} total={2700} layer="2" running /></State></div>
+          <div className="w-full max-w-358"><State label="Drying · phone (AppTimer)"><DryingTimer variant="phone" left={1452} total={2700} layer="2" running /></State></div>
           {kitGuide && (
             <State label="Printed guide · cover and layer 02 at 50 % (Guide01, Guide06), watermarked">
-              <div className="flex gap-24" style={{ zoom: 0.5 }}>
+              <div className="flex flex-wrap gap-24" style={{ zoom: 0.5 }}>
                 <GuideBooklet guide={kitGuide} paletteName="Original" license={{ name: "Camille M.", email: "camille.martin@mail.com", orderNumber: "GS-2041" }} only={[1, 6]} />
               </div>
             </State>
