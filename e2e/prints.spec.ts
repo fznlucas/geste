@@ -51,6 +51,9 @@ async function gridRows(page: Page) {
   });
 }
 
+/** Desktop guard-rail per grid: Shop 190–280 px, /prints 190–292 px (docs/decisions.md "Justified grid"). */
+const CEILING: Record<string, number> = { "/shop/": 280, "/prints/": 292 };
+
 for (const path of ["/shop/", "/prints/"]) {
   test(`${path}: justified rows, left and right edges on the content, equal gaps`, async ({ page }) => {
     await page.goto(path);
@@ -63,15 +66,12 @@ for (const path of ["/shop/", "/prints/"]) {
       expect(Math.abs(row[0]!.left - left)).toBeLessThanOrEqual(0.5);
       const gaps = row.slice(1).map((b, k) => b.left - row[k]!.right);
       for (const g of gaps) expect(Math.abs(g - (desktop ? 40 : 14))).toBeLessThanOrEqual(0.5);
-      if (desktop && h > 279.5) {
-        // Guard-rail: a row that would be taller than 280 px stays at 280, left-aligned (docs/decisions.md).
-        expect(Math.abs(h - 280)).toBeLessThanOrEqual(0.5);
-        continue;
-      }
+      // Every row of the full catalog is justified: right edge on the content too.
       expect(Math.abs(row[row.length - 1]!.right - right)).toBeLessThanOrEqual(0.5);
       if (desktop) {
         expect(row).toHaveLength(5);
         expect(h).toBeGreaterThanOrEqual(190);
+        expect(h).toBeLessThanOrEqual(CEILING[path]!);
       } else {
         // Phones: a landscape work alone on the full width, portraits in pairs.
         expect(row.length === 1 ? row[0]!.right - row[0]!.left > row[0]!.height : row.length === 2).toBe(true);

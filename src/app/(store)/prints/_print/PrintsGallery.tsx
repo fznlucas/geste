@@ -74,6 +74,8 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[];
         </p>
       ) : (
         <ProportionalGrid
+          // Ceiling 292 px (Lucas, 30 Sept): the third row of the full gallery, all portrait sheets, is 291 px justified.
+          heights={{ min: 190, max: 292, fallback: 260 }}
           items={shown.map((w, n) => ({
             key: w.workId,
             ratio: SHEET_RATIO[w.orientation],
