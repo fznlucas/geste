@@ -1,4 +1,4 @@
--- Behaviour tests for RLS and business functions. Run against a fresh database after 0001_init.sql + seed.sql:
+-- Behaviour tests for RLS and business functions. Run against a fresh database after the migrations + seed.sql:
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql
 -- Each block raises an exception on failure.
 grant usage on schema public to anon, authenticated;
@@ -74,6 +74,42 @@ do $$ declare e uuid := (select id from entitlements limit 1); ok boolean := fal
   begin perform use_print_credit(e); exception when others then ok := true; end;
   if not ok then raise exception 'print credits not enforced'; end if;
 end $$;
+
+-- 8. Guide timing and printed copy (0002): published with the version; the draft stays staff-only
+do $$ begin
+  if (select count(*) from guide_print) <> 0 then raise exception 'buyer reads the printed copy draft'; end if;
+  if (select content #>> '{layers,1,minutes}' from guide_versions) <> '45' then raise exception 'layer minutes not published'; end if;
+  if (select content #>> '{layers,1,steps,3,brush}' from guide_versions) <> 'Round n°6' then raise exception 'step brush not published'; end if;
+  if (select content #>> '{print,plan}' from guide_versions) is null then raise exception 'printed copy not published'; end if;
+end $$;
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
+do $$ declare n int; begin
+  if (select count(*) from guide_print) <> 1 then raise exception 'staff cannot read the printed copy'; end if;
+  update guide_print set content = content || '{"plan": "edited"}';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'support edited the printed copy'; end if;
+  update guide_steps set brush = 'Fan brush';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'support edited step brushes'; end if;
+end $$;
+set request.jwt.claim.sub = '10000000-0000-0000-0000-000000000001';
+do $$ declare n int; begin
+  update guide_layers set minutes = 50 where position = 2;
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'owner cannot edit layer minutes'; end if;
+  update guide_print set content = content || '{"plan": "edited"}';
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'owner cannot edit the printed copy'; end if;
+  if (select content #>> '{layers,1,minutes}' from guide_versions) <> '45' then raise exception 'draft edit reached the published version'; end if;
+  begin
+    update guide_layers set minutes = -1 where position = 1;
+    raise exception 'negative minutes accepted';
+  exception when check_violation then null; end;
+end $$;
+reset role;
+set request.jwt.claim.sub = '';
+set role anon;
+do $$ begin if (select count(*) from guide_print) <> 0 then raise exception 'anon reads the printed copy'; end if; end $$;
 reset role;
 
 select 'all RLS and business tests passed' as result;

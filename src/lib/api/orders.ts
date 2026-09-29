@@ -4,16 +4,14 @@ import { shortDate } from "@/lib/dates";
 import { CARRIERS, carrierOf, deliveryName, deliveryRange, deliveryWindow, formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
 import { FORMATS, SHIPPING } from "@/lib/pricing";
-import { customers } from "@/data/customers";
 import { printEditions } from "@/data/editions";
-import { refunds, shipments } from "@/data/orders";
-import { supportThreads } from "@/data/support";
 import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
-import { allOrders, allPrintCopies } from "./local";
+import { VAT_RATES } from "@/data/tax";
+import { allCustomers, allEntitlements, allOrders, allPrintCopies, allRefunds, allShipments, allSupportThreads } from "./local";
 import { mapThread } from "./support";
-import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrdersTab, OrderTracking, TrackingStep } from "./types";
+import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrdersTab, OrderTracking, RefundOption, TrackingStep } from "./types";
 
 /** Least advanced print decides the status of an order with prints. */
 const PRINT_STATUS: Array<[FulfilmentStatus, OrderDisplayStatus]> = [
@@ -30,10 +28,17 @@ function displayStatus(row: OrderRow): OrderDisplayStatus {
   if (row.status === "cancelled") return "Cancelled";
   if (row.status === "refunded") return "Refunded";
   if (row.status === "partially_refunded") return "Partly refunded";
-  if (supportThreads.some((t) => t.orderId === row.id && t.category === "refund" && t.status === "open")) return "Refund asked";
-  const prints = row.items.filter((i) => i.kind === "print");
+  if (allSupportThreads().some((t) => t.orderId === row.id && t.category === "refund" && t.status === "open")) return "Refund asked";
+  const prints = row.items.filter((i) => i.kind === "print").map((i) => itemFulfilment(i.id, i.fulfilment));
   if (prints.length === 0) return "Delivered";
-  return PRINT_STATUS.find(([f]) => prints.some((i) => i.fulfilment === f))?.[1] ?? "Delivered";
+  return PRINT_STATUS.find(([f]) => prints.includes(f))?.[1] ?? "Delivered";
+}
+
+/** A print line follows its numbered copies (moved on the fulfilment board); the least advanced wins. */
+function itemFulfilment(itemId: string, fallback: FulfilmentStatus): FulfilmentStatus {
+  const copies = allPrintCopies().filter((c) => c.orderItemId === itemId);
+  if (!copies.length) return fallback;
+  return PRINT_STATUS.find(([f]) => copies.some((c) => c.fulfilment === f))?.[0] ?? fallback;
 }
 
 const TABS: Record<Exclude<OrdersTab, "all">, OrderDisplayStatus[]> = {
@@ -43,10 +48,12 @@ const TABS: Record<Exclude<OrdersTab, "all">, OrderDisplayStatus[]> = {
 };
 
 export function mapOrder(row: OrderRow): Order {
-  const customer = customers.find((c) => c.id === row.userId)!;
-  const shipment = shipments.find((s) => s.orderId === row.id);
+  const customer = allCustomers().find((c) => c.id === row.userId)!;
+  const shipment = allShipments().find((s) => s.orderId === row.id);
   const copies = allPrintCopies();
+  const entitlements = allEntitlements();
   const items = row.items.map((i) => {
+    const ent = i.kind === "guide" ? entitlements.find((e) => e.orderItemId === i.id) : undefined;
     const work = works.find((w) => w.id === i.workId);
     const itemCopies = copies.filter((c) => c.orderItemId === i.id).sort((a, b) => a.number - b.number);
     return {
@@ -63,7 +70,7 @@ export function mapOrder(row: OrderRow): Order {
       imageUrl: work ? asset(work.previewPath) : null,
       unitPriceCents: i.unitPriceCents,
       quantity: i.quantity,
-      fulfilment: i.fulfilment,
+      fulfilment: i.kind === "print" ? itemFulfilment(i.id, i.fulfilment) : i.fulfilment,
       certificateNo: itemCopies[0]?.certificateNo ?? null,
       copyNumbers: itemCopies.map((c) => c.number),
       edition: (() => {
@@ -71,6 +78,10 @@ export function mapOrder(row: OrderRow): Order {
         return e ? { size: e.size, editionSize: e.editionSize } : null;
       })(),
       printedAt: itemCopies.length && itemCopies.every((c) => c.printedAt) ? itemCopies.map((c) => c.printedAt!).sort().at(-1)! : null,
+      copyIds: itemCopies.map((c) => c.id),
+      entitlementId: ent?.id ?? null,
+      printsLeft: ent ? ent.printsLeft : null,
+      accessRevoked: !!ent?.revokedAt,
     };
   });
   const summary = items
@@ -96,11 +107,11 @@ export function mapOrder(row: OrderRow): Order {
     risk: row.risk,
     paidAt: row.paidAt,
     createdAt: row.createdAt,
-    refunds: refunds
+    refunds: allRefunds()
       .filter((r) => r.orderId === row.id)
       .map(({ id, amountCents, reason, restock, revokeAccess, createdAt }) => ({ id, amountCents, reason, restock, revokeAccess, createdAt })),
     shipment: shipment
-      ? { id: shipment.id, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, inTransitAt: shipment.inTransitAt, outForDeliveryAt: shipment.outForDeliveryAt, deliveredAt: shipment.deliveredAt }
+      ? { id: shipment.id, labelCreatedAt: shipment.labelCreatedAt ?? null, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, inTransitAt: shipment.inTransitAt, outForDeliveryAt: shipment.outForDeliveryAt, deliveredAt: shipment.deliveredAt }
       : null,
   };
 }
@@ -116,13 +127,15 @@ function timeline(order: Order): OrderEvent[] {
     const edition = printEditions.find((e) => e.id === item.editionId);
     if (copy?.printedAt && edition) events.push({ at: copy.printedAt, label: `${item.title} ${copy.number}/${edition.editionSize} printed and signed` });
   }
+  if (order.shipment?.labelCreatedAt) events.push({ at: order.shipment.labelCreatedAt, label: `Shipping label created · ${formatTrackingNo(order.shipment.trackingNo)}` });
   if (order.shipment?.shippedAt) {
     const carrier = order.shippingMethod ? SHIPPING[order.shippingMethod].label : order.shipment.carrier;
     events.push({ at: order.shipment.shippedAt, label: `Shipped · ${carrier} · ${order.shipment.trackingNo}` });
   }
   if (order.shipment?.deliveredAt) events.push({ at: order.shipment.deliveredAt, label: "Delivered" });
   for (const r of order.refunds) events.push({ at: r.createdAt, label: `Refunded ${formatPrice(r.amountCents)} · ${r.reason}` });
-  for (const t of supportThreads.filter((t) => t.orderId === order.id)) events.push({ at: t.createdAt, label: `Customer wrote: ${t.subject}` });
+  // Open threads only: a message waiting for an answer belongs on the order; answered ones stay in the support inbox.
+  for (const t of allSupportThreads().filter((t) => t.orderId === order.id && t.status === "open")) events.push({ at: t.createdAt, label: `Customer wrote: ${t.subject}` });
   return events.sort((a, b) => a.at.localeCompare(b.at));
 }
 
@@ -153,9 +166,40 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
     timeline: timeline(order),
     customerOrdersCount: history.length,
     customerLifetimeCents: history.reduce((s, o) => s + o.totalCents, 0),
-    supportThreads: supportThreads.filter((t) => t.orderId === row.id).map(mapThread),
+    customerPhone: allCustomers().find((c) => c.id === row.userId)?.phone ?? null,
+    vatLabel: vatLabel(row),
+    supportThreads: allSupportThreads().filter((t) => t.orderId === row.id).map(mapThread),
   });
 }
+
+/** "VAT included (FR 20%)": the country of the shipping address, else the customer's. */
+function vatLabel(row: OrderRow): string | null {
+  const country = row.shippingAddress?.country ?? allCustomers().find((c) => c.id === row.userId)?.defaultAddress.country ?? "";
+  const rate = VAT_RATES[country];
+  return rate && row.taxCents > 0 ? `VAT included (${country} ${Math.round(rate * 1000) / 10}%)` : null;
+}
+
+/**
+ * Refund modal choices (AdminOrderDetail): the prints with the shipping ("returned"), the guides
+ * (revokes library access), the whole order. Amounts leave out what was already refunded; a choice
+ * appears only when the order has that kind of line.
+ */
+export async function getRefundOptions(number: string): Promise<RefundOption[]> {
+  const row = allOrders().find((o) => o.number === normalizeNumber(number));
+  if (!row) return [];
+  const refunded = allRefunds().filter((r) => r.orderId === row.id).reduce((s, r) => s + r.amountCents, 0);
+  const left = Math.max(0, row.totalCents - refunded);
+  const sum = (kind: string) => row.items.filter((i) => i.kind === kind).reduce((s, i) => s + i.unitPriceCents * i.quantity, 0);
+  const options: RefundOption[] = [];
+  const prints = sum("print"), guides = sum("guide");
+  if (prints && row.items.some((i) => i.kind !== "print")) options.push({ key: "print", label: "Print only (returned)", amountCents: Math.min(left, prints + row.shippingCents) });
+  if (guides && row.items.some((i) => i.kind !== "guide")) options.push({ key: "guide", label: "Guide only (revokes library access)", amountCents: Math.min(left, guides) });
+  options.push({ key: "full", label: "Full order", amountCents: left });
+  return clone(options.filter((o) => o.amountCents > 0));
+}
+
+/** "187 this month" under AdminOrders: the board's month figure (the mock holds only the latest orders). */
+export const ORDERS_THIS_MONTH = 187;
 
 // ── Customer side (Account › Orders, confirmation, tracking) ────────────────
 

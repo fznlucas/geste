@@ -29,6 +29,7 @@ All keys start with `geste.` and end with a version (`.v1`). Bump the version wh
 | `geste.cart.v1` | `src/lib/client/cart.ts` | `StoredCartLine[]`: guide (work, format, level or `match`, palette), print (edition, quantity), gift card (amount, recipient, message, send date) | `addToCart`, `updateCartLine`, `removeCartLine`, `clearCart`, `useCart(opts)` |
 | `geste.session.v1` | `src/lib/client/session.ts` | `{ customer, staff }` | `signIn`, `signOut`, `signInStaff`, `signOutStaff`, `useSession`, `useStaffSession`, `useRequireCustomer`, `useRequireStaff(role)`, `safeNext` |
 | `geste.progress.v1` | `src/lib/client/progress.ts` | `{ [entitlementId]: { step, openedAt, completedAt, drying: { layer, seconds, until, pausedLeft } \| null, updatedAt } }` | `markOpened`, `saveProgress`, `completeGuide`, `startDrying`, `toggleDrying`, `dryingLeft`, `stopDrying`, `restartGuide`, `useLibraryProgress`, `useProgressEntry`, `applyProgress` |
+| `geste.admin.v1` | `src/lib/client/admin.ts` + `src/lib/client/admin/*.ts` | `{ patches: { [table]: { [id]: columns } }, inserts: { [table]: rows[] }, audit: AuditEntry[] }` | `patchRow`, `insertRow`, `audit`, `useAdminQuery`, `requireStaff`, `setDemoRole`; domain actions `markShipped`, `refundOrder`, `moveCopy`, `saveWork`, `publishGuide`, `reply`, `setReviewStatus`, `createPromo`, `inviteStaff`… |
 
 `resetMockState()` (`src/lib/client/store.ts`) empties all of them: wire it to a discreet "Reset demo" link in the footer and on `/kit`.
 
@@ -39,7 +40,8 @@ Hydration: stores return their empty value during the server render and hydratio
 | Real thing | Mock behaviour |
 | --- | --- |
 | Log in (password, passkey, email code) | Nothing is checked. An email of a mock customer signs in as that customer (e.g. `sarah.cohen@mail.com`); any other email, and the passkey button, sign in as Camille Martin ("Hi Camille"). Codes: any 6 digits. |
-| Admin login + TOTP | Email + any password, then any 6 digits. Signs in as Lucas · Owner (`src/data/staff.ts`). The staff session is separate from the customer one, as in production. |
+| Admin login + TOTP | Email + any password, then any 6 digits (or the passkey button). Signs in as Lucas · Owner (`src/data/staff.ts`). The staff session is separate from the customer one, as in production. The top bar's "Demo data" chip switches the role (Owner, Support, Fulfilment, Content) and resets the admin's changes. |
+| Admin mutations | Written to `geste.admin.v1` with an audit line; `@/lib/api` merges them into every read (`src/lib/api/local.ts`), so the admin sees its own changes. The store pages are built at deploy time and ignore them, except what the browser reads (Library, reader: a refund revokes the guide, a published guide version is read by the reader). Exports (CSV, JSON) are built in the browser. |
 | Middleware guards | Client guards: `useRequireCustomer()` on `/account/**` and `/learn/**` → `/login?next=`; `useRequireStaff(role)` on `/admin/**` → `/admin/login?next=`. `next` goes through `safeNext` (same-site paths only). |
 | RLS | `getEntitlement(id, customerId)` returns null for someone else's guide; client pages pass the session's `userId`. |
 | Cart cookie / `carts` | `localStorage`, shared by guests and signed-in visitors; logging out keeps the cart. |
@@ -94,7 +96,7 @@ Render: **S** = server component at build, **S+c** = server shell with client is
 | `/learn/[id]/timer` | C | same | `startDrying` / `toggleDrying` / `stopDrying`; no notification permission in the mock |
 | `/learn/[id]/print` | C | same | Watermarked preview only; credits not spent |
 | `/admin/login` | C | `signInStaff` | |
-| `/admin/**` | C | admin reads of `@/lib/api` | Role-filtered nav from the staff session; mutations per §4 step M6 |
+| `/admin/**` | C | admin reads of `@/lib/api` through `useAdminQuery` | Role-filtered nav from the staff session; mutations in `geste.admin.v1`. Order detail is `/admin/orders/detail?number=` and new works open at `/admin/works/draft?slug=` (no prebuilt page for rows created in the browser) |
 
 ---
 
@@ -114,9 +116,10 @@ Each step is one prompt / one commit, like `docs/build-plan.md`, and ends with `
 
 - M5 Reader: `src/app/(reader)/learn/[entitlementId]` (GuideReader ≥ 1024 px, AppStep below), `/timer?layer=` (GuideReader drying view, AppTimer), `/print` (AppPrint sheet → watermarked A4 preview of Guide01–08 → browser print / save as PDF; no credit spent). No site chrome. `generateStaticParams` = the mock entitlements + `local-<guideId>` for every published guide. ← → keys, swipe (phone), segment clicks; `markOpened`, `saveProgress` on every step (URL `?step=` replaced, not pushed), `completeGuide` on "I signed it. Finish"; the drying timer is pausable and survives a reload (`progress.drying` holds the end date or the seconds left). Library "Continue / Start / Open" and "Print" are links to the reader and its print sheet. Events through `src/lib/analytics.ts` (`geste:track` DOM events in the mock). Redrawn to the boards: `StepProgress`, `StepCard`, `Plate`, `DryingTimer`; new `PrintSheet`, `GuideBooklet` / `GuideSheet`; all in /kit. Camille's GS-2028 is a shipped, in-transit print (decisions "Camille's shipped print"). Playwright `e2e/reader.spec.ts`; axe clean on the reader, timer and print sheet; every board state measured (see decisions "Reader (M5)").
 
+- M6 Admin: `src/app/(admin)/admin`: `/admin/login` (password → TOTP, passkey), the console layout (`_admin/AdminFrame.tsx`: staff guard, 257 px sidebar with live counts, toasts; `_admin/AdminPage.tsx`: top bar with search, "Demo data" role menu, alerts; phone header + Today · Orders · Alerts tabs below 768 px) and every admin board: dashboard (+ AdminMToday), alerts (+ AdminMAlerts), orders (+ AdminMOrders), order detail with the refund dialog (+ AdminMOrder, barcode scan), fulfilment, editions, customers + detail, works, work editor (+ drafts), guide editor (180 static guides), AI pipeline, support, reviews, content, analytics, finance, marketing, settings. Roles per docs/admin.md: the nav, the pages (no-access notice) and the actions (revenue owner-only, Support refunds ≤ $50, Fulfilment ships, Content edits the catalog) follow the role. A checkout order in this browser appears in Orders, its detail, Fulfilment, Editions, the customer and the dashboard, and can be shipped and refunded (the refund revokes the guide in the Library). Publishing a guide version is read by the reader in the same browser. Migration 0002 adds the reader's guide fields (minutes, step brush, printed copy). Playwright `e2e/admin-*.spec.ts` (7 files), axe clean; every board measured (decisions "Admin (M6)" rows).
+
 **Next**
-6. **M6 · Admin.** Login, shell, dashboard, orders + detail, works + editor + guide editor, customers, support, reviews, fulfilment, editions, then the owner-only pages (analytics, finance, marketing, content, settings, AI) as read-only boards. Mutations write to a local overlay (`geste.admin.v1`: patches keyed by table and id, plus an `audit_log` list shown on AdminSettings) that the admin reads merge; they never touch the store side, except work status and prices, which the store pages ignore in the mock (they are built at deploy time).
-7. **M7 · Tests.** Playwright on the built export (`npx serve out`): add a guide → checkout success → open the guide → progress in the Library; admin login → refund modal. Axe on every route.
+7. **M7 · Tests.** Playwright on the built export (`npx serve out`): add a guide → checkout success → open the guide → progress in the Library (admin flows are covered since M6). Axe on every route.
 8. **M8 · Optional before the backend.** PWA manifest + Serwist with `scope` under the basePath; French under `/fr` with next-intl static params; `/dev/emails` previews of the React Email templates.
 
 ---
@@ -130,7 +133,7 @@ When the mock ends, in this order:
 3. Replace `src/lib/client/session.ts` with Supabase Auth (`src/lib/auth.ts` + `middleware.ts`); the guards become server redirects, `useSession` reads the Supabase client session.
 4. Replace the bodies of `src/lib/client/cart.ts` with the `src/actions/cart.ts` actions (signed cookie for guests, `carts` when signed in, merge at login). The stored line shape is the `carts.items` shape.
 5. Replace `src/lib/client/progress.ts` storage with IndexedDB + `saveProgress` / `markOpened` sync. `applyProgress` and `useLibraryProgress` stay.
-6. Drop `purchases.ts` and the admin overlay; the webhook and admin actions write the database (with `audit_log`).
+6. Drop `purchases.ts` and the admin overlay (`geste.admin.v1`, `src/lib/client/admin*`); the webhook and the admin actions (`src/actions/admin/*.ts`, same names) write the database (with `audit_log`). `/admin/orders/detail?number=` becomes `/admin/orders/[number]`.
 7. Add the missing columns listed in docs/decisions.md ("Mock-only fields").
 
 ---
@@ -138,6 +141,5 @@ When the mock ends, in this order:
 ## 6. Open points
 
 - Store pages are built at deploy time, so an admin change in the mock (price, status, new work) does not show on the store. Acceptable for a demo; say so on the admin pages with a quiet note if it confuses testers.
-- Local purchases (M3) show in the customer's Library and Orders but not in the admin, whose order pages are pre-generated from the mock tables.
 - Guide content exists only for N°03 · 60×80 · Intermediate; every other guide is a stand-in (`isStandIn`).
 - The whole mock dataset ships in the JavaScript bundle. Fine while it is fake; watch the bundle size of the admin pages.

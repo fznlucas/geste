@@ -60,14 +60,14 @@ export interface GuideVersionContent {
     brush: string;
     plate: Swatch[];
     tip: string;
-    /** Mock-only (docs/decisions.md "Reader (M5)"): painting time of the layer, "45 min, then dry 45 min". */
+    /** `guide_layers.minutes` (0002): painting time of the layer, "45 min, then dry 45 min". */
     minutes: number;
     drySeconds: number;
     diagram: DiagramStroke[];
-    /** `brush`: mock-only, the brush of this step on the phone (AppStep); the layer's brush otherwise. */
+    /** `guide_steps.brush` (0002): the brush of this step on the phone (AppStep); the layer's brush when absent, "—" for none. */
     steps: Array<{ position: number; text: string; brush?: string }>;
   }>;
-  /** Mock-only: what the printed guide adds to the steps (Guide01–08). */
+  /** `guide_print.content` (0002), published with the version: what the printed guide adds to the steps (Guide01–08). */
   print?: GuidePrintContent;
 }
 
@@ -125,6 +125,8 @@ export interface ProfileRow {
   phone: string | null;
   defaultAddress: Address;
   createdAt: string;
+  /** Mock-only (admin overlay): set by the GDPR deletion, `profiles.deletion_scheduled_at` later. */
+  deletionScheduledAt?: string | null;
 }
 
 export interface OrderItemRow {
@@ -180,6 +182,8 @@ export interface ShipmentRow {
   trackingNo: string;
   parcel: string; // "Tube 60 cm · 0.4 kg"
   status: "label_created" | "in_transit" | "delivered";
+  /** When the label was bought (admin "Create shipping label"); absent on the mock rows. */
+  labelCreatedAt?: string | null;
   shippedAt: string | null;
   /** Mock-only: the carrier's scans (Boxtal tracking webhook), not columns yet (docs/decisions.md "Mock-only fields"). */
   inTransitAt: string | null;
@@ -220,6 +224,63 @@ export interface SupportThreadRow {
   /** Mock only (no column yet): drives the "Refund asked" order status on AdminOrders. */
   category: "refund" | "question" | "problem";
   status: ThreadStatus;
+  /** Mock only (no column yet): when staff last opened the thread; null = new ("2 new support messages"). */
+  readAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** `support_messages`: one message of a thread, from the customer (inbound email) or from staff. */
+export interface SupportMessageRow {
+  id: string;
+  threadId: string;
+  from: "customer" | "staff";
+  body: string;
+  /** Staff author ("Lucas"); null for the customer. */
+  staffName: string | null;
+  createdAt: string;
+}
+
+/** `site_settings` "support.saved_replies": `{name}` is replaced by the customer's first name. */
+export interface SavedReplyRow {
+  id: string;
+  name: string;
+  body: string;
+}
+
+/** `ai_jobs` (AdminAIPipeline): one generation run. Progress is the pipeline's, stored by the worker. */
+export interface AiJobRow {
+  id: string; // "job-118"
+  number: number; // 118
+  params: {
+    style: "gestural" | "colour_field" | "drips_veils";
+    format: FormatKey;
+    medium: "acrylic" | "gouache";
+    palette: PaletteKey;
+    maxStrokes: number;
+    layers: number;
+    candidates: number;
+  };
+  /** "Gestural · coral & blue · 60×80" */
+  label: string;
+  status: "queued" | "running" | "done" | "failed";
+  progress: number; // 0–100
+  costCents: number;
+  createdAt: string;
+}
+
+/** `ai_candidates`: one stroke plan to approve (→ draft work + guide) or reject. */
+export interface AiCandidateRow {
+  id: string; // "C-114-a"
+  jobNumber: number;
+  imagePath: string;
+  similarity: number; // %
+  strokes: number;
+  layers: number;
+  /** "Beginner-friendly", "Too many strokes for level" (Signal when it warns) */
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  /** Draft work created on approval. */
+  workSlug: string | null;
+  createdAt: string;
 }

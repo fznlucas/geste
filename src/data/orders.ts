@@ -68,7 +68,7 @@ function order(number: number, at: string, customerSlug: string, lines: Line[], 
     taxCents: includedVatCents(totalCents, customer.defaultAddress.country),
     totalCents,
     shippingAddress: hasPrint ? customer.defaultAddress : null,
-    stripePaymentIntent: `pi_mock_${number}`,
+    stripePaymentIntent: `pi_3Px${number}K${number % 97}9aQ`, // shown "pi_3Px…9aQ" (AdminOrderDetail)
     cardLast4: opts.last4 ?? "4242",
     risk: opts.risk ?? "low",
     withdrawalWaived: items.some((i) => i.kind === "guide"),

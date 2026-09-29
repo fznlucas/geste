@@ -13,6 +13,14 @@ import {
   StatusChip, StepCard, StepProgress, Plate, PrintSheet, GuideBooklet, type PrintScope, Switch, Tabs, Textarea, Timeline, ToastProvider, useToast, WorkCard,
 } from "@/components";
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
+import { ShellKit } from "./_admin/ShellKit";
+import { DashboardKit } from "./_admin/DashboardKit";
+import { OrdersKit } from "./_admin/OrdersKit";
+import { FulfilmentKit } from "./_admin/FulfilmentKit";
+import { CatalogKit } from "./_admin/CatalogKit";
+import { GuidesKit } from "./_admin/GuidesKit";
+import { SupportKit } from "./_admin/SupportKit";
+import { GrowthKit } from "./_admin/GrowthKit";
 import { getGuide, priceCart, type Guide, type ShoppingListLine, type StoredCartLine } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { asset } from "@/lib/asset";
@@ -61,6 +69,15 @@ const TRACK = [
 
 const STEP_IDS = N03_LAYERS.flatMap((l, li) => l.steps.map((_, si) => `${li + 1}${"abcde"[si]}`));
 const STEP_LAYERS = [0, 1, 2].map((l) => STEP_IDS.slice(l * 5, l * 5 + 5));
+
+function KitArea({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-16 border-t border-border pt-24">
+      <h3 className="font-medium">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
 function Board({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
@@ -336,6 +353,15 @@ export default function KitPage() {
             <Timeline events={[{ at: "Oct 1, 14:02", text: "Order paid · $70" }, { at: "Oct 2, 10:30", text: "Print N°07 12/50 printed and signed" }, { at: "Note", text: "Customer asked for gift wrap", kind: "note" }]} onAddNote={async () => {}} />
             <PermissionMatrix />
           </div>
+          {/* M6: every admin component in its states, one section per area. */}
+          <KitArea title="Shell"><ShellKit /></KitArea>
+          <KitArea title="Dashboard, alerts, phone"><DashboardKit /></KitArea>
+          <KitArea title="Orders"><OrdersKit /></KitArea>
+          <KitArea title="Fulfilment, editions, customers"><FulfilmentKit /></KitArea>
+          <KitArea title="Catalog, work editor"><CatalogKit /></KitArea>
+          <KitArea title="Guide editor, AI pipeline"><GuidesKit /></KitArea>
+          <KitArea title="Support, reviews, content"><SupportKit /></KitArea>
+          <KitArea title="Analytics, finance, marketing, settings"><GrowthKit /></KitArea>
         </Board>
       </main>
     </ToastProvider>

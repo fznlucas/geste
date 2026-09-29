@@ -14,9 +14,10 @@ Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the
 | | `work_formats` | work_id, format 30x40…80x100, default_level, guide_price_cents (base), est_minutes, active |
 | | `palettes` | work_id, key, name, swatches [{hex,name}], preview_filter |
 | Guides | `guides` | work × format × level, current_version |
-| | `guide_layers` | position, name, brush, plate, tip, dry_seconds, diagram (strokes) |
-| | `guide_steps` | layer_id, position 1–5 (a–e), text, mux_playback_id, highlight |
-| | `guide_versions` | immutable published snapshot (content jsonb) — what buyers read |
+| | `guide_layers` | position, name, brush, plate, tip, minutes (painting time), dry_seconds, diagram (strokes) |
+| | `guide_steps` | layer_id, position 1–5 (a–e), text, brush (null = the layer's), mux_playback_id, highlight |
+| | `guide_print` | guide_id, content (the printed guide's copy, Guide01–08); staff-only draft, published into the version |
+| | `guide_versions` | immutable published snapshot (content jsonb: layers with minutes, steps with brush, print) — what buyers read |
 | Shopping | `shopping_items` | name, standard/budget label, price, affiliate URLs, quantity_rule per format |
 | Prints | `print_editions` | work, size, edition_size, price, open |
 | | `print_copies` | edition, number, status available/reserved/sold/void, order_item, fulfilment, certificate_no |

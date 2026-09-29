@@ -1,11 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../primitives/Button";
+import { PillButton } from "./AdminUI";
 
 export interface KanbanCard {
-  id: string; // order number
+  /** Stable key (a print copy id). */
+  id: string;
+  /** Underlined link text: the order number ("#GS-2041"). Defaults to `id`. */
+  label?: string;
   title: string; // "N°07 · A3 · 12/50"
   subtitle: string; // "Camille Martin · Lyon"
   imageUrl: string;
@@ -20,44 +23,47 @@ export interface KanbanColumn {
 }
 
 /**
- * Fulfilment board: 4 columns on #F4F1ED, white cards. Moving is by buttons (← and "Next step →"), not drag,
- * so it works on a phone and with a keyboard. onMove is a server action that updates print_copies.status.
+ * Fulfilment board (AdminFulfilment): 4 columns on #F4F1ED (12 px padding, 560 px tall at least), white
+ * cards. Moving is by buttons (34 px "←" pill and the Ink "Next step →"), not drag, so it works on a phone
+ * and with a keyboard. `busy` disables a card while its move is saved.
  */
-export function KanbanBoard({ columns, onMove }: { columns: KanbanColumn[]; onMove: (cardId: string, toColumn: string) => void }) {
+export function KanbanBoard({ columns, onMove, busy }: { columns: KanbanColumn[]; onMove: (cardId: string, toColumn: string) => void; busy?: string | null }) {
   return (
     <div className="grid grid-cols-4 items-start gap-16">
       {columns.map((c, ci) => (
-        <section key={c.key} aria-label={c.title} className="flex min-h-560 flex-col gap-10 bg-surface-hover p-12">
+        <section key={c.key} aria-label={`${c.title}, ${c.cards.length}`} className="flex min-h-584 flex-col gap-10 bg-surface-hover p-12">
           <div className="flex justify-between">
-            <span className="font-medium">{c.title}</span>
-            <span className="text-fg-muted">{c.cards.length}</span>
+            <h2 className="font-medium tracking-normal">{c.title}</h2>
+            <span className="text-fg-muted" aria-hidden="true">{c.cards.length}</span>
           </div>
-          {c.cards.map((k) => (
-            <article key={k.id} className="flex flex-col gap-8 border border-border bg-surface p-14">
-              <div className="flex gap-10">
-                <span className="relative block h-50 w-40 shrink-0 bg-surface-muted">
-                  <Image src={k.imageUrl} alt="" fill sizes="40px" className="object-cover" />
-                </span>
-                <span className="flex flex-col">
-                  <Link href={k.href} className="underline underline-offset-3">{k.id}</Link>
-                  <span>{k.title}</span>
-                </span>
-              </div>
-              <span className="text-fg-muted">{k.subtitle}</span>
-              <div className="flex gap-6">
-                {ci > 0 && (
-                  <Button variant="ghost" size="sm" aria-label={`Move ${k.id} back to ${columns[ci - 1]!.title}`} onClick={() => onMove(k.id, columns[ci - 1]!.key)}>
-                    ←
-                  </Button>
-                )}
-                {ci < columns.length - 1 && (
-                  <Button size="sm" trailing="→" className="flex-1" onClick={() => onMove(k.id, columns[ci + 1]!.key)}>
-                    {c.nextLabel ?? columns[ci + 1]!.title}
-                  </Button>
-                )}
-              </div>
-            </article>
-          ))}
+          {c.cards.map((k) => {
+            const label = k.label ?? k.id;
+            return (
+              <article key={k.id} aria-label={`${label} · ${k.title}`} className="flex flex-col gap-8 border border-border bg-surface p-14">
+                <div className="flex gap-10">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- 40 × 50 thumbnail, as drawn */}
+                  <img src={k.imageUrl} alt="" className="block h-50 w-40 shrink-0 object-cover" />
+                  <span className="flex flex-col">
+                    <Link href={k.href} className="self-start underline underline-offset-3 hover:text-fg-muted">{label}</Link>
+                    <span>{k.title}</span>
+                  </span>
+                </div>
+                <span className="text-fg-muted">{k.subtitle}</span>
+                <div className="flex gap-6">
+                  {ci > 0 && (
+                    <PillButton aria-label={`Move ${label} back to ${columns[ci - 1]!.title}`} disabled={busy === k.id} onClick={() => onMove(k.id, columns[ci - 1]!.key)}>
+                      ←
+                    </PillButton>
+                  )}
+                  {ci < columns.length - 1 && (
+                    <Button size="sm" trailing="→" className="flex-1" disabled={busy === k.id} aria-label={`Move ${label} to ${columns[ci + 1]!.title}`} onClick={() => onMove(k.id, columns[ci + 1]!.key)}>
+                      {c.nextLabel ?? columns[ci + 1]!.title}
+                    </Button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </section>
       ))}
     </div>

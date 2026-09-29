@@ -174,7 +174,7 @@ export interface Guide {
   print: GuidePrintContent | null;
 }
 
-/** The printed guide's own copy (Guide01–08 boards). Paint colours are content. */
+/** The printed guide's own copy (Guide01–08 boards): `guide_print.content` (migration 0002, snake_case keys there). Paint colours are content. */
 export interface GuidePrintContent {
   /** "Flat brush 50 mm": the tools line of "In the box" (after the canvas and the tubes). */
   boxTools: string[];
@@ -236,8 +236,12 @@ export interface PrintCopy {
   size: PrintSize;
   imageUrl: string;
   orderNumber: string | null;
+  /** Payment date of the order: cards of a fulfilment column, newest first. */
+  orderPaidAt: string | null;
+  customerId: string | null;
   customerName: string | null;
   city: string | null;
+  workSlug: string;
 }
 
 // ── Cart ───────────────────────────────────────────────────────────────────
@@ -318,6 +322,14 @@ export interface OrderItem {
   edition: { size: string; editionSize: number } | null;
   /** Prints: when the copy was printed and signed (Tracking board). */
   printedAt: string | null;
+  /** Prints: the numbered copies' ids (fulfilment, restock). */
+  copyIds: string[];
+  /** Guides: the library access this line opened (null when the guide was already owned). */
+  entitlementId: string | null;
+  /** Guides: "2 of 3 prints left" (AdminOrderDetail). */
+  printsLeft: number | null;
+  /** Guides: access revoked by a refund. */
+  accessRevoked: boolean;
 }
 
 export interface Refund {
@@ -331,6 +343,8 @@ export interface Refund {
 
 export interface Shipment {
   id: string;
+  /** Admin "Create shipping label" (null on the mock rows). */
+  labelCreatedAt: string | null;
   carrier: "colissimo" | "mondial_relay" | "chronopost";
   trackingNo: string;
   parcel: string;
@@ -401,7 +415,17 @@ export interface OrderDetail extends Order {
   timeline: OrderEvent[];
   customerOrdersCount: number;
   customerLifetimeCents: number;
+  customerPhone: string | null;
+  /** "VAT included (FR 20%)", null without VAT. */
+  vatLabel: string | null;
   supportThreads: SupportThread[];
+}
+
+/** AdminOrderDetail refund modal: "Print only (returned) $51", "Guide only (revokes library access) $19", "Full order $70". */
+export interface RefundOption {
+  key: "print" | "guide" | "full";
+  label: string;
+  amountCents: number;
 }
 
 // ── People ─────────────────────────────────────────────────────────────────
@@ -420,6 +444,8 @@ export interface CustomerSummary {
   spentCents: number;
   lastOrderAt: string | null;
   createdAt: string;
+  /** GDPR "Delete account…" confirmed: the account is deleted 30 days later (mock: nothing is deleted). */
+  deletionScheduledAt: string | null;
 }
 
 export interface CustomerDetail extends CustomerSummary {
@@ -428,6 +454,10 @@ export interface CustomerDetail extends CustomerSummary {
   orders: Order[];
   library: LibraryItem[];
   reviews: Review[];
+  /** How they found the store ("TikTok"): the first order's source (PostHog / UTM later). */
+  source: string | null;
+  /** Account box of AdminCustomerDetail: "Password set · Face ID on iPhone". */
+  passkeyDevices: string[];
 }
 
 export interface LibraryItem {
@@ -499,6 +529,29 @@ export interface SupportThread {
   orderNumber: string | null;
   category: "refund" | "question" | "problem";
   status: ThreadStatus;
+  /** Not opened by staff since the customer wrote ("2 new support messages"). */
+  unread: boolean;
+  /** The customer's last message: the inbox list shows it and its time (replies do not move the thread). */
+  lastCustomerMessage: { body: string; at: string } | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  from: "customer" | "staff";
+  body: string;
+  staffName: string | null;
+  createdAt: string;
+}
+
+export interface SupportThreadDetail extends SupportThread {
+  messages: SupportMessage[];
+}
+
+export interface SavedReply {
+  id: string;
+  name: string;
+  /** "{name}" stands for the customer's first name. */
+  body: string;
 }

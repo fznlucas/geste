@@ -24,3 +24,5 @@ The full module list, data and actions are in `docs/admin.md`. Exact words: `ref
 | Content | AdminContent | Journal list, home hero, translation progress, legal versions |
 | Settings | AdminSettings | Tabs Store / Shipping / Payments & tax / Team & roles / Security / Integrations; invite + PermissionMatrix; audit log |
 | Phone: Today, To ship, Order, Alerts | AdminMToday, AdminMOrders, AdminMOrder, AdminMAlerts | Bottom tabs; mark shipped in one tap; barcode scan; push toggles |
+
+**Mock (M6, done):** every screen above is built on the mock (docs/mock-plan.md M6) and measured against its board; where the mock data or a rule wins over a board, see docs/decisions.md "Admin … (M6)". Not in the mock: real rate limiting of failed logins, Boxtal labels, emails, PostHog/Stripe data (mock tables).

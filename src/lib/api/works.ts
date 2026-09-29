@@ -3,13 +3,16 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, estimatedTime, guidePriceCents, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { FORMATS, LEVELS, PRINT_PRICES, estimatedTime, guidePriceCents, type FormatKey, type LevelKey, type PrintSize } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
+import { guides } from "@/data/guides";
 import type { WorkRow } from "@/data/types";
 import { HISTORICAL_SALES, HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/data/works";
 import { clone } from "./clone";
-import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorksQuery } from "./types";
+import { getGuideEditor } from "./guides";
+import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, inserted, localSoldCount, patched } from "./local";
+import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorkStatus, WorksQuery } from "./types";
 
 /** Cheapest guide of a work: its active formats at Beginner level ("from $12"). */
 export function minGuidePriceCents(workId: string): number {
@@ -162,4 +165,223 @@ export async function getGuideOutline(workId: string, level: LevelKey, palette: 
     ],
   };
   return lines[level].map((l, i) => ({ n: String(i + 1).padStart(2, "0"), ...l }));
+}
+
+// ── Admin (AdminCatalog, AdminWorkEditor) ───────────────────────────────────
+// Reads through the admin overlay (`allWorks`, `patched`): the admin sees its own edits and the
+// drafts it created. The store functions above read the mock tables as built, like the deployed site.
+
+const PRINT_SIZES: PrintSize[] = ["A3", "A2", "50×70"];
+/** Edition size offered by default when a size is not on sale yet. */
+const DEFAULT_EDITION_SIZE: Record<PrintSize, number> = { A3: 50, A2: 30, "50×70": 25 };
+/** How a palette's preview is tinted, in words (Palettes tab). */
+const FILTER_NOTE: Record<PaletteKey, string> = { original: "Tubes: 4 + white", warm: "Preview filter: warm", cool: "Preview filter: hue 150°", earth: "Preview filter: sepia" };
+
+/** Row ids of the tables without their own id in the mock (overlay keys). */
+export const formatRowId = (workId: string, format: FormatKey) => `${workId}:${format}`;
+export const paletteRowId = (workId: string, key: PaletteKey) => `${workId}:${key}`;
+export const listRowId = (workId: string, position: number) => `${workId}:${position}`;
+
+export interface AdminWorkFormat {
+  format: FormatKey;
+  label: string;
+  defaultLevel: LevelKey;
+  /** Guide price at the default level ("$19"): stored base + level surcharge. */
+  priceCents: number;
+  /** "~3h30" at the default level */
+  duration: string;
+  active: boolean;
+}
+
+export interface AdminWorkPalette {
+  key: PaletteKey;
+  name: string;
+  swatches: Array<{ hex: string; name: string }>;
+  /** "Tubes: 4 + white", "Preview filter: warm" */
+  note: string;
+  active: boolean;
+}
+
+export interface AdminListItem {
+  id: string;
+  position: number;
+  /** "Canvas 60 × 80 cm", "Turquoise 60 ml" at the default format */
+  name: string;
+  /** "Primed cotton canvas 60 × 80 cm, stretched / Unprimed roll + 4 stretcher bars" */
+  choices: string;
+  standardCents: number;
+  budgetCents: number;
+  url: string;
+}
+
+export interface AdminWorkEdition {
+  size: PrintSize;
+  editionId: string | null;
+  editionSize: number;
+  priceCents: number;
+  /** On sale (an open edition exists). */
+  open: boolean;
+  sold: number;
+}
+
+export interface AdminChecklistItem {
+  key: "preview" | "guide" | "studio" | "result" | "list";
+  /** "Guide: 15 steps", "Real result photo missing" */
+  label: string;
+  done: boolean;
+}
+
+export interface AdminWork {
+  id: string;
+  number: string;
+  slug: string;
+  status: WorkStatus;
+  publishAt: string | null;
+  description: string;
+  /** null for a new draft without a preview yet */
+  imageUrl: string | null;
+  resultPhotoUrl: string | null;
+  studioTested: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  sortOrder: number;
+  defaultFormat: FormatKey;
+  formatLabel: string;
+  levelLabel: string;
+  soldCount: number;
+  /** Created in the admin (no prebuilt editor page in the static export). */
+  isDraftCreated: boolean;
+  /** Where its editor lives: /admin/works/n03 or /admin/works/draft?slug=n16 */
+  editorHref: string;
+}
+
+export interface AdminWorkDetail extends AdminWork {
+  formats: AdminWorkFormat[];
+  palettes: AdminWorkPalette[];
+  shoppingList: AdminListItem[];
+  editions: AdminWorkEdition[];
+  guide: { id: string; layers: number; steps: number; version: number; editedAt: string } | null;
+  checklist: AdminChecklistItem[];
+  /** Published review photos of this work: "Pick from submitted results". */
+  resultCandidates: Array<{ reviewId: string; photoPath: string; photoUrl: string; customerName: string }>;
+}
+
+const workFormatRows = (workId: string) => {
+  const own = workFormats.filter((f) => f.workId === workId);
+  const rows = own.length
+    ? own
+    : (Object.keys(FORMATS) as FormatKey[]).map((format) => ({ workId, format, defaultLevel: FORMATS[format].defaultLevel as LevelKey, guidePriceCents: FORMATS[format].guideBase as number, estMinutes: 0, active: true }));
+  return rows.map((r) => patched("work_formats", { ...r, id: formatRowId(workId, r.format) }));
+};
+
+function adminFormats(workId: string): AdminWorkFormat[] {
+  return workFormatRows(workId).map((f) => ({
+    format: f.format,
+    label: FORMATS[f.format].label,
+    defaultLevel: f.defaultLevel,
+    priceCents: f.guidePriceCents + LEVELS[f.defaultLevel].surcharge,
+    duration: `~${estimatedTime({ format: f.format, level: f.defaultLevel, palette: "original" })}`,
+    active: f.active,
+  }));
+}
+
+function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
+  const format = workFormatRows(row.id).find((f) => f.format === row.defaultFormat);
+  const level = format?.defaultLevel ?? FORMATS[row.defaultFormat].defaultLevel;
+  const sold = allOrders()
+    .filter((o) => o.status !== "refunded" && o.status !== "cancelled")
+    .flatMap((o) => o.items)
+    .filter((i) => i.kind === "guide" && i.workId === row.id).length;
+  const isDraftCreated = createdIds.has(row.id);
+  return {
+    id: row.id,
+    number: row.number,
+    slug: row.slug,
+    status: row.status,
+    publishAt: row.publishAt,
+    description: row.description ?? "",
+    imageUrl: row.previewPath ? asset(row.previewPath) : null,
+    resultPhotoUrl: row.resultPhotoPath ? asset(row.resultPhotoPath) : null,
+    studioTested: !!row.studioTested,
+    seoTitle: row.seoTitle ?? "",
+    seoDescription: row.seoDescription ?? "",
+    sortOrder: row.sortOrder,
+    defaultFormat: row.defaultFormat,
+    formatLabel: FORMATS[row.defaultFormat].label,
+    levelLabel: LEVELS[level].label,
+    soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
+    isDraftCreated,
+    editorHref: isDraftCreated ? `/admin/works/draft?slug=${row.slug}` : `/admin/works/${row.slug}`,
+  };
+}
+
+const createdWorkIds = () => new Set(inserted<WorkRow>("works").map((w) => w.id));
+
+/** AdminCatalog: every work, any status, in catalog order (drafts created in the admin last). */
+export async function getAdminWorks(): Promise<AdminWork[]> {
+  const created = createdWorkIds();
+  return clone(allWorks().map((w) => mapAdminWork(w, created)).sort((a, b) => a.sortOrder - b.sortOrder));
+}
+
+/** AdminWorkEditor. */
+export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null> {
+  const row = allWorks().find((w) => w.slug === slug);
+  if (!row) return null;
+  const work = mapAdminWork(row, createdWorkIds());
+  const formats = adminFormats(row.id);
+  const def = formats.find((f) => f.format === row.defaultFormat)!;
+
+  const paletteRows = palettes.filter((p) => p.workId === row.id);
+  const workPalettes: AdminWorkPalette[] = (paletteRows.length ? paletteRows : [{ key: "original" as PaletteKey, name: "Original", swatches: palettes[0]!.swatches, active: true }])
+    .map((p) => patched("palettes", { id: paletteRowId(row.id, p.key), key: p.key, name: p.name, swatches: p.swatches, note: FILTER_NOTE[p.key], active: p.active }))
+    .map(({ id: _id, ...p }) => p);
+
+  const shoppingList: AdminListItem[] = shoppingItems
+    .filter((i) => i.workId === row.id)
+    .sort((a, b) => a.position - b.position)
+    .map((i) => {
+      const q = i.quantityRule?.[row.defaultFormat];
+      const fill = (label: string) => (q ? label.replace("{q}", q) : label);
+      const p = patched("shopping_items", { id: listRowId(row.id, i.position), url: i.standardUrl });
+      return { id: p.id, position: i.position, name: q ? `${i.name} ${q}` : i.name, choices: `${fill(i.standardLabel)} / ${fill(i.budgetLabel)}`, standardCents: i.standardCents, budgetCents: i.budgetCents, url: p.url };
+    });
+
+  const editionRows = allPrintEditions().filter((e) => e.workId === row.id);
+  const editions: AdminWorkEdition[] = PRINT_SIZES.map((size) => {
+    const e = editionRows.find((x) => x.size === size);
+    return e
+      ? { size, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: e.soldCount + localSoldCount(e.id) }
+      : { size, editionId: null, editionSize: DEFAULT_EDITION_SIZE[size], priceCents: PRINT_PRICES[size], open: false, sold: 0 };
+  });
+
+  const guideRow = guides.find((g) => g.workId === row.id && g.format === row.defaultFormat && g.level === def.defaultLevel);
+  const editor = guideRow ? await getGuideEditor(guideRow.id) : null;
+  const guide = guideRow && editor && editor.published.version > 0
+    ? {
+        id: guideRow.id,
+        layers: editor.published.layers.length,
+        steps: editor.published.stepCount,
+        version: editor.published.version,
+        editedAt: editor.savedAt ?? editor.versions[0]!.publishedAt,
+      }
+    : null;
+
+  const checklist: AdminChecklistItem[] = [
+    { key: "preview", label: work.imageUrl ? "Preview image" : "Preview image missing", done: !!work.imageUrl },
+    { key: "guide", label: guide ? `Guide: ${guide.steps} steps` : "Guide missing", done: !!guide },
+    { key: "studio", label: work.studioTested ? "Painted by the studio" : "Not painted by the studio", done: work.studioTested },
+    { key: "result", label: work.resultPhotoUrl ? "Real result photo" : "Real result photo missing", done: !!work.resultPhotoUrl },
+    { key: "list", label: shoppingList.length && shoppingList.every((i) => i.url) ? "Shopping list links" : "Shopping list links missing", done: shoppingList.length > 0 && shoppingList.every((i) => i.url) },
+  ];
+
+  const resultCandidates = allReviews()
+    .filter((r) => r.workId === row.id && r.photoPath && (r.status === "published" || r.status === "featured"))
+    .map((r) => ({ reviewId: r.id, photoPath: r.photoPath!, photoUrl: asset(r.photoPath!), customerName: allCustomers().find((c) => c.id === r.userId)?.fullName ?? "" }));
+
+  return clone({ ...work, formats, palettes: workPalettes, shoppingList, editions, guide, checklist, resultCandidates });
+}
+
+/** Static params of the work editor: the works of the mock (drafts created in the admin use /admin/works/draft?slug=). */
+export async function getWorkSlugs(): Promise<string[]> {
+  return works.map((w) => w.slug);
 }

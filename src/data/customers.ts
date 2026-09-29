@@ -39,3 +39,21 @@ export const customers: ProfileRow[] = [
 
 /** The customer the fake session signs in as ("Hi Camille" on the Account board). */
 export const DEMO_CUSTOMER_ID = "cus-camille-martin";
+
+/** Where each customer came from (first order's UTM source; PostHog later). Tags on AdminCustomerDetail. */
+export const CUSTOMER_SOURCES: Record<string, string> = {
+  "cus-camille-martin": "TikTok",
+  "cus-hugo-petit": "Instagram",
+  "cus-lea-dubois": "TikTok",
+  "cus-ines-moreau": "Google",
+  "cus-tom-laurent": "Newsletter",
+  "cus-sarah-cohen": "Instagram",
+  "cus-yanis-benali": "TikTok",
+  "cus-emma-roux": "Pinterest",
+  "cus-jules-fabre": "Instagram",
+  "cus-chloe-garnier": "Friend",
+  "cus-nina-keller": "Google",
+  "cus-paul-girard": "TikTok",
+  "cus-maya-lopez": "Pinterest",
+  "cus-adam-faure": "Google",
+};

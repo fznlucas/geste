@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   // Keep `next dev` from appending its agent block to CLAUDE.md (the project's instructions live there).
   agentRules: false,
+  // No dev overlay button: pages are compared to the boards pixel for pixel in `next dev`.
+  devIndicators: false,
 };
 
 export default nextConfig;

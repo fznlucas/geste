@@ -27,6 +27,7 @@
   --text-timer: 64px; --leading-timer: 64px; --weight-timer: 400;
   --text-2xl: 96px; --leading-2xl: 96px; --weight-2xl: 500;
   --text-admin-title: 20px; --leading-admin-title: 24px; --weight-admin-title: 500;
+  --text-stat: 24px; --leading-stat: 1.2; --weight-stat: 400;
   --text-code: 16px; --leading-code: 20px; --weight-code: 400;
   --text-print: 13px; --leading-print: 1.6; --weight-print: 400;
   --text-print-sm: 12px; --leading-print-sm: 16px; --weight-print-sm: 400;

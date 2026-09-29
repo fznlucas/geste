@@ -51,12 +51,12 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/admin/login` | AdminLogin | — | — |
 | `/admin` | AdminDashboard | AdminMToday | all |
 | `/admin/orders` | AdminOrders | AdminMOrders | owner, support, fulfilment |
-| `/admin/orders/[number]` | AdminOrderDetail | AdminMOrder | owner, support, fulfilment |
+| `/admin/orders/detail?number=` (mock; `[number]` with the backend) | AdminOrderDetail | AdminMOrder | owner, support, fulfilment |
 | `/admin/fulfilment` | AdminFulfilment | — | owner, fulfilment |
 | `/admin/editions` | AdminEditions | — | owner, fulfilment |
 | `/admin/works` | AdminCatalog | — | owner, content |
-| `/admin/works/[id]` | AdminWorkEditor | — | owner, content |
-| `/admin/works/[id]/guide/[guideId]` | AdminGuideEditor | — | owner, content |
+| `/admin/works/[slug]` (+ `/admin/works/draft?slug=` for works created in the browser, mock) | AdminWorkEditor | — | owner, content |
+| `/admin/works/[slug]/guide/[guideId]` | AdminGuideEditor | — | owner, content |
 | `/admin/ai` | AdminAIPipeline | — | owner, content |
 | `/admin/customers`, `/admin/customers/[id]` | AdminCustomers, AdminCustomerDetail | — | owner, support |
 | `/admin/support` | AdminSupport | — | owner, support |
@@ -66,7 +66,7 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/admin/marketing` | AdminMarketing | — | owner |
 | `/admin/content` | AdminContent | — | owner, content |
 | `/admin/settings` | AdminSettings | — | owner |
-| `/admin/alerts` | (popover on desktop) | AdminMAlerts | all |
+| `/admin/alerts` | (popover on desktop; a plain list at this URL) | AdminMAlerts | all |
 
 ## API
 

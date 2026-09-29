@@ -44,6 +44,7 @@ const preset: Partial<Config> = {
       "print-h2": ["20px", { lineHeight: "1.3", fontWeight: "500" }],
       "print-title": ["40px", { lineHeight: "1.1", fontWeight: "500" }],
       "admin-title": ["20px", { lineHeight: "24px", fontWeight: "500" }],
+      stat: ["24px", { lineHeight: "1.2", fontWeight: "400" }],
     },
     spacing,
     borderRadius: { none: "0", bar: "3px", full: "9999px" },

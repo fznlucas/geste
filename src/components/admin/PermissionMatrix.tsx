@@ -1,46 +1,50 @@
 import type { StaffRole } from "@/lib/types";
+import { AdminHeadRow, AdminRow } from "./AdminUI";
 
-export const PERMISSIONS: Array<{ area: string; roles: Record<StaffRole, "full" | "read" | "partial" | "none">; note?: string }> = [
-  { area: "Dashboard", roles: { owner: "full", support: "partial", fulfilment: "partial", content: "partial" }, note: "Revenue hidden for non-owners" },
-  { area: "Orders & refunds", roles: { owner: "full", support: "partial", fulfilment: "read", content: "none" }, note: "Support refunds up to $50" },
-  { area: "Fulfilment & editions", roles: { owner: "full", support: "read", fulfilment: "full", content: "none" } },
-  { area: "Works, guides, AI", roles: { owner: "full", support: "none", fulfilment: "none", content: "full" } },
-  { area: "Customers & support", roles: { owner: "full", support: "full", fulfilment: "none", content: "none" } },
-  { area: "Reviews & results", roles: { owner: "full", support: "full", fulfilment: "none", content: "full" } },
-  { area: "Analytics, finance, marketing", roles: { owner: "full", support: "none", fulfilment: "none", content: "none" } },
-  { area: "Content & translations", roles: { owner: "full", support: "none", fulfilment: "none", content: "full" } },
-  { area: "Settings & team", roles: { owner: "full", support: "none", fulfilment: "none", content: "none" } },
+/**
+ * Settings › Team & roles "Permissions by role", as drawn on AdminSettings. The source of truth is
+ * the database (`has_role` in the RLS policies) and docs/admin.md; keep the three in sync.
+ * "Orders & refunds" is about refunding: Fulfilment reads orders to ship them (its own row).
+ */
+export const PERMISSIONS: Array<{ area: string; roles: StaffRole[] }> = [
+  { area: "Orders & refunds", roles: ["owner", "support"] },
+  { area: "Fulfilment", roles: ["owner", "fulfilment"] },
+  { area: "Catalog & guides", roles: ["owner", "content"] },
+  { area: "Customers & support", roles: ["owner", "support"] },
+  { area: "Finance", roles: ["owner"] },
+  { area: "Settings & team", roles: ["owner"] },
 ];
 
-const SIGN = { full: "✓", read: "read", partial: "partial", none: "—" } as const;
-const ROLES: StaffRole[] = ["owner", "support", "fulfilment", "content"];
+const COLS = "1.4fr repeat(4, 110px)";
+const ROLES: Array<[StaffRole, string]> = [
+  ["owner", "Owner"],
+  ["support", "Support"],
+  ["fulfilment", "Fulfilment"],
+  ["content", "Content editor"],
+];
 
-/** Read-only matrix shown in Settings › Team. The source of truth for RLS is supabase (has_role); keep both in sync. */
+/** Read-only grid: Area + one column per role, ✓ or a Stone "—" (with a text alternative). Rows 8 px apart, as drawn. */
 export function PermissionMatrix() {
   return (
-    <table className="w-full table-fixed border-collapse">
-      <caption className="sr-only">Permissions by role</caption>
-      <thead>
-        <tr className="border-b border-fg text-left text-fg-muted">
-          <th className="w-2/5 py-8 font-normal">Area</th>
-          {ROLES.map((r) => (
-            <th key={r} className="w-110 py-8 font-normal capitalize">{r}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {PERMISSIONS.map((p) => (
-          <tr key={p.area} className="border-b border-border">
-            <th scope="row" className="py-12 text-left font-normal">
-              {p.area}
-              {p.note && <span className="block text-fg-muted">{p.note}</span>}
-            </th>
-            {ROLES.map((r) => (
-              <td key={r} className={p.roles[r] === "none" ? "text-fg-muted" : undefined}>{SIGN[p.roles[r]]}</td>
-            ))}
-          </tr>
+    <div role="table" aria-label="Permissions by role" className="flex flex-col gap-8">
+      <AdminHeadRow cols={COLS}>
+        <span role="columnheader">Area</span>
+        {ROLES.map(([k, l]) => (
+          <span key={k} role="columnheader">{l}</span>
         ))}
-      </tbody>
-    </table>
+      </AdminHeadRow>
+      {PERMISSIONS.map((p) => (
+        <AdminRow key={p.area} cols={COLS}>
+          <span role="rowheader">{p.area}</span>
+          {ROLES.map(([k]) =>
+            p.roles.includes(k) ? (
+              <span key={k} role="cell">✓<span className="sr-only"> allowed</span></span>
+            ) : (
+              <span key={k} role="cell"><span className="text-fg-muted" aria-hidden="true">—</span><span className="sr-only">not allowed</span></span>
+            ),
+          )}
+        </AdminRow>
+      ))}
+    </div>
   );
 }

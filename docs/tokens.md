@@ -49,6 +49,7 @@ JetBrains Mono 400 and 500 only. Sentence case. No italic, no uppercase, no lett
 | print-h2 | `text-print-h2` | 20 / 1.3 | 500 | Printed guide "Sign & share" |
 | print-title | `text-print-title` + `tracking-heading` | 40 / 1.1 | 500 | Printed guide cover number |
 | admin-title | `text-admin-title` | 20 / 24 | 500 | Admin page title only |
+| stat | `text-stat` | 24 / 1.2 | 400 | Phone admin KPI values (AdminMToday) |
 
 Emphasis = weight 500 or Ink vs Stone. Links are underlined with offset 3–4 px only where the board underlines them.
 

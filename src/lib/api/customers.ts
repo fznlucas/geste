@@ -1,11 +1,10 @@
 /** Customers (admin) with their order stats. */
-import { customers } from "@/data/customers";
-import { reviews } from "@/data/reviews";
+import { CUSTOMER_SOURCES } from "@/data/customers";
 import { passkeys, passwordChangedAt } from "@/data/security";
 import type { ProfileRow } from "@/data/types";
 import { clone } from "./clone";
 import { mapLibraryItem } from "./library";
-import { allEntitlements, allOrders } from "./local";
+import { allCustomers, allEntitlements, allOrders, allReviews } from "./local";
 import { mapOrder } from "./orders";
 import { mapReview } from "./reviews";
 import type { AccountSecurity, CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
@@ -27,14 +26,15 @@ function mapCustomer(row: ProfileRow): CustomerSummary {
     spentCents: paid.reduce((s, o) => s + o.totalCents, 0),
     lastOrderAt: paid.map((o) => o.createdAt).sort().at(-1) ?? null,
     createdAt: row.createdAt,
+    deletionScheduledAt: row.deletionScheduledAt ?? null,
   };
 }
 
-/** Most recent buyers first. */
+/** In the order of the AdminCustomers board (the mock table's order; newest sign-up first in the database). */
 export async function getCustomers(query: { segment?: CustomerSegment; search?: string } = {}): Promise<CustomerSummary[]> {
   const search = query.search?.trim().toLowerCase();
   return clone(
-    customers
+    allCustomers()
       .map(mapCustomer)
       .filter((c) => {
         switch (query.segment ?? "all") {
@@ -44,34 +44,39 @@ export async function getCustomers(query: { segment?: CustomerSegment; search?: 
           default: return true;
         }
       })
-      .filter((c) => !search || c.fullName.toLowerCase().includes(search) || c.email.toLowerCase().includes(search))
-      .sort((a, b) => (b.lastOrderAt ?? "").localeCompare(a.lastOrderAt ?? "")),
+      .filter((c) => !search || c.fullName.toLowerCase().includes(search) || c.email.toLowerCase().includes(search)),
   );
 }
 
 export async function getCustomer(id: string): Promise<CustomerDetail | null> {
-  const row = customers.find((c) => c.id === id);
+  const row = allCustomers().find((c) => c.id === id);
   if (!row) return null;
   return clone({
     ...mapCustomer(row),
     phone: row.phone,
     address: row.defaultAddress,
     orders: allOrders().filter((o) => o.userId === id).map(mapOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    library: allEntitlements().filter((e) => e.userId === id).map(mapLibraryItem),
-    reviews: reviews.filter((r) => r.userId === id).map(mapReview),
+    // Newest purchase first; within one order, guides in progress or not started before finished ones.
+    library: allEntitlements()
+      .filter((e) => e.userId === id)
+      .map(mapLibraryItem)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || Number(a.state === "finished") - Number(b.state === "finished")),
+    reviews: allReviews().filter((r) => r.userId === id).map(mapReview),
+    source: CUSTOMER_SOURCES[id] ?? null,
+    passkeyDevices: passkeys.filter((p) => p.userId === id).map((p) => p.device),
   });
 }
 
 /** Login and checkout: the account an email belongs to (case-insensitive). */
 export async function findCustomerByEmail(email: string): Promise<CustomerSummary | null> {
   const wanted = email.trim().toLowerCase();
-  const row = customers.find((c) => c.email === wanted);
+  const row = allCustomers().find((c) => c.email === wanted);
   return row ? clone(mapCustomer(row)) : null;
 }
 
 /** Settings › Password and Passkeys. Mock: without a row, the password dates from the account's creation. */
 export async function getAccountSecurity(customerId: string): Promise<AccountSecurity | null> {
-  const row = customers.find((c) => c.id === customerId);
+  const row = allCustomers().find((c) => c.id === customerId);
   if (!row) return null;
   return clone({
     passwordChangedAt: passwordChangedAt[customerId] ?? row.createdAt,

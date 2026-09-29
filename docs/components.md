@@ -360,7 +360,7 @@ export interface SegmentedProps<V extends string> {
 
 `src/components/primitives/StatusChip.tsx` · used on Orders, Admin
 
-**StatusChip** — Dot + word. Never colour alone. done = filled Ink dot · todo = hollow dot · issue = Signal dot and Signal word · off = Line-grey dot, Stone word.
+**StatusChip** — Dot + word. Never colour alone. The dot is 10 px (the boards' 8 px + 1 px border). done = filled Ink dot · todo = hollow dot · issue = Signal dot and Signal word · off = Line-grey dot, Stone word.
 
 ```ts
 export interface StatusChipProps {
@@ -472,6 +472,8 @@ export interface ModalProps {
   focusOnClose?: () => HTMLElement | null | undefined;
 }
 ```
+
+Admin: `placement="admin"` puts the scrim and the panel over the content area right of the 257 px sidebar (≥ 768 px), as the admin boards draw dialogs; `width` accepts 508 (refund dialog).
 
 
 ## Popover
@@ -908,40 +910,47 @@ export interface StepProgressProps {
 
 ## AdminShell
 
-`src/components/admin/AdminShell.tsx` · used on every Admin board
+`src/components/admin/AdminShell.tsx` · used on every Admin board (composed by `src/app/(admin)/admin/_admin/AdminFrame.tsx` and `AdminPage.tsx`)
 
-**AdminShell** — 232 px sidebar (grouped nav with counts, active row inverted to Ink) + top bar (breadcrumb, 20 px title, search, alerts, page actions) + main (24 32 40 padding, 24 px gaps). Items the role cannot use are not rendered.
-
-```ts
-export interface NavItem {
-  label: string;
-  href: string;
-  count?: number;
-  roles: StaffRole[];
-}
-```
+**AdminSidebar** — 257 px (232 px content, 12 px padding, 1 px rule, as the boards measure it): logo + "admin", grouped nav (`ADMIN_NAV`) with counts (`Badge`, 30 px), active row inverted to Ink (`activeNavHref(path)`: order detail lights Orders, guide pages light Guide editor), then View the store ↗, "Lucas · Owner  2FA on" (a link to Settings for the owner), Log out. Items the role cannot use are not rendered.
+**AdminTopBar** — breadcrumb "Sales /" + 20 px title, then search · "Demo data" · Alerts · page actions. **AdminMain** — 24 32 40 padding, 24 px gaps. **AdminShell** composes the three (kit).
+**AdminPhoneHeader** — 60 px: "geste.studio admin" + "Desktop ↗" (AdminM* boards). **AdminTabBar** — Today · Orders · Alerts, 56 px, current underlined; part of the flow (not sticky) under a scrolling main.
 
 ```ts
-export interface AdminShellProps {
+export interface AdminSidebarProps {
   role: StaffRole;
   userName: string;
-  currentHref: string;
-  counts: Partial<Record<string, number>>; // keyed by href
-  title: string;
-  breadcrumbs: Array<{ label: string; href: string }>;
-  actions?: ReactNode;
-  alerts?: ReactNode; // <Popover> with the alerts list
-  search?: ReactNode;
-  children: ReactNode;
+  activeHref: string | null;
+  counts: Partial<Record<"orders" | "fulfilment" | "editions" | "ai" | "support" | "reviews", number>>;
+  onLogOut?: () => void;
 }
+export interface AdminTopBarProps { breadcrumbs: Crumb[]; title: ReactNode; search?: ReactNode; demo?: ReactNode; alerts?: ReactNode; actions?: ReactNode }
 ```
+
+
+## AdminUI
+
+`src/components/admin/AdminUI.tsx` · the pieces every admin board repeats (board class in brackets)
+
+- **AdminBox** [.box] — white, Line border, 20 px padding, 14 px gap; `as="a"` for a linked tile.
+- **AdminHeadRow** [.th] / **AdminRow** [.row] — grid rows with the board's `cols` template; 36 / 44 px + 1 px rule (content-box: 37 / 45 px as measured); header Stone on an Ink rule; `href` makes the whole row a link (hover #F4F1ED).
+- **PillButton** / **PillLink** [.pillb] — 34 px outline pill (32 + borders), Line-field border, `pressed` = Ink border (aria-pressed), `inverse` on the Ink selection bar.
+- **AdminTabs** [.tab] — 40 px Stone labels 20 px apart on a Line rule; selected Ink with a 2 px underline; buttons with aria-pressed (filters).
+- **AdminTitle** (box title, 500, no heading tracking) · **UnderLink** (underlined text link).
+
+
+## DemoRoleMenu · AlertsPopover · AdminSearch
+
+`src/components/admin/DemoRoleMenu.tsx`, `AlertsPopover.tsx`, `AdminSearch.tsx` · top bar of every admin board
+
+**DemoRoleMenu** — the boards' "Demo data" chip (Mist, Stone). Mock: a Radix menu "View the admin as" with Owner / Support / Fulfilment / Content (radio items with what each sees) and "Reset demo data". **AlertsPopover** — "Alerts · n" (unread) pill; a 380 px panel pinned 64 px from the top and 32 px from the right of the content column, 53 px rows linking to their module, read ones in Stone, Close; Escape and outside click close, focus returns. **AdminSearch** — 300 × 36 px field with a hidden label; Enter → order, customer, work or the orders list.
 
 
 ## BarChart
 
 `src/components/admin/BarChart.tsx` · used on AdminDashboard
 
-**BarChart** — Single-series vertical bars (dataviz rules): one axis, Stone bars, the hovered bar turns Ink, 2 px gap, 3 px rounded data end, baseline 1 px Ink, tooltip above the hovered bar. Hit area = full column height. A visually hidden table carries the same values for screen readers.
+**BarChart** — Single-series vertical bars (dataviz rules): one axis, Stone bars, the hovered or focused bar turns Ink, 2 px gap, 3 px rounded data end, baseline 1 px Ink, tooltip above the bar in a 28 px band. Hit area = full column height. `height` is the plot area (default 240); label row 14 px under the baseline: first label · `note` · last label. A visually hidden table carries the same values for screen readers.
 
 ```ts
 export interface BarDatum {
@@ -993,14 +1002,14 @@ export interface DataTableProps<T> {
 
 `src/components/admin/HBar.tsx` · used on AdminAnalytics, AdminDashboard
 
-**HBar** — Horizontal bars for rankings and funnels: 170 px label · 10 px Mist track with Ink fill, 3 px data end · value right.
+**HBar** — Horizontal bars for rankings and funnels (AdminAnalytics): 170 px label · 10 px Mist track with Ink fill, 3 px data end · value right in 70 px. Rows 30 px, 14 px apart; lengths relative to the largest row; `highlight` turns a row Signal (label too, never colour alone); `display` overrides the value text.
 
 
 ## KanbanBoard
 
 `src/components/admin/KanbanBoard.tsx` · used on AdminFulfilment
 
-**KanbanBoard** — Fulfilment board: 4 columns on #F4F1ED, white cards. Moving is by buttons (← and "Next step →"), not drag, so it works on a phone and with a keyboard. onMove is a server action that updates print_copies.status.
+**KanbanBoard** — Fulfilment board (AdminFulfilment): 4 columns on #F4F1ED (12 px padding, 560 px tall at least), white cards. Moving is by buttons (34 px "←" pill and the Ink "Next step →"), not drag, so it works on a phone and with a keyboard. `onMove(cardId, toColumn)` is `moveCopy` (print_copies.fulfilment); `busy` disables a card while it saves. Cards carry `label` (order number) apart from `id` (copy id).
 
 ```ts
 export interface KanbanCard {
@@ -1026,14 +1035,14 @@ export interface KanbanColumn {
 
 `src/components/admin/KpiTile.tsx` · used on AdminDashboard, AdminFinance
 
-**KpiTile** — White box, 20 px padding: label (Stone) · 28 px value · delta or context (Stone). The whole tile links to its module.
+**KpiTile** — White box, 20 px padding: label (Stone) · 28 px value · delta or context (Stone). With `href` the whole tile links to its module (only modules the role can open). `size="sm"`: 14 px padding, 24 px `text-stat` value (AdminMToday).
 
 
 ## PermissionMatrix
 
 `src/components/admin/PermissionMatrix.tsx` · used on AdminSettings
 
-**PermissionMatrix** — Read-only matrix shown in Settings › Team. The source of truth for RLS is supabase (has_role); keep both in sync.
+**PermissionMatrix** — Read-only matrix of Settings › Team as drawn: 6 rows (Orders & refunds, Fulfilment, Catalog & guides, Customers & support, Finance, Settings & team) × Owner / Support / Fulfilment / Content editor, ✓ or Stone "—" with hidden "allowed / not allowed". The source of truth for RLS is supabase (has_role); keep both in sync.
 
 
 ## Timeline
@@ -1049,6 +1058,28 @@ export interface TimelineEvent {
   kind?: "system" | "note";
 }
 ```
+
+
+## OrderStatusChip · RefundModal
+
+`src/components/admin/OrderStatus.tsx`, `RefundModal.tsx` · AdminOrders, AdminOrderDetail, AdminM*
+
+**OrderStatusChip** — StatusChip with the admin wording: Signal for what needs a hand (To ship, Refund asked, Print to ship), filled for finished (Delivered, Shipped, Refunded, Sent), hollow in between (Printed, Packed, Pending, Partly refunded), off for Cancelled / Returned / Revoked. `fulfilmentLabel(kind, fulfilment, revoked)` words an order line.
+**RefundModal** — `Modal placement="admin"` (scrim and panel over the content area, 508 px): the applicable choices (Print only, Guide only, Full order) as 40 px outline rows with the amount right, the reason sent to the customer, restock, Cancel + Signal "Refund $51  →". Above the role's limit the confirm is disabled and says why.
+
+
+## ThreadListItem · MessageList · ReviewCard
+
+`src/components/admin/SupportParts.tsx` · AdminSupport, AdminReviews
+
+**ThreadListItem** — inbox row, 97 px: name + time, subject, preview (Stone); selected #F4F1ED; new threads carry a hidden " · new". **MessageList** — customer messages on Mist at the left, staff replies on Ink at the right, 80 % wide at most. **ReviewCard** — 4:5 photo, name · work and stars, the quote, actions (Approve / Feature / Hide) or the verdict, then "Reply privately".
+
+
+## AiCandidateCard · AdminMeter
+
+`src/components/admin/AiCandidateCard.tsx` · AdminAIPipeline (AdminMeter also on AdminEditions)
+
+**AdminMeter** — 8 px Mist track, Ink fill with a 3 px rounded end, role=progressbar with its value (job progress, GPU budget). **AiCandidateCard** — 4:5 image, id + similarity, strokes · layers, note, Approve (Ink, 32 px) + ✕ pill; once decided the verdict ("✓ Approved → Works (draft)", "✕ Rejected", card at 40 %).
 
 
 ## ShoppingListTable
