@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { Button, EditionCounter, PrintCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Segmented, stageStyle } from "@/components";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Button, EditionCounter, LightboxZoom, PrintCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Segmented, stageStyle } from "@/components";
 import type { PrintSize } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { formatPrice, fromPrice } from "@/lib/format";
@@ -32,6 +32,7 @@ function View({ work, editions, others, maxArea, requested, onSize }: PrintPageD
   const firstOpen = sizes.find((e) => !e.soldOut) ?? sizes[0]!;
   const picked = sizes.find((e) => sizeKey(e.size) === requested && !e.soldOut) ?? firstOpen;
   const [view, setView] = useState<"print" | "scale">("print");
+  const [zoom, setZoom] = useState(false);
   const [added, setAdded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -49,6 +50,19 @@ function View({ work, editions, others, maxArea, requested, onSize }: PrintPageD
   const [short, long] = PRINT_SIZES[picked.size].cm;
   const sheet: [number, number] = picked.orientation === "landscape" ? [long, short] : [short, long];
   const dims = paper.includes("×") ? picked.dimensions : `${picked.dimensions} · ${paper}`;
+  // The white sheet as printed: the work in its margin, the edition number in the bottom margin.
+  const sheetPaper = (props: { sizes: string; priority?: boolean; className: string; style?: CSSProperties; dataSheet?: boolean }) => (
+    <PrintPaper
+      imageUrl={picked.imageUrl}
+      alt={`${work.number}, limited print`}
+      orientation={picked.orientation}
+      caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`}
+      captionAlways
+      tone="white"
+      ratio={sheet[0] / sheet[1]}
+      {...props}
+    />
+  );
   const rows: Array<[string, string, string | null]> = [
     ["Edition", edition, edition],
     ["Paper", "Cotton rag, 308 g, matte", "Cotton rag, 308 g"],
@@ -73,21 +87,22 @@ function View({ work, editions, others, maxArea, requested, onSize }: PrintPageD
               // Board Print / MPrint: the Sand ground (760 px high on 7 columns, 395 px on phones), always the
               // same size; the white sheet at its paper's proportions and at the catalog's common scale (L fills
               // the inner 80 %), the work whole inside it.
-              <div data-stage className="flex h-395 items-center justify-center bg-surface-sunk @container-[size] lg:h-760">
-                <PrintPaper
-                  imageUrl={picked.imageUrl}
-                  alt={`${work.number}, limited print`}
-                  orientation={picked.orientation}
-                  caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`}
-                  captionAlways
-                  tone="white"
-                  ratio={sheet[0] / sheet[1]}
-                  style={stageStyle(sheet, LARGEST_PRINT_CM)}
-                  className="shrink-0 transition-[height] duration-base ease-standard motion-reduce:transition-none"
-                  dataSheet
-                  sizes="(min-width: 1200px) 560px, 290px"
-                  priority
-                />
+              // A click on the sheet or the Zoom button (bottom right) opens the whole sheet full screen.
+              <div
+                data-stage
+                onClick={(e) => (e.target as Element).closest("[data-sheet]") && setZoom(true)}
+                className="relative flex h-395 items-center justify-center bg-surface-sunk @container-[size] lg:h-760"
+              >
+                {sheetPaper({
+                  style: stageStyle(sheet, LARGEST_PRINT_CM),
+                  className: "shrink-0 cursor-zoom-in transition-[height] duration-base ease-standard motion-reduce:transition-none",
+                  dataSheet: true,
+                  sizes: "(min-width: 1200px) 560px, 290px",
+                  priority: true,
+                })}
+                <LightboxZoom open={zoom} onOpenChange={setZoom} title={`${work.number}, limited print, ${picked.size}`} ratio={sheet[0] / sheet[1]} className="absolute bottom-0 right-0 lg:bottom-6 lg:right-6">
+                  {sheetPaper({ className: "h-full w-full", sizes: "250vw" })}
+                </LightboxZoom>
               </div>
             ) : (
               <div className="flex items-end pt-24 lg:h-760 lg:pt-0">

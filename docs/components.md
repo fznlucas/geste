@@ -56,6 +56,7 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `GuideConfigurator` | `src/components/commerce/GuideConfigurator.tsx` | Product, MProduct |
 | Commerce | `PriceMorph` | `src/components/commerce/PriceMorph.tsx` | Shop, Home |
 | Commerce | `ProductGallery` | `src/components/commerce/ProductGallery.tsx` | Product |
+| Overlay | `LightboxZoom` | `src/components/overlay/LightboxZoom.tsx` | Product, Print (loupe; docs/decisions.md "Loupe") |
 | Commerce | `ShoppingListItem` | `src/components/commerce/ShoppingListItem.tsx` | ShoppingList |
 | Commerce | `StickyBuyBar` | `src/components/commerce/StickyBuyBar.tsx` | MProduct |
 | Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
@@ -756,7 +757,7 @@ export interface GuideConfiguratorProps {
 
 `src/components/commerce/ProductGallery.tsx` · used on Product, MProduct
 
-**ProductGallery** — The Mist ground of the boards (7 columns × 720 px on desktop, full width × 440 px on phones), always the same size, the "Digital preview" / "Real result" badge in its top-left corner (16 px, 10 px on phones) and the views "Preview · Real result" below (desktop adds the caption "Original palette, 50×60" on the right). The preview is the selected canvas at its exact proportions (the image covers it, centred), drawn in centimetres on the catalog's common scale (`stageStyle`, `stageScale.ts`): the largest canvas (80×100, either way) fits the inner 80 % of the ground, every other canvas is reduced in the same proportion, never under 35 % of the ground's height. Size and palette filter animate (`duration-base`). Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
+**ProductGallery** — The Mist ground of the boards (7 columns × 720 px on desktop, full width × 440 px on phones), always the same size, the "Digital preview" / "Real result" badge in its top-left corner (16 px, 10 px on phones) and the views "Preview · Real result" below (desktop adds the caption "Original palette, 50×60" on the right). The preview is the selected canvas at its exact proportions (the image covers it, centred), drawn in centimetres on the catalog's common scale (`stageStyle`, `stageScale.ts`): the largest canvas (80×100, either way) fits the inner 80 % of the ground, every other canvas is reduced in the same proportion, never under 35 % of the ground's height. Size and palette filter animate (`duration-base`). Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]". The canvas floats above the ground (`shadow-levitate`, the palette filter on the image so the shadow stays grey); the Zoom button bottom right, or a click on the canvas, opens `LightboxZoom`.
 
 ```ts
 export interface ProductGalleryProps {
@@ -828,6 +829,32 @@ interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "
 ```ts
 interface ProportionalGridProps { items: Array<{ key: string; ratio: number; area: number; node: ReactNode }>; cols?: { base: 1–5; md?: 1–5; lg?: 1–5 }; maxArea?: number; scaleSets?: Array<Array<{ ratio: number; area: number }>>; gap?: string /* "[--gap:16px] lg:[--gap:40px]" */; rowSpace?: string /* "mb-28 lg:mb-64" */; className?: string }
 ```
+
+## LightboxZoom
+
+`src/components/overlay/LightboxZoom.tsx` · used on Product (/works/[slug]), Print (/prints/[slug])
+
+**LightboxZoom** — The loupe. A Zoom button (`aria-label="Zoom"`, 44 px target, 24 px Paper square with the `zoom` icon, hover Stone, focus ring on the square) placed by the page on its ground, and a full-screen Radix Dialog on Paper that it (or a click on the picture, through `open`) opens: the picture whole, fitted inside 16 px (72 px desktop) gutters and 56 px (72 px) above and below, the cross ("Close") top right. Mouse: click → ×2.5 where it points, the picture follows the cursor, click → whole. Touch: pinch ×1–×4, drag to move, double-tap ×2.5 where it touches / whole again. Keyboard: Enter / Space zoom, arrows move. Escape, the cross or a click beside the picture close; focus returns to the button. Loading: Mist block (no spinner); error: "The picture did not load." + "Try again". Fade and zoom 240 ms (base), none under reduced motion.
+
+```ts
+export interface LightboxZoomProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Accessible name of the full-screen view: "N°08, digital preview". */
+  title: string;
+  /** Width / height of what is shown (the canvas, the whole sheet). */
+  ratio: number;
+  /** What is shown, filling a box of that ratio: the image (`fill`, sizes="250vw") or the print's sheet (`h-full w-full`). */
+  children: ReactNode;
+  /** Placement of the Zoom button on its ground, e.g. "absolute bottom-0 right-0". */
+  className?: string;
+  /** /kit: open already zoomed ×2.5 on the centre. */
+  initialZoomed?: boolean;
+  /** /kit: show a state whatever the picture does. */
+  status?: "loading" | "error";
+}
+```
+
 
 ## PrintPaper
 

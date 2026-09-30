@@ -67,4 +67,4 @@ Height from 0 to content (`--radix-accordion-content-height`), 240 ms. Plus/minu
 
 ## Don'ts
 
-No parallax, no scroll-triggered reveals, no skeleton shimmer, no page transitions, no confetti on purchase, no hover zoom on artworks.
+No parallax, no scroll-triggered reveals, no skeleton shimmer, no page transitions, no confetti on purchase, no hover zoom on artworks. The loupe (`LightboxZoom`, work and print pages) is not a hover zoom: it opens on a click, fades in 240 ms, zooms ×2.5 in 240 ms on a click or a double-tap, then the picture follows the cursor without easing; nothing under reduced motion.

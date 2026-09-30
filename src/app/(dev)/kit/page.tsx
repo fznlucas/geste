@@ -15,6 +15,7 @@ import {
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
 import { ShellKit } from "./_admin/ShellKit";
 import { InfoKit } from "./_store/InfoKit";
+import { LightboxKit } from "./_store/LightboxKit";
 import { DashboardKit } from "./_admin/DashboardKit";
 import { OrdersKit } from "./_admin/OrdersKit";
 import { FulfilmentKit } from "./_admin/FulfilmentKit";
@@ -278,6 +279,7 @@ export default function KitPage() {
               <div className="flex gap-10"><Button variant="ghost" onClick={() => setModal(true)}>Open payment error modal</Button><ToastDemo /></div>
             </div>
           </div>
+          <LightboxKit />
           <div className="grid grid-cols-3 gap-40">
             <State label="Cart panel · drawer, guide + print"><div className="flex min-h-640 w-376 flex-col"><CartPanel variant="drawer" cart={CART_FULL} onRemove={() => {}} onQuantity={() => {}} /></div></State>
             <State label="Cart panel · drawer, guides only"><div className="flex min-h-640 w-376 flex-col"><CartPanel variant="drawer" cart={CART_GUIDE} onRemove={() => {}} onQuantity={() => {}} /></div></State>

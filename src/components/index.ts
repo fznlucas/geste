@@ -27,6 +27,7 @@ export * from "./overlay/Popover";
 export * from "./overlay/Menu";
 export * from "./overlay/Tooltip";
 export * from "./overlay/Toast";
+export * from "./overlay/LightboxZoom";
 
 export * from "./layout/SiteHeader";
 export * from "./layout/MobileHeader";

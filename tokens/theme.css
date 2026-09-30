@@ -69,6 +69,7 @@
   --shadow-mat-sm: var(--shadow-mat-sm);
   --shadow-card: var(--shadow-card);
   --shadow-card-sm: var(--shadow-card-sm);
+  --shadow-levitate: var(--shadow-levitate);
   --spacing: 1px; /* p-12 = 12px, gap-24 = 24px: spacing utilities read in px */
   --breakpoint-*: initial;
   --breakpoint-md: 768px;

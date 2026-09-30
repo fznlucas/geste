@@ -49,7 +49,7 @@ const preset: Partial<Config> = {
     },
     spacing,
     borderRadius: { none: "0", bar: "3px", full: "9999px" },
-    boxShadow: { none: "none", pop: "var(--shadow-pop)", modal: "var(--shadow-modal)", mat: "var(--shadow-mat)", "mat-sm": "var(--shadow-mat-sm)", card: "var(--shadow-card)", "card-sm": "var(--shadow-card-sm)" },
+    boxShadow: { none: "none", pop: "var(--shadow-pop)", modal: "var(--shadow-modal)", mat: "var(--shadow-mat)", "mat-sm": "var(--shadow-mat-sm)", card: "var(--shadow-card)", "card-sm": "var(--shadow-card-sm)", levitate: "var(--shadow-levitate)" },
     screens: { md: "768px", lg: "1200px" },
     extend: {
       transitionTimingFunction: { standard: "var(--ease-standard)", pen: "var(--ease-pen)" },

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { LightboxZoom } from "../overlay/LightboxZoom";
 import { Segmented } from "../primitives/Segmented";
 import { LARGEST_CANVAS_CM } from "@/lib/pricing";
 import { stageStyle } from "./stageScale";
@@ -27,27 +28,37 @@ export interface ProductGalleryProps {
  * its exact proportions (the image covers it, centred), drawn in centimetres on the catalog's common
  * scale: 80×100 fills the inner 80 %, every canvas at least 35 % of the ground's height
  * (stageScale.ts). Size and palette changes animate (base, 240 ms), off under reduced motion.
+ * The canvas floats above the ground (`shadow-levitate`: a soft shadow, narrower than the canvas and
+ * well below it, never clipped by the ground); the palette filter is on the image so the shadow stays
+ * grey. The Zoom button (bottom right of the ground) or a click on the canvas opens LightboxZoom: the
+ * same canvas and palette, in full definition.
  */
 export function ProductGallery({ workNumber, imageUrl, filter, canvasCm, caption, resultPhotoUrl, priority }: ProductGalleryProps) {
   const [view, setView] = useState<"preview" | "result">("preview");
+  const [zoom, setZoom] = useState(false);
   const preview = view === "preview";
+  const canvas = (sizes: string, eager?: boolean) => (
+    <Image
+      src={imageUrl}
+      alt={`Digital preview of ${workNumber} in the selected palette`}
+      fill
+      sizes={sizes}
+      priority={eager}
+      className="object-cover transition-[filter] duration-base ease-standard motion-reduce:transition-none"
+      style={{ filter: filter ?? "none" }}
+    />
+  );
   return (
     <div className="flex flex-col gap-22 lg:gap-14">
       <div data-stage className="relative flex h-440 items-center justify-center bg-surface-muted @container-[size] lg:h-720">
         {preview ? (
           <span
             data-canvas
-            className="relative block transition-[height,filter] duration-base ease-standard motion-reduce:transition-none"
-            style={{ ...stageStyle(canvasCm, LARGEST_CANVAS_CM), filter: filter ?? "none" }}
+            onClick={() => setZoom(true)}
+            className="relative block cursor-zoom-in shadow-levitate transition-[height] duration-base ease-standard motion-reduce:transition-none"
+            style={stageStyle(canvasCm, LARGEST_CANVAS_CM)}
           >
-            <Image
-              src={imageUrl}
-              alt={`Digital preview of ${workNumber} in the selected palette`}
-              fill
-              sizes="(min-width: 1200px) 560px, 290px"
-              priority={priority}
-              className="object-cover"
-            />
+            {canvas("(min-width: 1200px) 560px, 290px", priority)}
           </span>
         ) : resultPhotoUrl ? (
           <Image src={resultPhotoUrl} alt={`${workNumber} painted by a first-time painter`} width={0} height={0} sizes="(min-width: 1200px) 560px, 100vw" className="block h-full w-auto max-w-full object-contain lg:h-520" />
@@ -59,6 +70,11 @@ export function ProductGallery({ workNumber, imageUrl, filter, canvasCm, caption
         <span className="absolute left-10 top-10 bg-bg px-7 py-3 lg:left-16 lg:top-16 lg:px-8 lg:py-5 lg:leading-[14px]">
           {preview ? "Digital preview" : "Real result"}
         </span>
+        {preview && (
+          <LightboxZoom open={zoom} onOpenChange={setZoom} title={`${workNumber}, digital preview`} ratio={canvasCm[0] / canvasCm[1]} className="absolute bottom-0 right-0 lg:bottom-6 lg:right-6">
+            {canvas("250vw")}
+          </LightboxZoom>
+        )}
       </div>
       {/* Board Product: the caption sits at the top of the 32 px row, in the normal line-height. */}
       <div className="flex items-start justify-between text-fg-muted">

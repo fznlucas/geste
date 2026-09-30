@@ -1,7 +1,7 @@
 import type { ReactNode, SVGProps } from "react";
 
 /**
- * Geste icon set — 20 icons drawn on a 12 px grid with the stroke of JetBrains Mono at 12 px:
+ * Geste icon set — 21 icons drawn on a 12 px grid with the stroke of JetBrains Mono at 12 px:
  * 1.1 px, flat (butt) ends, sharp (miter) corners, round only where letters are round.
  * Always currentColor. Sizes: 12 (UI), 16, 24, 48 (illustration).
  */
@@ -35,6 +35,9 @@ const PATHS = {
   ),
   "search": (
     <><rect x="1.4" y="1.4" width="7.2" height="7.2" rx="3.6"/><path d="M7.7 7.7L10.8 10.8"/></>
+  ),
+  "zoom": (
+    <><rect x="1.4" y="1.4" width="7.2" height="7.2" rx="3.6"/><path d="M7.7 7.7L10.8 10.8M5 3.2V6.8M3.2 5H6.8"/></>
   ),
   "show": (
     <><path d="M0.8 6C2.3 3.4 4 2.4 6 2.4S9.7 3.4 11.2 6C9.7 8.6 8 9.6 6 9.6S2.3 8.6 0.8 6Z"/><rect x="4.3" y="4.3" width="3.4" height="3.4" rx="1.7"/></>
