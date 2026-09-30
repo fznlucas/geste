@@ -1,6 +1,6 @@
 # Data model & API
 
-33 tables in Supabase Postgres, RLS on all of them. Full SQL: `supabase/migrations/0001_init.sql`. Seed: `supabase/seed.sql` (N°03, its 60×80 intermediate guide, 4 palettes, shopping list, A3 edition of 50). Tests: `supabase/tests/rls_test.sql` (run after the seed; it must print "all RLS and business tests passed").
+33 tables in Supabase Postgres, RLS on all of them. Full SQL: `supabase/migrations/0001_init.sql`. Seed: `supabase/seed.sql` (N°03, 5:6, its 50×60 intermediate guide, 4 palettes, shopping list, A3 edition of 50). Tests: `supabase/tests/rls_test.sql` (run after the seed; it must print "all RLS and business tests passed").
 
 Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the human order number `GS-2041`.
 
@@ -10,15 +10,16 @@ Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the
 | --- | --- | --- |
 | People | `profiles` | id = auth.users.id, email, full_name, locale en/fr, newsletter, deleted_at |
 | | `staff_roles` | user_id, role owner/support/fulfilment/content |
-| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, orientation portrait/landscape, signature, preview/result/studio images, studio_tested, seo |
-| | `work_formats` | work_id, format 30x40…80x100 (turned for a landscape work), default_level, guide_price_cents (any level; Signature +$6 added by pricing.ts), est_minutes, active |
+| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, proportion 3:4/4:5/5:6, base_level (on the medium canvas), default_format (the medium canvas), orientation portrait/landscape, signature, preview/result/studio images, studio_tested, seo |
+| | `canvas_formats` | the nine stock canvases: format "50x60", proportion, size small/medium/large, width/height cm, default guide_price_cents (0004) |
+| | `work_formats` | work_id, format: one of the three canvases of the work's proportion (trigger), turned for a landscape work; guide_price_cents (any level; Signature +$6 added by pricing.ts), est_minutes (at the canvas's default level), active. The default level is not stored: `canvas_default_level(format, base_level)` |
 | | `palettes` | work_id, key, name, swatches [{hex,name}], preview_filter |
 | Guides | `guides` | work × format × level, current_version |
 | | `guide_layers` | position, name, brush, plate, tip, minutes (painting time), dry_seconds, diagram (strokes) |
 | | `guide_steps` | layer_id, position 1–5 (a–e), text, brush (null = the layer's), mux_playback_id, highlight |
 | | `guide_print` | guide_id, content (the printed guide's copy, Guide01–08); staff-only draft, published into the version |
 | | `guide_versions` | immutable published snapshot (content jsonb: layers with minutes, steps with brush, print) — what buyers read |
-| Shopping | `shopping_items` | name, standard/budget label, price, affiliate URLs, quantity_rule per format |
+| Shopping | `shopping_items` | name, standard/budget label, price, affiliate URLs, quantity_kind canvas/tube/white (the quantity follows the canvas's surface, pricing.ts) |
 | Prints | `print_editions` | work, size S/M/L, edition_size, price, open |
 | | `print_copies` | edition, number, status available/reserved/sold/void, order_item, fulfilment, certificate_no |
 | Orders | `carts` | user_id, items |

@@ -46,13 +46,13 @@ test("finance: P&L adds up and the CSV downloads", async ({ page }) => {
   await asStaff(page);
   await page.goto("/admin/finance/");
   await expect(page.getByRole("rowheader", { name: "Gross margin" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Net result/ })).toContainText("$3,543");
+  await expect(page.getByRole("row", { name: /Net result/ })).toContainText("$3,385");
   await expectNoAxeViolations(page);
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export for accountant (CSV)" }).click()]);
   expect(download.suggestedFilename()).toBe("geste-finance-2026-09.csv");
   const csv = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8"));
-  expect(csv).toContain("Net result,3543.00,65");
-  expect(csv).toContain("Belgium · OSS,21%,125.00");
+  expect(csv).toContain("Net result,3385.00,64");
+  expect(csv).toContain("Belgium · OSS,21%,120.00");
   await expect(page.getByRole("button", { name: "CSV downloaded" })).toBeVisible();
 });
 

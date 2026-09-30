@@ -24,7 +24,7 @@ export function DashboardKit() {
     <div className="flex flex-col gap-24">
       <State label="KpiTile · md linked (hover: Line-field border) · md without link (role cannot open the module)">
         <div className="grid grid-cols-3 gap-12">
-          <KpiTile label="Revenue · 30 d" value="$5,472" context="+38% vs Aug" href="#" />
+          <KpiTile label="Revenue · 30 d" value="$5,278" context="+38% vs Aug" href="#" />
           <KpiTile label="Avg. order" value="$29.3" context="−2%" href="#" />
           <KpiTile label="Conversion" value="2.8%" context="+0.6 pt" />
         </div>

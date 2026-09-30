@@ -36,7 +36,7 @@ function item(orderNumber: number, index: number, line: Line): OrderItemRow {
   const format = line.format ?? work.defaultFormat;
   const level = line.level ?? "match";
   const palette = line.palette ?? "original";
-  const resolved = resolveLevel({ format, level, palette });
+  const resolved = resolveLevel({ format, level }, work.baseLevel);
   const paletteName = palettes.find((p) => p.workId === work.id && p.key === palette)!.name;
   return {
     id, kind: "guide", workId: work.id, guideId: guideId(work.slug, format, resolved), editionId: null,
@@ -106,7 +106,7 @@ export const orders: OrderRow[] = [
   order(2016, "2026-09-20T07:50:00Z", "nina-keller", [{ kind: "guide", work: 11 }], { last4: "8431" }),
   order(2014, "2026-09-19T14:05:00Z", "chloe-garnier", [{ kind: "print", edition: "ed-05-s" }], { shipping: "international", last4: "2222" }),
   order(2012, "2026-09-18T12:10:00Z", "camille-martin", [{ kind: "gift_card", cents: 3000 }]),
-  order(2010, "2026-09-17T10:00:00Z", "emma-roux", [{ kind: "guide", work: 3, format: "30x40" }], { last4: "6011" }),
+  order(2010, "2026-09-17T10:00:00Z", "emma-roux", [{ kind: "guide", work: 3, format: "38x46" }], { last4: "6011" }),
   order(2008, "2026-09-16T12:45:00Z", "yanis-benali", [{ kind: "guide", work: 10 }], { last4: "5100" }),
   order(2003, "2026-09-15T19:30:00Z", "tom-laurent", [{ kind: "guide", work: 9 }], { last4: "7310" }),
   order(1994, "2026-09-12T17:05:00Z", "lea-dubois", [{ kind: "guide", work: 2 }], { last4: "0005" }),

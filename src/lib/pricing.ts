@@ -6,24 +6,84 @@
 
 export type Orientation = "portrait" | "landscape";
 
+/** Proportion family of a work (works.proportion): its three canvases keep the work's own ratio. */
+export type Proportion = "3:4" | "4:5" | "5:6";
+/** Size of a canvas within its family. */
+export type SizeKey = "small" | "medium" | "large";
+export type LevelKey = "beginner" | "intermediate" | "advanced";
+
 /**
- * Canvas formats, named portrait (width × height). A landscape work sells the same four formats
- * turned (40×30, 50×40, 80×60, 100×80): same guide, same price. The guide price depends on the format
- * only, level included (docs/decisions.md "Prices by format").
+ * Sizes: the guide price (any level, "Custom" free) and the default level, one step below the work's
+ * base level on the small canvas and one above on the large one (docs/decisions.md "Formats by work").
  */
-export const FORMATS = {
-  "30x40": { label: "30×40", landscapeLabel: "40×30", name: "Small", guideCents: 1500, defaultLevel: "beginner", baseMinutes: 60, canvasUsd: 6, tubeUsd: 2.5, tubeMl: "20 ml", brushUsd: 4 },
-  "40x50": { label: "40×50", landscapeLabel: "50×40", name: "Medium", guideCents: 1900, defaultLevel: "beginner", baseMinutes: 90, canvasUsd: 9, tubeUsd: 3.5, tubeMl: "40 ml", brushUsd: 4 },
-  "60x80": { label: "60×80", landscapeLabel: "80×60", name: "Large", guideCents: 2500, defaultLevel: "intermediate", baseMinutes: 150, canvasUsd: 16, tubeUsd: 4.5, tubeMl: "60 ml", brushUsd: 7 },
-  "80x100": { label: "80×100", landscapeLabel: "100×80", name: "Extra large", guideCents: 2900, defaultLevel: "advanced", baseMinutes: 210, canvasUsd: 24, tubeUsd: 7.5, tubeMl: "120 ml", brushUsd: 7 },
-} as const;
+export const SIZES = {
+  small: { label: "Small", guideCents: 1500, levelStep: -1 },
+  medium: { label: "Medium", guideCents: 1900, levelStep: 0 },
+  large: { label: "Large", guideCents: 2500, levelStep: 1 },
+} as const satisfies Record<SizeKey, { label: string; guideCents: number; levelStep: number }>;
+export const SIZE_ORDER: SizeKey[] = ["small", "medium", "large"];
+
+interface Canvas {
+  /** Width × height in cm, portrait. A landscape work sells it turned (40×30 …): same guide, same price. */
+  cm: readonly [number, number];
+  proportion: Proportion;
+  size: SizeKey;
+  guideCents: number;
+}
+const canvas = (w: number, h: number, proportion: Proportion, size: SizeKey, guideCents: number = SIZES[size].guideCents): Canvas => ({ cm: [w, h], proportion, size, guideCents });
+
+/**
+ * Stock canvases, named portrait (width × height). Each work sells the three of its proportion
+ * family; 80×100 is the largest of the catalog and costs $29 instead of the Large $25.
+ */
+export const CANVASES = {
+  "30x40": canvas(30, 40, "3:4", "small"),
+  "46x61": canvas(46, 61, "3:4", "medium"),
+  "60x80": canvas(60, 80, "3:4", "large"),
+  "24x30": canvas(24, 30, "4:5", "small"),
+  "40x50": canvas(40, 50, "4:5", "medium"),
+  "80x100": canvas(80, 100, "4:5", "large", 2900),
+  "38x46": canvas(38, 46, "5:6", "small"),
+  "50x60": canvas(50, 60, "5:6", "medium"),
+  "60x73": canvas(60, 73, "5:6", "large"),
+} satisfies Record<string, Canvas>;
+export type FormatKey = keyof typeof CANVASES;
+
+/** The three canvases of each family, small → large. */
+export const PROPORTIONS: Record<Proportion, { ratio: number; formats: readonly [FormatKey, FormatKey, FormatKey] }> = {
+  "3:4": { ratio: 3 / 4, formats: ["30x40", "46x61", "60x80"] },
+  "4:5": { ratio: 4 / 5, formats: ["24x30", "40x50", "80x100"] },
+  "5:6": { ratio: 5 / 6, formats: ["38x46", "50x60", "60x73"] },
+};
+export const PROPORTION_ORDER: Proportion[] = ["3:4", "4:5", "5:6"];
+
+/** The largest canvas of the catalog (80×100): the work page's preview scale is set on it. */
+export const LARGEST_CANVAS_CM = Math.max(...Object.values(CANVASES).map((c) => c.cm[1]));
+
+export function isFormatKey(v: unknown): v is FormatKey {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(CANVASES, v);
+}
+
+/** The formats a work sells, small → large. */
+export function formatsOf(proportion: Proportion): FormatKey[] {
+  return [...PROPORTIONS[proportion].formats];
+}
+
+/** The medium canvas: the work page's default and the cards' price. */
+export function mediumFormat(proportion: Proportion): FormatKey {
+  return PROPORTIONS[proportion].formats[1];
+}
 
 /** Levels change the layers and the time, never the price ("Custom" is free). */
 export const LEVELS = {
   beginner: { label: "Beginner", layers: 2, timeFactor: 1 },
   intermediate: { label: "Intermediate", layers: 3, timeFactor: 1.4 },
   advanced: { label: "Advanced", layers: 5, timeFactor: 2 },
-} as const;
+} as const satisfies Record<LevelKey, { label: string; layers: number; timeFactor: number }>;
+export const LEVEL_ORDER: LevelKey[] = ["beginner", "intermediate", "advanced"];
+
+/** Shown under the level and on the cart line when the level is below the work's base level. */
+export const SIMPLIFIED_LABEL = "Simplified version";
 
 /** "Signature" works (works.signature): every format of their guide costs this much more. */
 export const SIGNATURE_CENTS = 600;
@@ -54,19 +114,13 @@ export const SHIPPING = {
 } as const;
 export type ShippingMethod = keyof typeof SHIPPING;
 
-export type FormatKey = keyof typeof FORMATS;
-export type LevelKey = keyof typeof LEVELS;
-
 export interface GuideConfig {
   format: FormatKey;
-  /** "match" = the format's default level (the validated default). Otherwise a chosen level ("Custom"). */
+  /** "match" = the default level of the format for this work (the validated default). Otherwise a chosen level ("Custom"). */
   level: LevelKey | "match";
   palette: string;
   withPrint?: boolean;
 }
-
-/** A format and a level, with or without the rest of a configuration. */
-type FormatLevel = Pick<GuideConfig, "format" | "level"> & Partial<GuideConfig>;
 
 /** What makes one work's guide price differ from the defaults. */
 export interface WorkPricing {
@@ -75,8 +129,23 @@ export interface WorkPricing {
   formatCents?: Partial<Record<FormatKey, number>>;
 }
 
-export function resolveLevel(c: FormatLevel): LevelKey {
-  return c.level === "match" ? FORMATS[c.format].defaultLevel : c.level;
+/**
+ * Default level of a format for a work: its base level on the medium canvas, one step below on the
+ * small one, one above on the large one, never below Beginner nor above Advanced.
+ */
+export function defaultLevel(format: FormatKey, baseLevel: LevelKey): LevelKey {
+  const i = LEVEL_ORDER.indexOf(baseLevel) + SIZES[CANVASES[format].size].levelStep;
+  return LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, Math.max(0, i))]!;
+}
+
+/** The level a configuration paints at: its chosen level, or the format's default for the work. */
+export function resolveLevel(c: { format: FormatKey; level: LevelKey | "match" }, baseLevel: LevelKey): LevelKey {
+  return c.level === "match" ? defaultLevel(c.format, baseLevel) : c.level;
+}
+
+/** Below the work's base level, the guide is a simplified version: fewer layers, gestures grouped, a rawer finish. */
+export function isSimplified(level: LevelKey, baseLevel: LevelKey): boolean {
+  return LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf(baseLevel);
 }
 
 /**
@@ -88,19 +157,31 @@ export function imageRatio(w: { previewWidth?: number | null; previewHeight?: nu
   return w.orientation === "landscape" ? 5 / 4 : 4 / 5;
 }
 
+/** [width, height] of the canvas in cm, turned for a landscape work. */
+export function canvasCm(format: FormatKey, orientation: Orientation = "portrait"): [number, number] {
+  const [w, h] = CANVASES[format].cm;
+  return orientation === "landscape" ? [h, w] : [w, h];
+}
+
+/** Painted surface in cm²: the shopping list's quantities and the time follow it. */
+export function canvasArea(format: FormatKey): number {
+  const [w, h] = CANVASES[format].cm;
+  return w * h;
+}
+
 /** "60×80", or "80×60" for a landscape work. */
 export function formatLabel(format: FormatKey, orientation: Orientation = "portrait"): string {
-  return orientation === "landscape" ? FORMATS[format].landscapeLabel : FORMATS[format].label;
+  return canvasCm(format, orientation).join("×");
 }
 
 /** "60 × 80 cm", turned for a landscape work (shopping list, printed guide). */
 export function formatCm(format: FormatKey, orientation: Orientation = "portrait"): string {
-  return `${formatLabel(format, orientation).replace("×", " × ")} cm`;
+  return `${canvasCm(format, orientation).join(" × ")} cm`;
 }
 
 /** Guide price before the Signature supplement: the work's own price for the format, or the default. */
 export function guideBaseCents(format: FormatKey, work?: WorkPricing): number {
-  return work?.formatCents?.[format] ?? FORMATS[format].guideCents;
+  return work?.formatCents?.[format] ?? CANVASES[format].guideCents;
 }
 
 /** Guide price of a work in a format, level included. */
@@ -130,20 +211,63 @@ export function printCm(size: PrintSize, orientation: Orientation = "portrait"):
   return orientation === "landscape" ? `${h} × ${w} cm` : `${w} × ${h} cm`;
 }
 
-/** "3h30" — rounded to 10 minutes. */
-export function estimatedTime(c: FormatLevel): string {
-  const mins = Math.round((FORMATS[c.format].baseMinutes * LEVELS[resolveLevel(c)].timeFactor) / 10) * 10;
+/**
+ * Painting time at Beginner, in minutes: 60 min on 30×40 (1,200 cm²), growing with the surface to the
+ * power 2/3 (a wider brush covers more per stroke), so 80×100 (8,000 cm²) takes 3h30.
+ */
+function baseMinutes(format: FormatKey): number {
+  return 60 * (canvasArea(format) / 1200) ** (2 / 3);
+}
+
+/** Painting time of a format at a level, rounded to 10 minutes (work_formats.est_minutes at the default level). */
+export function estimatedMinutes(format: FormatKey, level: LevelKey): number {
+  return Math.round((baseMinutes(format) * LEVELS[level].timeFactor) / 10) * 10;
+}
+
+/** "3h30", "40 min" under an hour — rounded to 10 minutes. */
+export function estimatedTime(format: FormatKey, level: LevelKey): string {
+  const mins = estimatedMinutes(format, level);
+  if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}h${m ? String(m).padStart(2, "0") : ""}`;
 }
 
-/** Materials estimate shown next to the shopping list ("~$41 at partner stores"). */
-export function materialsEstimateUsd(c: FormatLevel): number {
-  const f = FORMATS[c.format];
-  const lvl = resolveLevel(c);
-  const base = f.canvasUsd + f.tubeUsd * 5 + f.brushUsd + (lvl === "advanced" ? 8 : 0);
-  return Math.round(base * 1.6);
+/** Stock tube sizes, with a partner-store price: a list line takes the smallest tube that holds what the surface needs. */
+const TUBES: Array<[ml: number, usd: number]> = [[20, 2.5], [40, 3.5], [60, 4.5], [75, 5], [120, 7.5], [200, 11], [250, 13], [500, 22]];
+/** Paint used per cm² of canvas: one colour, and the white (it goes in most mixes). */
+const COLOUR_ML_PER_CM2 = 0.015;
+const WHITE_ML_PER_CM2 = 0.03;
+
+function tubeFor(ml: number, smallest = 20): [number, number] {
+  return TUBES.find(([size]) => size >= smallest && size >= ml) ?? TUBES[TUBES.length - 1]!;
+}
+
+/** One colour's tube for the canvas: "20 ml" on 30×40, "120 ml" on 80×100. */
+export function tubeMl(format: FormatKey): string {
+  return `${tubeFor(canvasArea(format) * COLOUR_ML_PER_CM2)[0]} ml`;
+}
+
+/** The white's tube (40 ml at least). */
+export function whiteMl(format: FormatKey): string {
+  return `${tubeFor(canvasArea(format) * WHITE_ML_PER_CM2, 40)[0]} ml`;
+}
+
+/** What a shopping list line scales with (shopping_items.quantity_kind): the canvas itself, a colour, the white. */
+export type QuantityKind = "canvas" | "tube" | "white";
+
+/** "{q}" of a shopping list line: "60 × 80 cm", "60 ml". */
+export function quantityLabel(kind: QuantityKind, format: FormatKey, orientation: Orientation = "portrait"): string {
+  return kind === "canvas" ? formatCm(format, orientation) : kind === "tube" ? tubeMl(format) : whiteMl(format);
+}
+
+/** Materials estimate shown next to the shopping list ("~$41 at partner stores"): canvas, five tubes, white, brushes, by surface. */
+export function materialsEstimateUsd(format: FormatKey, level: LevelKey): number {
+  const area = canvasArea(format);
+  const canvasUsd = 3 + area * 0.00265;
+  const tubes = tubeFor(area * COLOUR_ML_PER_CM2)[1] * 5 + tubeFor(area * WHITE_ML_PER_CM2, 40)[1];
+  const brushUsd = area < 3000 ? 4 : 7;
+  return Math.round((canvasUsd + tubes + brushUsd + (level === "advanced" ? 8 : 0)) * 1.6);
 }
 
 /** Works that have both a guide and a print among the lines: those lines get the bundle discount. */

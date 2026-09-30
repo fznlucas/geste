@@ -101,9 +101,9 @@ test("print page: sizes turned for a landscape work, to scale, then the bundle i
   await page.goto("/works/n07/");
   await page.getByRole("button", { name: /^Add/ }).filter({ visible: true }).first().click();
   await page.goto("/cart/");
-  // Guide 40×30 $15 and print M $95: −15% on both.
+  // Guide 50×40 (N°07's medium canvas) $19 and print M $95: −15% on both.
   await expect(page.getByText("−15% with the print")).toBeVisible();
   await expect(page.getByText("−15% with the guide")).toBeVisible();
   await expect(page.getByText("Guide + print −15%")).toBeVisible();
-  await expect(page.getByText("−$16.50")).toBeVisible();
+  await expect(page.getByText("−$17.10")).toBeVisible();
 });

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Segmented } from "../primitives/Segmented";
 import { Button } from "../primitives/Button";
-import { BUNDLE_DISCOUNT_PCT, FORMATS, LEVELS, estimatedTime, formatLabel, resolveLevel, type FormatKey, type GuideConfig, type LevelKey, type Orientation } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, LEVELS, LEVEL_ORDER, SIMPLIFIED_LABEL, defaultLevel, estimatedTime, formatLabel, isSimplified, resolveLevel, type FormatKey, type GuideConfig, type LevelKey, type Orientation } from "@/lib/pricing";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import type { Palette } from "@/lib/types";
@@ -12,8 +12,10 @@ export interface GuideConfiguratorProps {
   value: GuideConfig;
   onChange: (next: GuideConfig) => void;
   palettes: Palette[];
-  /** Formats the work sells (default: all four). */
-  formats?: FormatKey[];
+  /** The three canvases of the work's proportion, small → large (the ones on sale). */
+  formats: FormatKey[];
+  /** The work's level on its medium canvas: the default level follows the size, and below it the guide is simplified. */
+  baseLevel: LevelKey;
   /** The work has an S edition with copies left. Otherwise "Guide + list + print" is disabled. */
   printAvailable?: boolean;
   /** Landscape works sell the formats turned (40×30 … 100×80). */
@@ -27,14 +29,17 @@ export interface GuideConfiguratorProps {
 
 /**
  * Work page configurator (boards Product, MProduct), in this order:
- *   Format (cm) — "suggests Intermediate"  ·  Level — "set by format": Match format | Custom (Custom reveals the 3 levels, same price)
+ *   Format (cm) — the work's three canvases, "suggests Intermediate" (the work's base level on the medium
+ *   canvas, one step down on the small, one up on the large)  ·  Level — "set by format": Match format | Custom
+ *   (Custom reveals the 3 levels, same price); "Simplified version" below when the level is under the base level
  *   Palette — 44 px swatch buttons, name on the right  ·  What you get — Guide + list | Guide + list + print ("−15% on both")
  *   "3 layers   ~3h30   5 colours   Intermediate"  ·  primary "Add to cart   $19" (desktop; phones use StickyBuyBar)
  * Desktop: label and note on one line above the choices. Phone: "Format (cm) · suggests Intermediate".
  * Keep the configuration in the URL (?format=&level=&palette=&print=1) so links reproduce it.
  */
-export function GuideConfigurator({ value, onChange, palettes, formats = Object.keys(FORMATS) as FormatKey[], printAvailable = true, orientation = "portrait", priceCents, onAdd, adding, added }: GuideConfiguratorProps) {
-  const lvl = resolveLevel(value);
+export function GuideConfigurator({ value, onChange, palettes, formats, baseLevel, printAvailable = true, orientation = "portrait", priceCents, onAdd, adding, added }: GuideConfiguratorProps) {
+  const lvl = resolveLevel(value, baseLevel);
+  const simplified = isSimplified(lvl, baseLevel);
   const custom = value.level !== "match";
   const palette = palettes.find((p) => p.id === value.palette) ?? palettes[0];
   // Palette colours + white.
@@ -42,7 +47,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
   const choices = "gap-x-16 lg:gap-x-20";
   return (
     <div className="flex flex-col gap-22 lg:gap-24">
-      <Row label="Format (cm)" note={`suggests ${LEVELS[FORMATS[value.format].defaultLevel].label}`}>
+      <Row label="Format (cm)" note={`suggests ${LEVELS[defaultLevel(value.format, baseLevel)].label}`}>
         <Segmented<FormatKey>
           label="Format"
           gap={choices}
@@ -57,7 +62,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
             label="Level mode"
             gap={choices}
             value={custom ? "custom" : "match"}
-            onChange={(m) => onChange({ ...value, level: m === "match" ? "match" : FORMATS[value.format].defaultLevel })}
+            onChange={(m) => onChange({ ...value, level: m === "match" ? "match" : defaultLevel(value.format, baseLevel) })}
             options={[{ value: "match", label: "Match format" }, { value: "custom", label: "Custom" }]}
           />
           {custom && (
@@ -66,9 +71,11 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
               gap={choices}
               value={lvl}
               onChange={(level) => onChange({ ...value, level })}
-              options={(Object.keys(LEVELS) as LevelKey[]).map((l) => ({ value: l, label: LEVELS[l].label }))}
+              options={LEVEL_ORDER.map((l) => ({ value: l, label: LEVELS[l].label }))}
             />
           )}
+          {/* Below the work's base level: fewer layers, gestures grouped, a rawer finish. */}
+          {simplified && <p className="text-fg-muted">{SIMPLIFIED_LABEL}</p>}
         </div>
       </Row>
       <Row label="Palette" note={palette?.name} noteInk gap="gap-6 lg:gap-8">
@@ -110,7 +117,7 @@ export function GuideConfigurator({ value, onChange, palettes, formats = Object.
       <div className="flex flex-col gap-22 lg:gap-10">
         <p className="flex flex-wrap gap-x-16 text-fg-muted lg:gap-x-24">
           <span>{LEVELS[lvl].layers} layers</span>
-          <span>~{estimatedTime(value)}</span>
+          <span>~{estimatedTime(value.format, lvl)}</span>
           <span className="hidden lg:inline">{colours} colours</span>
           <span>{LEVELS[lvl].label}</span>
         </p>

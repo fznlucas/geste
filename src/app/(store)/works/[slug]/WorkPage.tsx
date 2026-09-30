@@ -63,11 +63,12 @@ function View({ work, print, outlines, config, onChange }: Props & { config: Gui
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const level = resolveLevel(config);
+  const level = resolveLevel(config, work.baseLevel);
   const palette = work.palettes.find((p) => p.key === config.palette) ?? work.palettes[0]!;
   const outline = outlines[`${level}:${palette.key}`] ?? [];
   // Prices come from the catalog (pricing.ts on the server): the format's guide price, Signature included.
-  const guideCents = work.formats.find((f) => f.format === config.format)!.priceCents;
+  const format = work.formats.find((f) => f.format === config.format)!;
+  const guideCents = format.priceCents;
   const withPrint = !!(config.withPrint && print);
   const totalCents = bundleTotalCents(guideCents, withPrint ? print!.priceCents : null);
   const total = formatPrice(totalCents);
@@ -91,7 +92,7 @@ function View({ work, print, outlines, config, onChange }: Props & { config: Gui
       price: formatPrice(guideCents),
     },
     {
-      name: <><span className="lg:hidden">Shopping list</span><span className="hidden lg:inline">Shopping list: materials ~${materialsEstimateUsd(config)} at partner stores</span></>,
+      name: <><span className="lg:hidden">Shopping list</span><span className="hidden lg:inline">Shopping list: materials ~${materialsEstimateUsd(config.format, level)} at partner stores</span></>,
       price: "Included",
     },
     ...(withPrint
@@ -116,8 +117,7 @@ function View({ work, print, outlines, config, onChange }: Props & { config: Gui
             workNumber={work.number}
             imageUrl={work.imageUrl}
             filter={palette.previewFilter}
-            format={config.format}
-            orientation={work.orientation}
+            canvasCm={format.cm}
             caption={`${palette.name} palette, ${size}`}
             resultPhotoUrl={work.resultPhotoUrl}
             priority
@@ -139,6 +139,7 @@ function View({ work, print, outlines, config, onChange }: Props & { config: Gui
             onChange={onChange}
             palettes={toConfiguratorPalettes(work)}
             formats={work.formats.filter((f) => f.active).map((f) => f.format)}
+            baseLevel={work.baseLevel}
             printAvailable={!!print}
             orientation={work.orientation}
             priceCents={totalCents}

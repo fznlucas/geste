@@ -1,18 +1,18 @@
--- Seed: one live work (N°03) with its 60×80 intermediate guide, palettes, shopping list and an S print edition.
+-- Seed: one live work (N°03, proportion 5:6) with its 50×60 intermediate guide, palettes, shopping list and an S print edition.
 -- Images are mock artworks from public/mock (same as the canvas).
-insert into works (id, number, slug, status, default_format, orientation, signature, description, preview_path, preview_width, preview_height, studio_tested, seo_title, seo_description, sort_order) values
-  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '60x80', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', 1064, 1200, true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
-insert into work_formats (work_id, format, default_level, guide_price_cents, est_minutes) values
-  ('00000000-0000-0000-0000-000000000003', '30x40', 'beginner', 1500, 60),
-  ('00000000-0000-0000-0000-000000000003', '40x50', 'beginner', 1900, 90),
-  ('00000000-0000-0000-0000-000000000003', '60x80', 'intermediate', 2500, 210),
-  ('00000000-0000-0000-0000-000000000003', '80x100', 'advanced', 2900, 420);
+insert into works (id, number, slug, status, default_format, proportion, base_level, orientation, signature, description, preview_path, preview_width, preview_height, studio_tested, seo_title, seo_description, sort_order) values
+  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '50x60', '5:6', 'intermediate', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', 1064, 1200, true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
+-- Its three canvases: 38×46 (Beginner, 1h20), 50×60 (Intermediate, 2h30), 60×73 (Advanced, 4h40).
+insert into work_formats (work_id, format, guide_price_cents, est_minutes) values
+  ('00000000-0000-0000-0000-000000000003', '38x46', 1500, 80),
+  ('00000000-0000-0000-0000-000000000003', '50x60', 1900, 150),
+  ('00000000-0000-0000-0000-000000000003', '60x73', 2500, 280);
 insert into palettes (work_id, key, name, swatches, preview_filter) values
   ('00000000-0000-0000-0000-000000000003', 'original', 'Original', '[{"hex": "#22A6C9", "name": "Turquoise"}, {"hex": "#1F2433", "name": "Payne’s grey"}, {"hex": "#F2B632", "name": "Cadmium yellow"}, {"hex": "#E8862E", "name": "Orange"}]', null),
   ('00000000-0000-0000-0000-000000000003', 'warm', 'Warm', '[{"hex": "#E8735A", "name": "Coral"}, {"hex": "#E88A3A", "name": "Orange"}, {"hex": "#D9A441", "name": "Yellow ochre"}, {"hex": "#F0A596", "name": "Rose"}]', 'sepia(0.25) saturate(1.25) hue-rotate(-12deg)'),
   ('00000000-0000-0000-0000-000000000003', 'cool', 'Cool', '[{"hex": "#2F5FB3", "name": "Ultramarine"}, {"hex": "#2E9C8F", "name": "Teal"}, {"hex": "#A9A3D9", "name": "Lilac"}, {"hex": "#F2DC5A", "name": "Lemon"}]', 'hue-rotate(150deg) saturate(0.9)'),
   ('00000000-0000-0000-0000-000000000003', 'earth', 'Earth', '[{"hex": "#A0522D", "name": "Burnt sienna"}, {"hex": "#8A8F3C", "name": "Olive"}, {"hex": "#6F5A45", "name": "Raw umber"}, {"hex": "#C9A27E", "name": "Sand"}]', 'sepia(0.6) saturate(0.8) hue-rotate(-8deg)');
-insert into guides (id, work_id, format, level, current_version) values ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-000000000003', '60x80', 'intermediate', 1);
+insert into guides (id, work_id, format, level, current_version) values ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-000000000003', '50x60', 'intermediate', 1);
 insert into guide_layers (id, guide_id, position, name, brush, plate, tip, minutes, dry_seconds, diagram) values ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-0000000000a3', 1, 'Underlayer', '50 mm flat', '[{"hex": "#F3C9A6", "name": "Peach ground"}, {"hex": "#F0A83A", "name": "Warm yellow"}, {"hex": "#F2B632", "name": "Yellow"}, {"hex": "#E8862E", "name": "Orange"}, {"hex": "#3FA58A", "name": "Sea green"}]', 'Thin is good. This layer should look almost like watercolour.', 30, 1800, '[{"layer": 1, "kind": "rect", "x": 24.0, "y": 24.0, "w": 552.0, "h": 752.0, "color": "#F3C9A6", "opacity": 0.9}, {"layer": 1, "kind": "path", "d": "M60 260 Q180 220 300 280", "color": "#F0A83A", "width": 70, "opacity": 0.95}, {"layer": 1, "kind": "path", "d": "M80 340 Q160 305 260 355", "color": "#F2B632", "width": 50, "opacity": 0.95}, {"layer": 1, "kind": "path", "d": "M300 130 Q360 105 430 150", "color": "#E8862E", "width": 60, "opacity": 0.9}, {"layer": 1, "kind": "path", "d": "M60 80 L200 145", "color": "#3FA58A", "width": 26, "opacity": 0.85}, {"layer": 1, "kind": "path", "d": "M95 60 L240 170", "color": "#3FA58A", "width": 18, "opacity": 0.8}, {"layer": 1, "kind": "path", "d": "M150 60 L270 120", "color": "#3FA58A", "width": 16, "opacity": 0.8}]');
 insert into guide_steps (layer_id, position, text, brush) values ('00000000-0000-0000-0000-000000000101', 1, 'Cover most of the canvas with the peach ground in wide, loose strokes. Leave a few gaps of raw canvas near the edges.', '50 mm flat');
 insert into guide_steps (layer_id, position, text, brush) values ('00000000-0000-0000-0000-000000000101', 2, 'While it is still wet, brush the warm yellow across the left side, a little above the middle. Two or three strokes, slightly curved.', '50 mm flat');
@@ -38,10 +38,10 @@ select g.id, 1, jsonb_build_object('layers', (select jsonb_agg(jsonb_build_objec
   'steps', (select jsonb_agg(jsonb_build_object('position', s.position, 'text', s.text, 'brush', s.brush) order by s.position) from guide_steps s where s.layer_id = l.id)) order by l.position) from guide_layers l where l.guide_id = g.id),
   'print', (select p.content from guide_print p where p.guide_id = g.id))
 from guides g where g.id = '00000000-0000-0000-0000-0000000000a3';
-insert into shopping_items (work_id, position, name, standard_label, budget_label, standard_cents, budget_cents, standard_url, budget_url, quantity_rule) values
-  ('00000000-0000-0000-0000-000000000003', 0, 'Canvas', 'Primed cotton, stretched', 'Roll + stretcher bars', 2400, 1400, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "30×40 cm", "40x50": "40×50 cm", "60x80": "60×80 cm", "80x100": "80×100 cm"}'),
-  ('00000000-0000-0000-0000-000000000003', 1, 'Turquoise', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml"}'),
-  ('00000000-0000-0000-0000-000000000003', 2, 'Payne’s grey', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml"}'),
-  ('00000000-0000-0000-0000-000000000003', 3, 'Flat brush 50 mm', 'Synthetic artist brush', 'Decorating brush', 800, 300, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', '{"30x40": "1", "40x50": "1", "60x80": "1", "80x100": "1"}');
+insert into shopping_items (work_id, position, name, standard_label, budget_label, standard_cents, budget_cents, standard_url, budget_url, quantity_kind) values
+  ('00000000-0000-0000-0000-000000000003', 0, 'Canvas', 'Primed cotton, stretched', 'Roll + stretcher bars', 2400, 1400, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', 'canvas'),
+  ('00000000-0000-0000-0000-000000000003', 1, 'Turquoise', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', 'tube'),
+  ('00000000-0000-0000-0000-000000000003', 2, 'Payne’s grey', 'Artist range', 'Student range', 700, 350, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', 'tube'),
+  ('00000000-0000-0000-0000-000000000003', 3, 'Flat brush 50 mm', 'Synthetic artist brush', 'Decorating brush', 800, 300, 'https://partner.example/std?ref=geste', 'https://partner.example/budget?ref=geste', null);
 insert into print_editions (work_id, size, edition_size, price_cents) values ('00000000-0000-0000-0000-000000000003', 'S', 100, 5500);
 insert into site_settings (key, value) values ('home.hero_work', '"n03"'), ('ai.monthly_budget_cents', '8000'), ('support.saved_replies', '[]');

@@ -147,5 +147,5 @@ When the mock ends, in this order:
 ## 6. Open points
 
 - Store pages are built at deploy time, so an admin change in the mock (price, status, new work) does not show on the store. Acceptable for a demo; say so on the admin pages with a quiet note if it confuses testers.
-- Guide content exists only for N°03 · 60×80 · Intermediate; every other guide is a stand-in (`isStandIn`).
+- Guide content exists only for N°03 · 50×60 · Intermediate; every other guide is a stand-in (`isStandIn`).
 - The whole mock dataset ships in the JavaScript bundle. Fine while it is fake; watch the bundle size of the admin pages.

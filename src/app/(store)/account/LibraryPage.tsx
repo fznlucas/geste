@@ -11,7 +11,7 @@ import { Button, ButtonLink, LibraryRow } from "@/components";
 import { getLibrary, libraryProgress, type LibraryItem } from "@/lib/api";
 import { useLibraryProgress } from "@/lib/client";
 import { dayMonth } from "@/lib/dates";
-import { FORMATS, LEVELS } from "@/lib/pricing";
+import { LEVELS, formatLabel } from "@/lib/pricing";
 import { AccountFrame } from "./_parts/AccountFrame";
 
 const ORDER: Record<LibraryItem["state"], number> = { in_progress: 0, not_started: 1, finished: 2 };
@@ -90,7 +90,7 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
       imageUrl={i.work.imageUrl}
       orientation={i.work.orientation}
       number={i.work.number}
-      detail={phone ? `${FORMATS[i.format].label} · ${LEVELS[i.level].label}` : i.detail}
+      detail={phone ? `${formatLabel(i.format, i.work.orientation)} · ${LEVELS[i.level].label}` : i.detail}
       progress={libraryProgress(i)}
       status={status(i)}
       action={action(i)}

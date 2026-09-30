@@ -77,7 +77,7 @@ test("an order paid at checkout shows in the library, the orders and the trackin
     localStorage.setItem(
       "geste.cart.v2",
       JSON.stringify([
-        { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000005", format: "40x50", level: "match", palette: "original" },
+        { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000005", format: "50x60", level: "match", palette: "original" },
         { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-s", quantity: 1 },
       ]),
     ),
@@ -105,7 +105,7 @@ test("an order paid at checkout shows in the library, the orders and the trackin
   await page.goto("/account/orders/");
   const first = page.getByRole("button", { name: /#GS-2042/ });
   await expect(first).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByText("N°05 — Guide, 40×50")).toBeVisible();
+  await expect(page.getByText("N°05 — Guide, 50×60")).toBeVisible();
   await expect(page.getByText(/N°07 — Print S, \d+\/100/).first()).toBeVisible();
   await page.getByRole("link", { name: /^Track/ }).first().click();
   await expect(page).toHaveURL(/\/track\/?\?order=GS-2042/);

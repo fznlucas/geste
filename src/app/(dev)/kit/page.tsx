@@ -25,14 +25,14 @@ import { GrowthKit } from "./_admin/GrowthKit";
 import { getGuide, priceCart, type Guide, type ShoppingListLine, type StoredCartLine } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { asset } from "@/lib/asset";
-import { totalCents, type GuideConfig } from "@/lib/pricing";
+import { canvasCm, formatLabel, totalCents, type GuideConfig } from "@/lib/pricing";
 
 const WORKS = [1, 2, 3, 4, 5].map((n) => ({
   id: `w${n}`, number: `N°0${n}`, slug: `n0${n}`, imageUrl: asset(`mock/work-0${n}.jpg`), imageAlt: `N°0${n}`,
   orientation: (n <= 2 ? "landscape" : "portrait") as "landscape" | "portrait", signature: n === 1,
   imageRatio: [2360 / 1760, 818 / 720, 1064 / 1200, 1001 / 1200, 960 / 1102][n - 1]!,
-  fromPriceCents: [2500, 1500, 2500, 2500, 1900][n - 1]!, defaultFormat: "40x50" as const,
-  levelLabel: ["Beginner", "Beginner", "Intermediate", "Intermediate", "Beginner"][n - 1]!, duration: ["1h30", "1h", "3h30", "2h30", "1h30"][n - 1]!, soldOut: n === 5,
+  fromPriceCents: [2500, 1900, 1900, 1900, 1900][n - 1]!, defaultFormat: (["46x61", "50x60", "50x60", "50x60", "50x60"] as const)[n - 1]!,
+  levelLabel: ["Intermediate", "Advanced", "Intermediate", "Advanced", "Advanced"][n - 1]!, duration: ["2h30", "3h40", "2h30", "3h40", "3h40"][n - 1]!, soldOut: n === 5,
 }));
 const PALETTES = [
   { id: "original", name: "Original", swatches: ["#22A6C9", "#F2B632", "#E8862E"] },
@@ -123,7 +123,7 @@ export default function KitPage() {
   const [pw2, setPw2] = useState("paint");
   const [orderOpen, setOrderOpen] = useState(true);
   const [sw, setSw] = useState(true);
-  const [cfg, setCfg] = useState<GuideConfig>({ format: "60x80", level: "match", palette: "original" });
+  const [cfg, setCfg] = useState<GuideConfig>({ format: "50x60", level: "match", palette: "original" });
   const [added, setAdded] = useState(false);
   const [step, setStep] = useState(7);
   const [printOpen, setPrintOpen] = useState(false);
@@ -251,17 +251,20 @@ export default function KitPage() {
           </State>
           <div className="grid grid-cols-2 gap-40">
             <State label="Price morph · hidden / shown"><div className="flex w-208 flex-col gap-16"><PriceMorph visible={false} meta="Beginner · 1h" price="from $15" /><PriceMorph visible meta="Beginner · 1h" price="from $15" /></div></State>
-            <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} priceCents={totalCents(cfg)} onAdd={() => setAdded(true)} added={added} /></div>
-            <State label="Configurator · landscape work (turned formats), no S print left (option disabled)"><GuideConfigurator value={{ format: "40x50", level: "match", palette: "warm" }} onChange={() => {}} palettes={PALETTES} printAvailable={false} orientation="landscape" priceCents={1900} onAdd={() => {}} /></State>
-            <State label="Product gallery · format and palette follow the configurator above"><ProductGallery workNumber="N°03" imageUrl={asset("mock/work-03.jpg")} filter={{ original: null, warm: "sepia(0.25) saturate(1.25) hue-rotate(-12deg)", cool: "hue-rotate(150deg) saturate(0.9)", earth: "sepia(0.6) saturate(0.8) hue-rotate(-8deg)" }[cfg.palette] ?? null} format={cfg.format} caption={`${cfg.palette} palette, ${cfg.format}`} resultPhotoUrl={null} /></State>
-            <State label="Product gallery · landscape work (N°01), long side follows the format"><ProductGallery workNumber="N°01" imageUrl={asset("mock/work-01.jpg")} filter={null} format={cfg.format} orientation="landscape" caption="Original palette, 50×40" resultPhotoUrl={null} /></State>
-            <State label="Sticky buy bar · phone only (< 1200 px), pinned to the bottom"><StickyBuyBar title="N°03 · 60×80" detail="Guide + list" price="$19" onAdd={() => {}} /></State>
+            <div ref={buy}><GuideConfigurator value={cfg} onChange={setCfg} palettes={PALETTES} formats={["38x46", "50x60", "60x73"]} baseLevel="intermediate" priceCents={totalCents(cfg)} onAdd={() => setAdded(true)} added={added} /></div>
+            <State label="Configurator · landscape work (turned formats), no S print left (option disabled)"><GuideConfigurator value={{ format: "40x50", level: "match", palette: "warm" }} onChange={() => {}} palettes={PALETTES} formats={["24x30", "40x50", "80x100"]} baseLevel="advanced" printAvailable={false} orientation="landscape" priceCents={1900} onAdd={() => {}} /></State>
+            <State label="Configurator · small canvas of an Intermediate work: Beginner, Simplified version"><GuideConfigurator value={{ format: "38x46", level: "match", palette: "original" }} onChange={() => {}} palettes={PALETTES} formats={["38x46", "50x60", "60x73"]} baseLevel="intermediate" priceCents={1500} onAdd={() => {}} /></State>
+            <State label="Configurator · Custom level below the base level: Simplified version"><GuideConfigurator value={{ format: "60x73", level: "beginner", palette: "original" }} onChange={() => {}} palettes={PALETTES} formats={["38x46", "50x60", "60x73"]} baseLevel="intermediate" priceCents={2500} onAdd={() => {}} /></State>
+            <State label="Product gallery · format and palette follow the configurator above"><ProductGallery workNumber="N°03" imageUrl={asset("mock/work-03.jpg")} filter={{ original: null, warm: "sepia(0.25) saturate(1.25) hue-rotate(-12deg)", cool: "hue-rotate(150deg) saturate(0.9)", earth: "sepia(0.6) saturate(0.8) hue-rotate(-8deg)" }[cfg.palette] ?? null} canvasCm={canvasCm(cfg.format)} caption={`${cfg.palette} palette, ${formatLabel(cfg.format)}`} resultPhotoUrl={null} /></State>
+            <State label="Product gallery · landscape work (N°01) on 61×46, same scale as every canvas"><ProductGallery workNumber="N°01" imageUrl={asset("mock/work-01.jpg")} filter={null} canvasCm={canvasCm("46x61", "landscape")} caption="Original palette, 61×46" resultPhotoUrl={null} /></State>
+            <State label="Product gallery · smallest canvas (24×30): raised to 35 % of the ground"><ProductGallery workNumber="N°09" imageUrl={asset("mock/work-09.jpg")} filter={null} canvasCm={canvasCm("24x30")} caption="Original palette, 24×30" resultPhotoUrl={null} /></State>
+            <State label="Sticky buy bar · phone only (< 1200 px), pinned to the bottom"><StickyBuyBar title="N°03 · 50×60" detail="Guide + list" price="$19" onAdd={() => {}} /></State>
             <div className="flex flex-col">
-              <CartLine item={{ id: "1", kind: "guide", title: "N°03 — Guide", detail: "60×80 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 2500, quantity: 1 }} href="#" note="+ shopping list" onRemove={() => {}} />
+              <CartLine item={{ id: "1", kind: "guide", title: "N°03 — Guide", detail: "50×60 · Intermediate · Original", imageUrl: asset("mock/work-03.jpg"), unitPriceCents: 1900, quantity: 1 }} href="#" note="+ shopping list" onRemove={() => {}} />
               <CartLine item={{ id: "2", kind: "print", title: "N°07 — Print", detail: "M · 59 × 42 cm · Edition 13/50", imageUrl: asset("mock/work-07.jpg"), orientation: "landscape", unitPriceCents: 9500, quantity: 1, discountCents: 1425 }} href="#" note="Signed, with certificate" bundleNote="−15% with the guide" onRemove={() => {}} onQuantity={() => {}} maxQuantity={3} />
               <CartLine item={{ id: "3", kind: "print", title: "N°07 — Print", detail: "S · 42 × 30 cm · Sold out", imageUrl: asset("mock/work-07.jpg"), orientation: "landscape", unitPriceCents: 5500, quantity: 1 }} issue="Sold out, not counted" onRemove={() => {}} />
-              <CartLine size="lg" item={{ id: "4", kind: "guide", title: "N°07 — Guide", detail: "40×30 · Beginner · Original", imageUrl: asset("mock/work-07.jpg"), orientation: "landscape", unitPriceCents: 1500, quantity: 1, discountCents: 225 }} href="#" note="+ shopping list" bundleNote="−15% with the print" onRemove={() => {}} />
-              <div className="pt-16"><CartSummary hasPhysical totals={{ subtotalCents: 13500, discountCents: 1650, discountLabel: "Guide + print −15%", shippingCents: null, totalCents: 11850 }} /></div>
+              <CartLine size="lg" item={{ id: "4", kind: "guide", title: "N°07 — Guide", detail: "30×24 · Intermediate · Original", imageUrl: asset("mock/work-07.jpg"), orientation: "landscape", unitPriceCents: 1500, quantity: 1, discountCents: 225, simplified: true }} href="#" note="+ shopping list" bundleNote="−15% with the print" onRemove={() => {}} />
+              <div className="pt-16"><CartSummary hasPhysical totals={{ subtotalCents: 12900, discountCents: 1650, discountLabel: "Guide + print −15%", shippingCents: null, totalCents: 11250 }} /></div>
             </div>
             <div className="flex flex-col gap-24">
               <State label="Checkout stepper · on payment, shipping incomplete (desktop)"><CheckoutStepper steps={["contact", "shipping", "payment", "confirmation"]} current="payment" clickable={["contact", "shipping", "payment"]} errors={["shipping"]} onGo={() => {}} /></State>

@@ -19,14 +19,13 @@ import { useAdminQuery } from "@/lib/client";
 import { STATUS_LABEL, markStudioTested, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
-import { BUNDLE_DISCOUNT_PCT, LEVELS, SIGNATURE_CENTS, formatLabel, printCm, type Orientation } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, CANVASES, LEVELS, LEVEL_ORDER, PROPORTION_ORDER, SIGNATURE_CENTS, defaultLevel, estimatedTime, formatLabel, formatsOf, printCm, type Orientation, type Proportion } from "@/lib/pricing";
 import { AdminPage } from "../../../_admin/AdminPage";
 import { useAdmin } from "../../../_admin/AdminFrame";
 
 const TABS = ["General", "Formats & prices", "Palettes", "Shopping list", "Prints", "SEO"] as const;
 type Tab = (typeof TABS)[number];
 const STATUSES: WorkStatus[] = ["live", "draft", "scheduled", "archived"];
-const LEVEL_KEYS = Object.keys(LEVELS) as LevelKey[];
 
 /** "$12", "$3.5" (the boards drop trailing zeros). */
 const money = (cents: number) => `$${Number((cents / 100).toFixed(2))}`;
@@ -40,7 +39,9 @@ interface Form {
   signature: boolean;
   seoTitle: string;
   seoDescription: string;
-  formats: Array<{ format: WorkDraft["formats"][number]["format"]; defaultLevel: LevelKey; price: string; active: boolean }>;
+  proportion: Proportion;
+  baseLevel: LevelKey;
+  formats: Array<{ format: WorkDraft["formats"][number]["format"]; price: string; active: boolean }>;
   palettes: WorkDraft["palettes"];
   shoppingList: WorkDraft["shoppingList"];
   editions: Array<{ size: WorkDraft["editions"][number]["size"]; editionId: string | null; editionSize: string; price: string }>;
@@ -54,7 +55,9 @@ const toForm = (w: AdminWorkDetail): Form => ({
   signature: w.signature,
   seoTitle: w.seoTitle,
   seoDescription: w.seoDescription,
-  formats: w.formats.map((f) => ({ format: f.format, defaultLevel: f.defaultLevel, price: money(f.priceCents), active: f.active })),
+  proportion: w.proportion,
+  baseLevel: w.baseLevel,
+  formats: w.formats.map((f) => ({ format: f.format, price: money(f.priceCents), active: f.active })),
   palettes: w.palettes.map((p) => ({ key: p.key, active: p.active })),
   shoppingList: w.shoppingList.map((i) => ({ position: i.position, url: i.url })),
   editions: w.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: String(e.editionSize), price: money(e.priceCents) })),
@@ -111,7 +114,9 @@ function Editor({ work }: { work: AdminWorkDetail }) {
         signature: form.signature,
         seoTitle: form.seoTitle,
         seoDescription: form.seoDescription,
-        formats: form.formats.map((f) => ({ format: f.format, defaultLevel: f.defaultLevel, priceCents: parseMoney(f.price), active: f.active })),
+        proportion: form.proportion,
+        baseLevel: form.baseLevel,
+        formats: form.formats.map((f) => ({ format: f.format, priceCents: parseMoney(f.price), active: f.active })),
         palettes: form.palettes,
         shoppingList: form.shoppingList,
         editions: form.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: Number(e.editionSize), priceCents: parseMoney(e.price) })),
@@ -306,8 +311,32 @@ const FORMAT_COLS = "90px 140px 110px 110px 90px 1fr";
 function Formats({ work, form, edit }: TabProps) {
   const set = (i: number, patch: Partial<Form["formats"][number]>) => edit({ formats: form.formats.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
   const [custom, setCustom] = useState(true);
+  const { desktop } = useAdmin();
+  // Another proportion sells its own three canvases: their stored price when the work had them, else the default.
+  const setProportion = (proportion: Proportion) =>
+    edit({
+      proportion,
+      formats: formatsOf(proportion).map((format) => {
+        const had = work.formats.find((f) => f.format === format);
+        return { format, price: money(had?.priceCents ?? CANVASES[format].guideCents), active: had?.active ?? true };
+      }),
+    });
   return (
     <div className="flex flex-col gap-14 overflow-x-auto">
+      <div className={cn("grid gap-14", desktop ? "grid-cols-3" : "grid-cols-1")}>
+        {/* The work's own ratio: its three stock canvases (a nearly square image is cropped at the centre). */}
+        <Field label="Proportion">
+          <Select value={form.proportion} onChange={(e) => setProportion(e.target.value as Proportion)}>
+            {PROPORTION_ORDER.map((p) => <option key={p} value={p}>{p} · {formatsOf(p).map((f) => formatLabel(f, form.orientation)).join(" · ")}</option>)}
+          </Select>
+        </Field>
+        {/* By complexity. Small: one level below, large: one above. Below it a guide is a simplified version. */}
+        <Field label="Base level (medium)">
+          <Select value={form.baseLevel} onChange={(e) => edit({ baseLevel: e.target.value as LevelKey })}>
+            {LEVEL_ORDER.map((l) => <option key={l} value={l}>{LEVELS[l].label}</option>)}
+          </Select>
+        </Field>
+      </div>
       <div role="table" aria-label="Formats and prices" className="min-w-640 flex flex-col gap-14">
         <AdminHeadRow cols={FORMAT_COLS}>
           <span role="columnheader">Format</span>
@@ -318,7 +347,7 @@ function Formats({ work, form, edit }: TabProps) {
           <span role="columnheader">Available</span>
         </AdminHeadRow>
         {form.formats.map((f, i) => {
-          const base = work.formats[i]!;
+          const level = defaultLevel(f.format, form.baseLevel);
           // The form's orientation, so the labels turn before saving ("80×60" for a landscape work).
           const label = formatLabel(f.format, form.orientation);
           const cents = parseMoney(f.price);
@@ -326,16 +355,12 @@ function Formats({ work, form, edit }: TabProps) {
           return (
             <AdminRow key={f.format} cols={FORMAT_COLS}>
               <span role="cell">{label}</span>
-              <span role="cell">
-                <select aria-label={`Default level ${label}`} value={f.defaultLevel} onChange={(e) => set(i, { defaultLevel: e.target.value as LevelKey })} className={smallField}>
-                  {LEVEL_KEYS.map((l) => <option key={l} value={l}>{LEVELS[l].label}</option>)}
-                </select>
-              </span>
+              <span role="cell">{LEVELS[level].label}</span>
               <span role="cell">
                 <input aria-label={`Price ${label}`} aria-invalid={invalid || undefined} value={f.price} onChange={(e) => set(i, { price: e.target.value })} className={fieldClass(invalid).replace("min-h-44", "min-h-32")} />
               </span>
               <span role="cell" className="tabular-nums">{invalid ? "—" : money(cents + (form.signature ? SIGNATURE_CENTS : 0))}</span>
-              <span role="cell">{f.defaultLevel === base.defaultLevel ? base.duration : "—"}</span>
+              <span role="cell">~{estimatedTime(f.format, level)}</span>
               <span role="cell">
                 <Checkbox layout="setting" gap="gap-10" label="On sale" checked={f.active} onChange={(e) => set(i, { active: e.target.checked })} />
               </span>

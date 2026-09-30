@@ -6,7 +6,7 @@
  * The store pages are built at deploy time and do not show these edits (docs/mock-plan.md §6).
  */
 import { MOCK_NOW, formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
-import type { Orientation } from "@/lib/pricing";
+import { mediumFormat, type Orientation, type Proportion } from "@/lib/pricing";
 import { insertRow, patchRow, requireStaff } from "../admin";
 
 export interface WorkDraft {
@@ -17,7 +17,10 @@ export interface WorkDraft {
   signature: boolean;
   seoTitle: string;
   seoDescription: string;
-  formats: Array<{ format: FormatKey; defaultLevel: LevelKey; priceCents: number; active: boolean }>;
+  /** Its three canvases (Formats & prices); the default level of each follows the base level. */
+  proportion: Proportion;
+  baseLevel: LevelKey;
+  formats: Array<{ format: FormatKey; priceCents: number; active: boolean }>;
   palettes: Array<{ key: PaletteKey; active: boolean }>;
   shoppingList: Array<{ position: number; url: string }>;
   editions: Array<{ size: PrintSize; editionId: string | null; editionSize: number; priceCents: number }>;
@@ -29,7 +32,7 @@ export const STATUS_LABEL: Record<WorkStatus, string> = { live: "Live", draft: "
 function changedTabs(before: AdminWorkDetail, d: WorkDraft): string[] {
   const tabs: string[] = [];
   if (d.description !== before.description || d.orientation !== before.orientation) tabs.push("General");
-  if (d.signature !== before.signature || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format)!; return b.defaultLevel !== f.defaultLevel || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
+  if (d.signature !== before.signature || d.proportion !== before.proportion || d.baseLevel !== before.baseLevel || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format); return !b || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
   if (d.palettes.some((p) => before.palettes.find((x) => x.key === p.key)?.active !== p.active)) tabs.push("Palettes");
   if (d.shoppingList.some((i) => before.shoppingList.find((x) => x.position === i.position)?.url !== i.url)) tabs.push("Shopping list");
   if (d.editions.some((e) => { const b = before.editions.find((x) => x.size === e.size)!; return e.editionId && (b.editionSize !== e.editionSize || b.priceCents !== e.priceCents); })) tabs.push("Prints");
@@ -51,10 +54,10 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   const tabs = changedTabs(before, draft);
   if (!tabs.length) return [];
   const id = before.id;
-  patchRow("works", id, { description: draft.description.trim(), orientation: draft.orientation, signature: draft.signature, seoTitle: draft.seoTitle.trim(), seoDescription: draft.seoDescription.trim() });
+  patchRow("works", id, { description: draft.description.trim(), orientation: draft.orientation, signature: draft.signature, proportion: draft.proportion, baseLevel: draft.baseLevel, defaultFormat: mediumFormat(draft.proportion), seoTitle: draft.seoTitle.trim(), seoDescription: draft.seoDescription.trim() });
   for (const f of draft.formats) {
     // Stored for any level; the Signature supplement is added by pricing.ts.
-    patchRow("work_formats", formatRowId(id, f.format), { defaultLevel: f.defaultLevel, guidePriceCents: f.priceCents, active: f.active });
+    patchRow("work_formats", formatRowId(id, f.format), { guidePriceCents: f.priceCents, active: f.active });
   }
   for (const p of draft.palettes) patchRow("palettes", paletteRowId(id, p.key), { active: p.active });
   for (const i of draft.shoppingList) patchRow("shopping_items", listRowId(id, i.position), { url: i.url.trim() });
@@ -97,7 +100,7 @@ export async function markStudioTested(slug: string) {
   patchRow("works", work.id, { studioTested: true }, { action: "work.studio_test", target: `work:${slug}`, summary: `${staff.fullName} uploaded the studio test of ${work.number}` });
 }
 
-/** "New work": a draft with the next number, the four formats and the Original palette. Returns its slug. */
+/** "New work": a draft with the next number, the three 4:5 canvases and the Original palette. Returns its slug. */
 export async function createWork(): Promise<string> {
   const staff = requireStaff("content");
   const all = await getAdminWorks();
@@ -113,6 +116,8 @@ export async function createWork(): Promise<string> {
       status: "draft",
       publishAt: null,
       defaultFormat: "40x50",
+      proportion: "4:5",
+      baseLevel: "intermediate",
       orientation: "portrait",
       signature: false,
       previewWidth: 0,

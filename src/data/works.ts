@@ -1,15 +1,30 @@
 /**
- * The 15 works of the canvas, on the 15 images of public/mock. Default formats come from the
- * Product01–15 boards; prices, levels and times are never written here: they come from
- * src/lib/pricing.ts. N°03 is supabase/seed.sql (ids included).
+ * The 15 works of the canvas, on the 15 images of public/mock. Each work keeps its own proportion and
+ * sells the three stock canvases of that family (pricing.ts PROPORTIONS); prices, levels and times are
+ * never written here: they come from src/lib/pricing.ts. N°03 is supabase/seed.sql (ids included).
  */
-import { FORMATS, LEVELS, formatCm, guidePriceCents, type FormatKey, type Orientation } from "@/lib/pricing";
+import { CANVASES, LEVELS, defaultLevel, estimatedMinutes, formatsOf, guidePriceCents, mediumFormat, type LevelKey, type Orientation, type Proportion, type QuantityKind } from "@/lib/pricing";
 import type { PaletteKey, PaletteRow, ShoppingItemRow, Swatch, WorkFormatRow, WorkRow } from "./types";
 
-const DEFAULT_FORMATS: FormatKey[] = [
-  "40x50", "30x40", "60x80", "60x80", "40x50",
-  "60x80", "30x40", "80x100", "30x40", "40x50",
-  "60x80", "30x40", "80x100", "40x50", "30x40",
+/**
+ * Proportion family of each work, the nearest to its image (docs/decisions.md "Formats by work").
+ * N°02, 03, 05, 08 and 14 are almost square: they are cropped at the centre to 5:6, about 5 % of the image.
+ */
+const PROPORTION: Proportion[] = [
+  "3:4", "5:6", "5:6", "5:6", "5:6",
+  "3:4", "4:5", "5:6", "4:5", "4:5",
+  "3:4", "5:6", "5:6", "5:6", "4:5",
+];
+
+/**
+ * Base level of each work, by its complexity: the level of its medium canvas. N°15 is Intermediate,
+ * not Beginner as briefed: its ground is a wet blend of orange into turquoise, complementary colours
+ * that turn to mud without some practice (docs/decisions.md "Levels").
+ */
+const BASE_LEVEL: LevelKey[] = [
+  "intermediate", "advanced", "intermediate", "advanced", "advanced",
+  "intermediate", "advanced", "advanced", "intermediate", "advanced",
+  "beginner", "beginner", "intermediate", "advanced", "intermediate",
 ];
 
 /** Pixel size of public/mock/work-01 … 15.jpg (works.preview_width / preview_height). */
@@ -62,20 +77,22 @@ const DESCRIPTIONS: string[] = [
 const pad = (n: number) => String(n).padStart(2, "0");
 export const workId = (n: number) => `00000000-0000-0000-0000-0000000000${pad(n)}`;
 
-export const works: WorkRow[] = DEFAULT_FORMATS.map((defaultFormat, i) => {
+export const works: WorkRow[] = PROPORTION.map((proportion, i) => {
   const n = i + 1;
-  const level = FORMATS[defaultFormat].defaultLevel;
+  const level = BASE_LEVEL[i]!;
   const article = level === "intermediate" || level === "advanced" ? "An" : "A";
   const signature = SIGNATURE.has(n);
-  // Cheapest format of the work, as on the cards' "from" price.
-  const from = guidePriceCents("30x40", { signature }) / 100;
+  // Cheapest canvas of the work (its small one): the SEO line's "from".
+  const from = guidePriceCents(formatsOf(proportion)[0]!, { signature }) / 100;
   return {
     id: workId(n),
     number: `N°${pad(n)}`,
     slug: `n${pad(n)}`,
     status: "live",
     publishAt: null,
-    defaultFormat,
+    defaultFormat: mediumFormat(proportion),
+    proportion,
+    baseLevel: level,
     orientation: (LANDSCAPE.has(n) ? "landscape" : "portrait") as Orientation,
     signature,
     description: DESCRIPTIONS[i]!,
@@ -91,19 +108,15 @@ export const works: WorkRow[] = DEFAULT_FORMATS.map((defaultFormat, i) => {
   };
 });
 
-/** Every work sells the four formats at the pricing.ts defaults (seed: est_minutes at the default level). */
+/** Every work sells the three canvases of its proportion at the pricing.ts defaults (est_minutes at the default level). */
 export const workFormats: WorkFormatRow[] = works.flatMap((w) =>
-  (Object.keys(FORMATS) as FormatKey[]).map((format) => {
-    const f = FORMATS[format];
-    return {
-      workId: w.id,
-      format,
-      defaultLevel: f.defaultLevel,
-      guidePriceCents: f.guideCents,
-      estMinutes: Math.round((f.baseMinutes * LEVELS[f.defaultLevel].timeFactor) / 10) * 10,
-      active: true,
-    };
-  }),
+  formatsOf(w.proportion).map((format) => ({
+    workId: w.id,
+    format,
+    guidePriceCents: CANVASES[format].guideCents,
+    estMinutes: estimatedMinutes(format, defaultLevel(format, w.baseLevel)),
+    active: true,
+  })),
 );
 
 type Sw = [hex: string, name: string];
@@ -190,28 +203,24 @@ export const palettes: PaletteRow[] = works.flatMap((w, i) => {
   }));
 });
 
-const TUBE_RULE = { "30x40": "20 ml", "40x50": "40 ml", "60x80": "60 ml", "80x100": "120 ml" } as const;
-const WHITE_RULE = { "30x40": "40 ml", "40x50": "80 ml", "60x80": "120 ml", "80x100": "250 ml" } as const;
-const canvasRule = (orientation: Orientation) =>
-  Object.fromEntries((Object.keys(FORMATS) as FormatKey[]).map((f) => [f, formatCm(f, orientation)])) as Record<FormatKey, string>;
 const STD_URL = "https://partner.example/std?ref=geste";
 const BUDGET_URL = "https://partner.example/budget?ref=geste";
 
-type ListRow = [name: string, standard: string, budget: string, stdCents: number, budgetCents: number, rule: Record<FormatKey, string> | null];
+type ListRow = [name: string, standard: string, budget: string, stdCents: number, budgetCents: number, kind: QuantityKind | null];
 
 /**
- * Shopping list of a work (ShoppingList board, prices as drawn): the canvas in the work's
- * orientation, its five tubes (the Original palette and one more), white, the brushes.
+ * Shopping list of a work (ShoppingList board, prices as drawn): the canvas (turned for a landscape
+ * work when the list is read), its five tubes (the Original palette and one more), white, the brushes.
  */
-function listOf(n: number, orientation: Orientation): ListRow[] {
+function listOf(n: number): ListRow[] {
   const tubes: Sw[] = n === 3
     // N°03: the order of its guide's tubes (seed).
     ? [["#F2B632", "Cadmium yellow"], ["#E8862E", "Orange"], ["#22A6C9", "Turquoise"], EXTRA_TUBE[3]!, ["#1F2433", "Payne’s grey"]]
     : [...ORIGINAL[n]!, EXTRA_TUBE[n]!];
   return [
-    ["Canvas", "Primed cotton canvas {q}, stretched", "Unprimed roll + 4 stretcher bars", 2400, 1400, canvasRule(orientation)],
-    ...tubes.map(([, name]): ListRow => [name, "Acrylic, {q}", "Student range, 75 ml", 700, 350, TUBE_RULE]),
-    ["Titanium white", "Acrylic, {q}", "Student range, 120 ml", 900, 450, WHITE_RULE],
+    ["Canvas", "Primed cotton canvas {q}, stretched", "Unprimed roll + 4 stretcher bars", 2400, 1400, "canvas"],
+    ...tubes.map(([, name]): ListRow => [name, "Acrylic, {q}", "Student range, 75 ml", 700, 350, "tube"]),
+    ["Titanium white", "Acrylic, {q}", "Student range, 120 ml", 900, 450, "white"],
     ["Flat brush 50 mm", "Synthetic, long handle", "Decorating brush 50 mm", 800, 300, null],
     ["Flat brush 25 mm", "Synthetic, long handle", "Decorating brush 25 mm", 600, 250, null],
     ["Round brush n°6", "Synthetic", "Round n°6, any range", 400, 200, null],
@@ -220,8 +229,8 @@ function listOf(n: number, orientation: Orientation): ListRow[] {
 }
 
 export const shoppingItems: ShoppingItemRow[] = works.flatMap((w, i) =>
-  listOf(i + 1, w.orientation).map(([name, standardLabel, budgetLabel, standardCents, budgetCents, quantityRule], position) => ({
-    workId: w.id, position, name, standardLabel, budgetLabel, standardCents, budgetCents, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityRule,
+  listOf(i + 1).map(([name, standardLabel, budgetLabel, standardCents, budgetCents, quantityKind], position) => ({
+    workId: w.id, position, name, standardLabel, budgetLabel, standardCents, budgetCents, standardUrl: STD_URL, budgetUrl: BUDGET_URL, quantityKind,
   })),
 );
 

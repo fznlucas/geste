@@ -28,7 +28,7 @@ export async function getArticle(slug: string): Promise<ArticleDetail | null> {
   return clone({
     ...mapArticle(row),
     body: row.body,
-    cta: row.cta && work ? { text: row.cta.text, work: { number: work.number, slug: work.slug, duration: estimatedTime({ format: work.defaultFormat, level: "match", palette: "original" }) } } : null,
+    cta: row.cta && work ? { text: row.cta.text, work: { number: work.number, slug: work.slug, duration: estimatedTime(work.defaultFormat, work.baseLevel) } } : null,
   });
 }
 

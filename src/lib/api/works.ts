@@ -3,7 +3,7 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, estimatedTime, formatLabel, guidePriceCents, imageRatio, printCm, type FormatKey, type LevelKey, type Orientation, type PrintSize, type WorkPricing } from "@/lib/pricing";
+import { CANVASES, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind, type WorkPricing } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
 import { guides } from "@/data/guides";
@@ -31,18 +31,23 @@ export function minGuidePriceCents(workId: string): number {
 
 export function mapWork(row: WorkRow): CatalogWork {
   const pricing = workPricing(row);
-  const formats: WorkFormat[] = workFormats
-    .filter((f) => f.workId === row.id)
-    .map((f) => ({
-      format: f.format,
-      label: formatLabel(f.format, row.orientation),
-      defaultLevel: f.defaultLevel,
-      levelLabel: LEVELS[f.defaultLevel].label,
-      layers: LEVELS[f.defaultLevel].layers,
-      priceCents: guidePriceCents(f.format, pricing),
-      duration: estimatedTime({ format: f.format, level: "match", palette: "original" }),
-      active: f.active,
-    }));
+  const formats: WorkFormat[] = formatsOf(row.proportion)
+    .map((format) => workFormats.find((f) => f.workId === row.id && f.format === format))
+    .filter((f) => f !== undefined)
+    .map((f) => {
+      const level = defaultLevel(f.format, row.baseLevel);
+      return {
+        format: f.format,
+        label: formatLabel(f.format, row.orientation),
+        cm: canvasCm(f.format, row.orientation),
+        defaultLevel: level,
+        levelLabel: LEVELS[level].label,
+        layers: LEVELS[level].layers,
+        priceCents: guidePriceCents(f.format, pricing),
+        duration: estimatedTime(f.format, level),
+        active: f.active,
+      };
+    });
   const card = formats.find((f) => f.format === row.defaultFormat)!;
   const sold = orders
     .filter((o) => o.status !== "refunded" && o.status !== "cancelled")
@@ -66,6 +71,8 @@ export function mapWork(row: WorkRow): CatalogWork {
     seoDescription: row.seoDescription,
     sortOrder: row.sortOrder,
     defaultFormat: row.defaultFormat,
+    proportion: row.proportion,
+    baseLevel: row.baseLevel,
     formats,
     palettes: palettes
       .filter((p) => p.workId === row.id && p.active)
@@ -85,7 +92,7 @@ export async function getWorks(query: WorksQuery = {}): Promise<CatalogWork[]> {
     works
       .filter((w) => status === "all" || w.status === status)
       .map(mapWork)
-      .filter((w) => !query.level || FORMATS[w.defaultFormat].defaultLevel === query.level)
+      .filter((w) => !query.level || w.baseLevel === query.level)
       .filter((w) => !query.palette || w.palettes.some((p) => p.key === query.palette))
       .sort((a, b) => a.sortOrder - b.sortOrder),
   );
@@ -108,9 +115,10 @@ export async function getHomeHeroWork(): Promise<CatalogWork | null> {
   return getWork(HOME_HERO_WORK);
 }
 
-/** Shopping list of a work (board ShoppingList), labels scaled to the format. */
+/** Shopping list of a work (board ShoppingList), quantities scaled to the canvas's surface. */
 export async function getShoppingList(workId: string, format: FormatKey): Promise<ShoppingListLine[]> {
-  const fill = (label: string, rule: Record<FormatKey, string> | null) => (rule ? label.replace("{q}", rule[format]) : label);
+  const orientation = works.find((w) => w.id === workId)?.orientation ?? "portrait";
+  const fill = (label: string, kind: QuantityKind | null) => (kind ? label.replace("{q}", quantityLabel(kind, format, orientation)) : label);
   return clone(
     shoppingItems
       .filter((i) => i.workId === workId)
@@ -118,8 +126,8 @@ export async function getShoppingList(workId: string, format: FormatKey): Promis
       .map((i) => ({
         position: i.position,
         name: i.name,
-        standard: { label: fill(i.standardLabel, i.quantityRule), priceCents: i.standardCents, url: i.standardUrl },
-        budget: { label: fill(i.budgetLabel, i.quantityRule), priceCents: i.budgetCents, url: i.budgetUrl },
+        standard: { label: fill(i.standardLabel, i.quantityKind), priceCents: i.standardCents, url: i.standardUrl },
+        budget: { label: fill(i.budgetLabel, i.quantityKind), priceCents: i.budgetCents, url: i.budgetUrl },
       })),
   );
 }
@@ -196,6 +204,7 @@ export interface AdminWorkFormat {
   format: FormatKey;
   /** "60×80", "80×60" for a landscape work. */
   label: string;
+  /** Set by the size and the work's base level (pricing.ts defaultLevel), not stored. */
   defaultLevel: LevelKey;
   /** Stored guide price for any level (`work_formats.guide_price_cents`), before the Signature supplement. */
   priceCents: number;
@@ -259,6 +268,8 @@ export interface AdminWork {
   seoDescription: string;
   sortOrder: number;
   defaultFormat: FormatKey;
+  proportion: Proportion;
+  baseLevel: LevelKey;
   orientation: Orientation;
   signature: boolean;
   formatLabel: string;
@@ -281,28 +292,37 @@ export interface AdminWorkDetail extends AdminWork {
   resultCandidates: Array<{ reviewId: string; photoPath: string; photoUrl: string; customerName: string }>;
 }
 
-const workFormatRows = (workId: string) => {
-  const own = workFormats.filter((f) => f.workId === workId);
-  const rows = own.length
-    ? own
-    : (Object.keys(FORMATS) as FormatKey[]).map((format) => ({ workId, format, defaultLevel: FORMATS[format].defaultLevel as LevelKey, guidePriceCents: FORMATS[format].guideCents as number, estMinutes: 0, active: true }));
-  return rows.map((r) => patched("work_formats", { ...r, id: formatRowId(workId, r.format) }));
-};
+/** A draft created in the admin before its proportion or level is set. */
+const DRAFT_PROPORTION: Proportion = "4:5";
+const DRAFT_LEVEL: LevelKey = "intermediate";
 
-function adminFormats(workId: string, orientation: Orientation): AdminWorkFormat[] {
-  return workFormatRows(workId).map((f) => ({
-    format: f.format,
-    label: formatLabel(f.format, orientation),
-    defaultLevel: f.defaultLevel,
-    priceCents: f.guidePriceCents,
-    duration: `~${estimatedTime({ format: f.format, level: f.defaultLevel, palette: "original" })}`,
-    active: f.active,
-  }));
+/** The three canvases of the work's proportion: its own rows, or the defaults (a draft, a proportion just changed). */
+const workFormatRows = (workId: string, proportion: Proportion) =>
+  formatsOf(proportion).map((format) => {
+    const own = workFormats.find((f) => f.workId === workId && f.format === format);
+    const row = own ?? { workId, format, guidePriceCents: CANVASES[format].guideCents, estMinutes: 0, active: true };
+    return patched("work_formats", { ...row, id: formatRowId(workId, format) });
+  });
+
+function adminFormats(workId: string, proportion: Proportion, baseLevel: LevelKey, orientation: Orientation): AdminWorkFormat[] {
+  return workFormatRows(workId, proportion).map((f) => {
+    const level = defaultLevel(f.format, baseLevel);
+    return {
+      format: f.format,
+      label: formatLabel(f.format, orientation),
+      defaultLevel: level,
+      priceCents: f.guidePriceCents,
+      duration: `~${estimatedTime(f.format, level)}`,
+      active: f.active,
+    };
+  });
 }
 
 function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
-  const format = workFormatRows(row.id).find((f) => f.format === row.defaultFormat);
-  const level = format?.defaultLevel ?? FORMATS[row.defaultFormat].defaultLevel;
+  const proportion = row.proportion ?? DRAFT_PROPORTION;
+  const baseLevel = row.baseLevel ?? DRAFT_LEVEL;
+  // The medium canvas of the proportion (the stored default may be of the proportion before a change).
+  const defaultFormat = formatsOf(proportion)[1]!;
   const sold = allOrders()
     .filter((o) => o.status !== "refunded" && o.status !== "cancelled")
     .flatMap((o) => o.items)
@@ -321,11 +341,13 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     seoTitle: row.seoTitle ?? "",
     seoDescription: row.seoDescription ?? "",
     sortOrder: row.sortOrder,
-    defaultFormat: row.defaultFormat,
+    defaultFormat,
+    proportion,
+    baseLevel,
     orientation: row.orientation ?? "portrait",
     signature: !!row.signature,
-    formatLabel: formatLabel(row.defaultFormat, row.orientation ?? "portrait"),
-    levelLabel: LEVELS[level].label,
+    formatLabel: formatLabel(defaultFormat, row.orientation ?? "portrait"),
+    levelLabel: LEVELS[baseLevel].label,
     soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
     isDraftCreated,
     editorHref: isDraftCreated ? `/admin/works/draft?slug=${row.slug}` : `/admin/works/${row.slug}`,
@@ -345,8 +367,8 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
   const row = allWorks().find((w) => w.slug === slug);
   if (!row) return null;
   const work = mapAdminWork(row, createdWorkIds());
-  const formats = adminFormats(row.id, work.orientation);
-  const def = formats.find((f) => f.format === row.defaultFormat)!;
+  const formats = adminFormats(row.id, work.proportion, work.baseLevel, work.orientation);
+  const def = formats.find((f) => f.format === work.defaultFormat)!;
 
   const paletteRows = palettes.filter((p) => p.workId === row.id);
   const workPalettes: AdminWorkPalette[] = (paletteRows.length ? paletteRows : [{ key: "original" as PaletteKey, name: "Original", swatches: palettes[0]!.swatches, active: true }])
@@ -357,7 +379,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
     .filter((i) => i.workId === row.id)
     .sort((a, b) => a.position - b.position)
     .map((i) => {
-      const q = i.quantityRule?.[row.defaultFormat];
+      const q = i.quantityKind ? quantityLabel(i.quantityKind, work.defaultFormat, work.orientation) : null;
       const fill = (label: string) => (q ? label.replace("{q}", q) : label);
       const p = patched("shopping_items", { id: listRowId(row.id, i.position), url: i.standardUrl });
       return { id: p.id, position: i.position, name: q ? `${i.name} ${q}` : i.name, choices: `${fill(i.standardLabel)} / ${fill(i.budgetLabel)}`, standardCents: i.standardCents, budgetCents: i.budgetCents, url: p.url };
@@ -372,7 +394,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
       : { size, dimensions, editionId: null, editionSize: PRINT_SIZES[size].editionSize, priceCents: PRINT_SIZES[size].priceCents, open: false, sold: 0 };
   });
 
-  const guideRow = guides.find((g) => g.workId === row.id && g.format === row.defaultFormat && g.level === def.defaultLevel);
+  const guideRow = guides.find((g) => g.workId === row.id && g.format === work.defaultFormat && g.level === def.defaultLevel);
   const editor = guideRow ? await getGuideEditor(guideRow.id) : null;
   const guide = guideRow && editor && editor.published.version > 0
     ? {

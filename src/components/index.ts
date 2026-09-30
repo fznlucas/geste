@@ -47,6 +47,7 @@ export * from "./commerce/ProportionalGrid";
 export * from "./commerce/PrintPaper";
 export * from "./commerce/PrintScale";
 export * from "./commerce/ProductGallery";
+export * from "./commerce/stageScale";
 export * from "./commerce/GuideConfigurator";
 export * from "./commerce/StickyBuyBar";
 export * from "./commerce/CartLine";

@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Button, EditionCounter, PrintCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Segmented } from "@/components";
+import { Button, EditionCounter, PrintCard, PrintPaper, PrintScale, ProportionalGrid, SHEET_RATIO, Segmented, stageStyle } from "@/components";
 import type { PrintSize } from "@/lib/api";
 import { addToCart } from "@/lib/client";
 import { formatPrice, fromPrice } from "@/lib/format";
 import { duration } from "@/lib/motion";
 import { PRINT_SIZES, PRINT_SIZE_ORDER } from "@/lib/pricing";
+
+/** The largest sheet (L, 50×70): its long side sets the print page's scale. */
+const LARGEST_PRINT_CM = Math.max(...Object.values(PRINT_SIZES).map((s) => s.cm[1]));
 import type { PrintPageData } from "./data";
 
 const sizeKey = (s: PrintSize) => s.toLowerCase(); // ?size=m
@@ -42,6 +45,9 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
   const edition = picked.nextNumber === null ? "Sold out" : `${picked.nextNumber} of ${picked.editionSize}`;
   // "30 × 42 cm · A3"; L has no paper name of its own ("50×70").
   const paper = PRINT_SIZES[picked.size].paper;
+  // The sheet in cm, turned for a landscape work.
+  const [short, long] = PRINT_SIZES[picked.size].cm;
+  const sheet: [number, number] = picked.orientation === "landscape" ? [long, short] : [short, long];
   const dims = paper.includes("×") ? picked.dimensions : `${picked.dimensions} · ${paper}`;
   const rows: Array<[string, string, string | null]> = [
     ["Edition", edition, edition],
@@ -64,16 +70,22 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
         <div className="flex flex-col gap-20 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-40">
           <div className="flex flex-col gap-22 lg:col-span-7 lg:gap-14">
             {view === "print" ? (
-              // The print as a Sand sheet straight on the page, centred in the board's 760 px area.
-              <div className="flex items-center justify-center lg:h-760">
+              // Board Print / MPrint: the Sand ground (760 px high on 7 columns, 395 px on phones), always the
+              // same size; the white sheet at its paper's proportions and at the catalog's common scale (L fills
+              // the inner 80 %), the work whole inside it.
+              <div data-stage className="flex h-395 items-center justify-center bg-surface-sunk @container-[size] lg:h-760">
                 <PrintPaper
                   imageUrl={picked.imageUrl}
                   alt={`${work.number}, limited print`}
                   orientation={picked.orientation}
                   caption={`${work.number} · ${picked.nextNumber ?? picked.editionSize}/${picked.editionSize}`}
                   captionAlways
-                  className={picked.orientation === "landscape" ? "w-full" : "w-256 lg:w-486"}
-                  sizes="(min-width: 1200px) 640px, 100vw"
+                  tone="white"
+                  ratio={sheet[0] / sheet[1]}
+                  style={stageStyle(sheet, LARGEST_PRINT_CM)}
+                  className="shrink-0 transition-[height] duration-base ease-standard motion-reduce:transition-none"
+                  dataSheet
+                  sizes="(min-width: 1200px) 560px, 290px"
                   priority
                 />
               </div>

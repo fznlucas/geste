@@ -756,14 +756,14 @@ export interface GuideConfiguratorProps {
 
 `src/components/commerce/ProductGallery.tsx` · used on Product, MProduct
 
-**ProductGallery** — The work straight on the page (no Mist box), whole, with a "Digital preview" / "Real result" badge on its corner and the views "Preview · Real result" below (desktop adds the caption "Original palette, 60×80" on the right). Desktop: 720 px area; the render's long side follows the format (440 / 520 / 580 / 660 px: height portrait, width landscape) and its CSS filter the palette, both animating 420 ms. Phone: full width (landscape) or up to 440 px tall (portrait). Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
+**ProductGallery** — The Mist ground of the boards (7 columns × 720 px on desktop, full width × 440 px on phones), always the same size, the "Digital preview" / "Real result" badge in its top-left corner (16 px, 10 px on phones) and the views "Preview · Real result" below (desktop adds the caption "Original palette, 50×60" on the right). The preview is the selected canvas at its exact proportions (the image covers it, centred), drawn in centimetres on the catalog's common scale (`stageStyle`, `stageScale.ts`): the largest canvas (80×100, either way) fits the inner 80 % of the ground, every other canvas is reduced in the same proportion, never under 35 % of the ground's height. Size and palette filter animate (`duration-base`). Without a result photo, the dashed placeholder of the boards: "[Photo of N°03 painted by a first-time painter, same guide]".
 
 ```ts
 export interface ProductGalleryProps {
   workNumber: string;
   imageUrl: string;
   filter: string | null;       // palettes.preview_filter
-  format: FormatKey;
+  canvasCm: [number, number];  // the selected canvas, turned for a landscape work (WorkFormat.cm)
   caption: string;
   resultPhotoUrl: string | null;
   priority?: boolean;
@@ -833,7 +833,7 @@ interface ProportionalGridProps { items: Array<{ key: string; ratio: number; nod
 
 `src/components/commerce/PrintPaper.tsx` · used on /prints, /prints/[slug], Home "Limited prints", PrintScale, PrintCard
 
-**PrintPaper** — A print as its sheet: Sand (the cotton paper tone), no outline, no shadow, 5:7 (7:5 landscape, `SHEET_RATIO`). The work whole inside an 8 % margin (of the short side), 15 % at the bottom where the caption is printed in Ink: "N°06 · Edition of 100" left, "Geste Studio" right, `text-sheet` (2.8 % of the sheet's height, 9–12 px), aria-hidden, printed only from 9 px (230 px portrait / 450 px landscape sheet) unless `captionAlways` (print page).
+**PrintPaper** — A print as its sheet: Sand (the cotton paper tone; `tone="white"` on the print page: #FFFFFF, caption in Stone), no outline, no shadow, 5:7 (7:5 landscape, `SHEET_RATIO`, or the paper's own `ratio`). The work whole inside an 8 % margin (of the short side), 15 % at the bottom where the caption is printed in Ink: "N°06 · Edition of 100" left, "Geste Studio" right (only on a sheet 170 px wide or more), `text-sheet` (2.8 % of the sheet's height, 9–12 px), aria-hidden, printed only from 9 px (230 px portrait / 450 px landscape sheet) unless `captionAlways` (print page).
 
 ## PrintWorkCard
 

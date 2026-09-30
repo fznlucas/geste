@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { getGuide, getGuideEditorParams } from "@/lib/api";
 import { GuideEditor } from "./GuideEditor";
 
-/** Every guide of every work (15 × 4 formats × 3 levels): light client shells, like the reader's pages. */
+/** Every guide of every work (15 × 3 canvases × 3 levels): light client shells, like the reader's pages. */
 export async function generateStaticParams({ params }: { params?: { slug?: string } }) {
   return (await getGuideEditorParams()).filter((p) => !params?.slug || p.slug === params.slug);
 }

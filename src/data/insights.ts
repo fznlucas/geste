@@ -71,18 +71,22 @@ export interface PnlLine {
   kind: "revenue" | "cost" | "total";
 }
 
-/** `v_pnl_monthly`, September 2026. Totals are recomputed by the API from the lines. */
+/**
+ * `v_pnl_monthly`, September 2026. Totals are recomputed by the API from the lines. Guides at the
+ * medium canvas's price (docs/decisions.md "Formats by work"): × 0.9405, the sold mix of the month at
+ * the cards' new price; VAT and fees follow the sales they are charged on.
+ */
 export const pnlSeptember: PnlLine[] = [
-  { label: "Guides", cents: 326400, kind: "revenue" },
+  { label: "Guides", cents: 307000, kind: "revenue" },
   { label: "Prints", cents: 155800, kind: "revenue" },
   { label: "Gift cards sold", cents: 33200, kind: "revenue" },
   { label: "Affiliate commissions (shopping lists)", cents: 31800, kind: "revenue" },
   // Revenue is VAT included (KPI "VAT incl."): the VAT paid back comes off before the gross margin.
   // Not drawn on AdminFinance, whose gross margin only adds up with it (docs/decisions.md).
-  { label: "VAT to pay back", cents: 72900, kind: "cost" },
+  { label: "VAT to pay back", cents: 70000, kind: "cost" },
   { label: "Print production (paper, ink, tubes)", cents: 28600, kind: "cost" },
   { label: "Shipping labels", cents: 12100, kind: "cost" },
-  { label: "Payment fees (Stripe, PayPal)", cents: 18100, kind: "cost" },
+  { label: "Payment fees (Stripe, PayPal)", cents: 17400, kind: "cost" },
   { label: "GPU (AI pipeline)", cents: 3800, kind: "cost" },
   { label: "Software (store, Claude, email)", cents: 9600, kind: "cost" },
   { label: "Ads", cents: 0, kind: "cost" },
@@ -92,21 +96,21 @@ export const pnlSeptember: PnlLine[] = [
 export const DIRECT_COSTS = 4;
 
 export const vatQ3 = [
-  { country: "France", rate: "20%", cents: 182100 as number | null },
-  { country: "Belgium · OSS", rate: "21%", cents: 12500 as number | null },
+  { country: "France", rate: "20%", cents: 174800 as number | null },
+  { country: "Belgium · OSS", rate: "21%", cents: 12000 as number | null },
   { country: "Switzerland", rate: "n/a", cents: null as number | null },
-  { country: "Germany · OSS", rate: "19%", cents: 5300 as number | null },
+  { country: "Germany · OSS", rate: "19%", cents: 5100 as number | null },
 ];
 
 /**
  * Turnover of the calendar year. The threshold is entered by the accountant (`site_settings`
  * 'finance.turnover_threshold_cents', null until then); meanwhile the bar uses the micro-enterprise
- * services ceiling of 2026 ($77,700 in the mock's dollars), which gives 31 % (the board's 24 % at the old prices).
+ * services ceiling of 2026 ($77,700 in the mock's dollars), which gives 30 % (the board's 24 % at the old prices).
  */
-export const turnover2026 = { cents: 2393000, thresholdCents: null as number | null, placeholderThresholdCents: 7770000 };
+export const turnover2026 = { cents: 2308200, thresholdCents: null as number | null, placeholderThresholdCents: 7770000 };
 
 export const payouts = [
-  { id: "po_oct3", date: "2026-10-03", cents: 166800, status: "scheduled" as const },
-  { id: "po_sep26", date: "2026-09-26", cents: 132400, status: "paid" as const },
-  { id: "po_sep19", date: "2026-09-19", cents: 83400, status: "paid" as const },
+  { id: "po_oct3", date: "2026-10-03", cents: 160900, status: "scheduled" as const },
+  { id: "po_sep26", date: "2026-09-26", cents: 127700, status: "paid" as const },
+  { id: "po_sep19", date: "2026-09-19", cents: 80400, status: "paid" as const },
 ];

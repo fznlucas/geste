@@ -1,9 +1,10 @@
 /** Domain types shared by components. Mirror of supabase/migrations/0001_init.sql (+ 0003). */
-import type { Orientation } from "./pricing";
+import type { FormatKey, Orientation } from "./pricing";
 
 export type { Orientation };
 export type Level = "beginner" | "intermediate" | "advanced" | "custom";
-export type Format = "30x40" | "40x50" | "60x80" | "80x100";
+/** A stock canvas ("50x60"): each work sells the three of its proportion (pricing.ts CANVASES). */
+export type Format = FormatKey;
 export type WorkStatus = "draft" | "scheduled" | "live" | "archived";
 
 export interface Work {
@@ -51,6 +52,8 @@ export interface CartItem {
   quantity: number;
   /** Bundle discount on the whole line (guide + print of the same work). */
   discountCents?: number;
+  /** Guide below the work's base level: "Simplified version" on the line. */
+  simplified?: boolean;
 }
 
 export interface PlateColour {

@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { ButtonLink, CanvasDiagram, FitLine, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
 import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
 import { fromPrice, formatPrice } from "@/lib/format";
-import { FORMATS, PRINT_WITH_GUIDE } from "@/lib/pricing";
+import { PRINT_WITH_GUIDE, defaultLevel } from "@/lib/pricing";
 
 const STEPS = [
   { n: "01", title: "Choose", text: "A work, a format, a palette. The size sets the level.", short: "A work, a format, a palette." },
@@ -19,7 +19,7 @@ const STEPS = [
 export default async function HomePage() {
   const [hero, works, editions, articles] = await Promise.all([getHomeHeroWork(), getWorks(), getEditions(), getArticles({ limit: 2 })]);
   if (!hero) throw new Error("Home hero work is not live");
-  const guide = await findGuide(hero.id, hero.defaultFormat, FORMATS[hero.defaultFormat].defaultLevel);
+  const guide = await findGuide(hero.id, hero.defaultFormat, defaultLevel(hero.defaultFormat, hero.baseLevel));
   const strokes = guide?.layers.flatMap((l) => l.diagram) ?? [];
 
   // New works: desktop shows the first five (hero included), phones the first four without the hero (MHome).

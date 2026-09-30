@@ -91,7 +91,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     if (stored.kind === "guide") {
       const work = works.find((w) => w.id === stored.workId)!;
       const format = stored.format;
-      const level = resolveLevel(stored);
+      const level = resolveLevel(stored, work.baseLevel);
       const gid = guideId(work.slug, format, level);
       items.push({
         id, kind: "guide", workId: work.id, guideId: gid, editionId: null,

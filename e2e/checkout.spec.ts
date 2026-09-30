@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 /** /checkout: every payment outcome of the Checkout board with Stripe's test cards (docs/screens/checkout.md). */
 
 const CART = [
-  { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", format: "60x80", level: "match", palette: "original" },
+  { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", format: "50x60", level: "match", palette: "original" },
   { id: "l2", addedAt: "2026-10-01T10:01:00Z", kind: "print", editionId: "ed-07-s", quantity: 1 },
 ];
 

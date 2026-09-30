@@ -2,7 +2,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import type { Guide, GuideLicense, Swatch } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
-import { FORMATS } from "@/lib/pricing";
+import { tubeMl as tubeFor } from "@/lib/pricing";
 import { CanvasDiagram } from "./CanvasDiagram";
 
 /** Cover, before you start, palette & mixes, the plan, one page per layer, avoid mud & finish. */
@@ -100,7 +100,7 @@ export function GuideBooklet({ guide, license, paletteName, only }: GuideBooklet
   const pages = guidePageCount(guide);
   const strokes = guide.layers.flatMap((l) => l.diagram);
   const size = guide.formatLabel.replace("×", " × ");
-  const tubeMl = FORMATS[guide.format].tubeMl;
+  const tubeMl = tubeFor(guide.format);
   const sheet = (page: number, children: ReactNode) =>
     (!only || only.includes(page)) && (
       <GuideSheet key={page} workNumber={guide.workNumber} page={page} pages={pages} license={license}>

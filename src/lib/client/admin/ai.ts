@@ -7,6 +7,7 @@
  */
 import { AI_LIMITS, aiBudget, aiCandidateRow, aiJobCostCents, aiJobLabel, allAiJobs, getAdminWorks, type AiJobParams } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
+import { CANVASES, mediumFormat } from "@/lib/pricing";
 
 export class AiBudgetError extends Error {}
 
@@ -90,13 +91,17 @@ export async function approveCandidate(id: string): Promise<string> {
   const n = Math.max(...all.map((w) => Number.parseInt(w.number.slice(2), 10) || 0)) + 1;
   const num = String(n).padStart(2, "0");
   const slug = `n${num}`;
+  const proportion = CANVASES[job?.params.format ?? "40x50"].proportion;
   insertRow("works", {
     id: `work-new-${slug}`,
     number: `N°${num}`,
     slug,
     status: "draft",
     publishAt: null,
-    defaultFormat: job?.params.format ?? "40x50",
+    // The proportion of the canvas it was generated on; its medium canvas is the default.
+    proportion,
+    defaultFormat: mediumFormat(proportion),
+    baseLevel: "intermediate",
     orientation: "portrait",
     signature: false,
     // Read from the image at upload (works.preview_width / preview_height); 0 = not known yet.

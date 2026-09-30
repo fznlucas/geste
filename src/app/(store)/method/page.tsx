@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Accordion, ButtonLink, CanvasDiagram } from "@/components";
 import { findGuide, getWork } from "@/lib/api";
-import { FORMATS, LEVELS, estimatedTime, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { LEVELS, defaultLevel, estimatedTime, formatLabel, type LevelKey } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -45,12 +45,15 @@ const QUESTIONS = [
 export default async function MethodPage() {
   const work = await getWork(METHOD_WORK);
   if (!work) throw new Error(`Method work ${METHOD_WORK} is not live`);
-  const guide = await findGuide(work.id, work.defaultFormat, FORMATS[work.defaultFormat].defaultLevel);
+  const guide = await findGuide(work.id, work.defaultFormat, defaultLevel(work.defaultFormat, work.baseLevel));
   const strokes = guide?.layers.flatMap((l) => l.diagram) ?? [];
-  const sizes = (Object.keys(FORMATS) as FormatKey[]).map((f) => {
-    const level = FORMATS[f].defaultLevel;
-    return { format: FORMATS[f].label, level: LEVELS[level].label, detail: `${LEVELS[level].layers} layers, ${TECHNIQUE[level]}`, time: `~${estimatedTime({ format: f, level: "match", palette: "original" })}` };
-  });
+  // The three canvases of the method's work: its level one step down on the small one, one up on the large one.
+  const sizes = work.formats.map((f) => ({
+    format: formatLabel(f.format, work.orientation),
+    level: LEVELS[f.defaultLevel].label,
+    detail: `${LEVELS[f.defaultLevel].layers} layers, ${TECHNIQUE[f.defaultLevel]}`,
+    time: `~${estimatedTime(f.format, f.defaultLevel)}`,
+  }));
 
   return (
     <div className="mx-auto flex w-full max-w-1440 flex-col gap-48 px-16 pt-24 lg:gap-96 lg:px-120 lg:pt-88">

@@ -21,7 +21,7 @@ const pct = (cm: number, of: number) => `${(cm / of) * 100}%`;
  * Print at its real size on a wall, above a 160 cm sideboard (board Print, "To scale"): the frame is
  * drawn in centimetres, so S, M and L keep their true proportions to the furniture. The size change
  * animates 420 ms (panel), off under prefers-reduced-motion. The wall is the page (Paper); the frame
- * (2 px Ink) holds the print's Sand sheet (PrintPaper); the sideboard is a light silhouette so the
+ * (2 px Ink) holds the print's white sheet (PrintPaper, as in the Print view); the sideboard is a light silhouette so the
  * print stays the subject.
  */
 export function PrintScale({ imageUrl, alt, orientation, size }: PrintScaleProps) {
@@ -39,7 +39,7 @@ export function PrintScale({ imageUrl, alt, orientation, size }: PrintScaleProps
       {/* Framed print: a thin Ink frame around the sheet. */}
       <div className="absolute border-2 border-fg transition-[width,height,left,bottom] duration-panel ease-standard motion-reduce:transition-none" style={frame}>
         {/* No printed caption in the frame: the sheet only (docs/decisions.md "Print page"). */}
-        <PrintPaper imageUrl={imageUrl} alt={alt} orientation={orientation} className="h-full w-full" sizes="(min-width: 1200px) 320px, 50vw" />
+        <PrintPaper imageUrl={imageUrl} alt={alt} orientation={orientation} tone="white" className="h-full w-full" sizes="(min-width: 1200px) 320px, 50vw" />
       </div>
       {/* Sideboard silhouette: top, body, two legs. */}
       <svg aria-hidden="true" className="absolute bottom-0 text-border-field" style={{ left: pct(sideboardLeft, WALL.w), width: pct(SIDEBOARD.w, WALL.w), height: pct(SIDEBOARD.h, WALL.h) }} viewBox={`0 0 ${SIDEBOARD.w} ${SIDEBOARD.h}`} preserveAspectRatio="none">

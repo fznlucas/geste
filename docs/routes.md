@@ -9,7 +9,7 @@ Every canvas board maps to one route. Desktop boards (1440) and phone boards (pr
 | `/` | Home | MHome | ISR 1 h | Hero work from `site_settings.home.hero_work` |
 | `/shop` | Shop | MShop | ISR + client filters | Filters `?level=&palette=` in the URL; 15 works, 5 × 3 |
 | `/works/[slug]` | Product, Product01–15 | MProduct, MProduct01–15 | ISR per work | Config `?format=&level=&palette=` in the URL |
-| `/works/[slug]/list` | ShoppingList | MShoppingList | ISR | Quantities from `shopping_items.quantity_rule[format]` |
+| `/works/[slug]/list` | ShoppingList | MShoppingList | ISR | Quantities from `shopping_items.quantity_kind` and the canvas's surface (pricing.ts `quantityLabel`) |
 | `/prints` | — (Shop grid) | — (MShop grid) | dynamic stock | Gallery of every edition, filters orientation and size |
 | `/prints/[slug]` | Print | MPrint | dynamic stock | One work's print in S 55, M 95, L 145; to-scale preview |
 | `/prints/[slug]` | Print | MPrint | dynamic stock | One work's print |

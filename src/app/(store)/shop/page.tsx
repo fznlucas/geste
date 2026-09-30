@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getWorks, toWorkCard } from "@/lib/api";
-import { FORMATS } from "@/lib/pricing";
 import { ShopGrid, type ShopItem } from "./ShopGrid";
 
 export const metadata: Metadata = { title: "Shop" };
@@ -11,7 +10,7 @@ export default async function ShopPage() {
   const works = await getWorks();
   const items: ShopItem[] = works.map((w) => ({
     card: toWorkCard(w),
-    level: FORMATS[w.defaultFormat].defaultLevel,
+    level: w.baseLevel,
     palettes: w.palettes.map((p) => p.key),
   }));
   return (

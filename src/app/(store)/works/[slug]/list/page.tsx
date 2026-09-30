@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getShoppingList, getWork, getWorks, type ShoppingListLine } from "@/lib/api";
-import { FORMATS, type FormatKey } from "@/lib/pricing";
+import type { FormatKey } from "@/lib/pricing";
 import { ListPage } from "./ListPage";
 
 export const dynamicParams = false;
@@ -22,9 +22,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Page({ params }: Props) {
   const work = await getWork((await params).slug);
   if (!work) notFound();
-  // Every format's list, so ?format= switches without a request.
-  const lists = {} as Record<FormatKey, ShoppingListLine[]>;
-  for (const f of Object.keys(FORMATS) as FormatKey[]) lists[f] = await getShoppingList(work.id, f);
+  // The list of each of the work's canvases, so ?format= switches without a request.
+  const lists: Partial<Record<FormatKey, ShoppingListLine[]>> = {};
+  for (const f of work.formats) lists[f.format] = await getShoppingList(work.id, f.format);
   return (
     <Suspense fallback={<ListPage work={work} lists={lists} static />}>
       <ListPage work={work} lists={lists} />

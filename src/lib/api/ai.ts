@@ -4,7 +4,7 @@
  * Later: `ai_jobs`, `ai_candidates` (written by the GPU worker) and `site_settings`.
  */
 import { asset } from "@/lib/asset";
-import { FORMATS, type FormatKey } from "@/lib/pricing";
+import { CANVASES, formatLabel, type FormatKey } from "@/lib/pricing";
 import { AI_CENTS_PER_CANDIDATE, AI_MONTHLY_BUDGET_CENTS, AI_SPENT_CENTS, aiCandidates, aiJobs } from "@/data/ai";
 import type { AiCandidateRow, AiJobRow } from "@/data/types";
 import { setAiToReviewSource } from "./admin";
@@ -32,7 +32,8 @@ export const AI_PALETTES: Array<{ value: PaletteKey; label: string }> = [
   { value: "cool", label: "Cool" },
   { value: "earth", label: "Earth" },
 ];
-export const AI_FORMATS: FormatKey[] = ["60x80", "30x40", "40x50", "80x100"];
+/** The stock canvases, by proportion family: the generated work keeps that proportion. */
+export const AI_FORMATS = Object.keys(CANVASES) as FormatKey[];
 export const AI_LIMITS = { maxStrokes: [20, 400], layers: [1, 5], candidates: [1, 24] } as const;
 
 export interface AiJob {
@@ -94,7 +95,7 @@ export const aiJobCostCents = (candidates: number) => Math.round(candidates * AI
 
 /** "Gestural · warm · 60×80" */
 export function aiJobLabel(p: AiJobParams): string {
-  return `${AI_STYLES.find((s) => s.value === p.style)!.short} · ${p.palette} · ${FORMATS[p.format].label}`;
+  return `${AI_STYLES.find((s) => s.value === p.style)!.short} · ${p.palette} · ${formatLabel(p.format)}`;
 }
 
 export function aiBudget(): AiBudget {

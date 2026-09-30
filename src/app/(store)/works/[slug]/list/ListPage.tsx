@@ -7,7 +7,7 @@ import { Artwork, Button, ButtonLink, Segmented, ShoppingListTable } from "@/com
 import type { CatalogWork, PaletteKey, ShoppingListLine } from "@/lib/api";
 import { createPersistentStore, isRecord, useSession, useStore } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
-import { FORMATS, LEVELS, formatLabel, resolveLevel, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { LEVELS, formatLabel, resolveLevel, type FormatKey, type LevelKey } from "@/lib/pricing";
 
 /** "I already have" ticks, per work, kept in the browser ("geste.list-have.v1"). */
 const haveStore = createPersistentStore<Record<string, number[]>>("list-have", 1, {}, (raw) => {
@@ -19,7 +19,8 @@ const haveStore = createPersistentStore<Record<string, number[]>>("list-have", 1
 
 interface Props {
   work: CatalogWork;
-  lists: Record<FormatKey, ShoppingListLine[]>;
+  /** One list per canvas the work sells. */
+  lists: Partial<Record<FormatKey, ShoppingListLine[]>>;
   static?: boolean;
 }
 
@@ -30,7 +31,7 @@ export function ListPage(props: Props) {
 /** ?format=&level=&palette= as on the work page's "See a full shopping list" link. */
 function UrlListPage(props: Props) {
   const q = useSearchParams();
-  const format = (Object.keys(FORMATS) as FormatKey[]).find((f) => f === q.get("format")) ?? props.work.defaultFormat;
+  const format = props.work.formats.find((f) => f.format === q.get("format"))?.format ?? props.work.defaultFormat;
   const rawLevel = q.get("level");
   const level: LevelKey | "match" = rawLevel && rawLevel in LEVELS ? (rawLevel as LevelKey) : "match";
   const palette = props.work.palettes.find((p) => p.key === q.get("palette"))?.key ?? "original";
@@ -43,7 +44,7 @@ function View({ work, lists, format, level, palette }: Props & { format: FormatK
   const session = useSession();
   const haveAll = useStore(haveStore);
   const have = new Set(haveAll[work.slug] ?? []);
-  const lines = lists[format];
+  const lines = lists[format] ?? [];
   const toggle = (position: number) =>
     haveStore.set((all) => {
       const cur = new Set(all[work.slug] ?? []);
@@ -55,7 +56,7 @@ function View({ work, lists, format, level, palette }: Props & { format: FormatK
   const full = lines.reduce((s, l) => s + l[tier].priceCents, 0);
   const toBuy = lines.reduce((s, l) => s + (have.has(l.position) ? 0 : l[tier].priceCents), 0);
   const haveCount = lines.filter((l) => have.has(l.position)).length;
-  const levelLabel = LEVELS[resolveLevel({ format, level, palette })].label;
+  const levelLabel = LEVELS[resolveLevel({ format, level }, work.baseLevel)].label;
   const paletteName = work.palettes.find((p) => p.key === palette)?.name ?? "Original";
   const detail = `${work.number} · ${formatLabel(format, work.orientation)} · ${levelLabel} · ${paletteName}`;
 

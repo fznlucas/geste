@@ -15,7 +15,7 @@ import {
 import { useAdminQuery } from "@/lib/client";
 import { AiBudgetError, advanceJobs, approveCandidate, createJob, rejectCandidate, validateJob } from "@/lib/client/admin/ai";
 import { formatPrice } from "@/lib/format";
-import { FORMATS } from "@/lib/pricing";
+import { CANVASES, formatLabel } from "@/lib/pricing";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
@@ -132,7 +132,7 @@ function NewGeneration({ budget, nextJob, className }: { budget: AiBudget; nextJ
       <div className="grid grid-cols-2 gap-10">
         <Field label="Format" className="[&>label]:mb-7">
           <Select value={p.format} onChange={(e) => set("format", e.target.value as AiJobParams["format"])}>
-            {AI_FORMATS.map((f) => <option key={f} value={f}>{FORMATS[f].label}</option>)}
+            {AI_FORMATS.map((f) => <option key={f} value={f}>{CANVASES[f].proportion} · {formatLabel(f)}</option>)}
           </Select>
         </Field>
         <Field label="Medium" className="[&>label]:mb-7">

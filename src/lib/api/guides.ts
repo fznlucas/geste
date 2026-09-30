@@ -72,7 +72,7 @@ export function mapGuide(raw: GuideRow): Guide {
     isStandIn,
     layers,
     stepCount: layers.reduce((n, l) => n + l.steps.length, 0),
-    duration: estimatedTime({ format: row.format, level: row.level, palette: "original" }),
+    duration: estimatedTime(row.format, row.level),
     print: content.print ?? null,
   };
 }
@@ -162,7 +162,7 @@ export async function getGuideEditorParams(): Promise<Array<{ slug: string; guid
   return guides.map((g) => ({ slug: works.find((w) => w.id === g.workId)!.slug, guideId: g.id }));
 }
 
-/** The guides of a work (editor header, work editor links), newest formats first as in FORMATS. */
+/** The guides of a work (editor header, work editor links): its three canvases small → large, each level. */
 export async function getWorkGuides(workId: string): Promise<Array<{ id: string; format: FormatKey; level: LevelKey; label: string; version: number }>> {
   const work = works.find((w) => w.id === workId);
   return clone(

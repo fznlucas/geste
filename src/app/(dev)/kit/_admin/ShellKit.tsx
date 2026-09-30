@@ -48,7 +48,7 @@ export function ShellKit() {
               <div className="flex justify-between"><AdminTitle>Latest orders</AdminTitle><UnderLink href="#">All orders</UnderLink></div>
               <div role="table" aria-label="Latest orders" className="flex flex-col gap-14">
               <AdminHeadRow cols="90px 1fr 70px 140px"><span role="columnheader">Order</span><span role="columnheader">Customer</span><span role="columnheader">Total</span><span role="columnheader">Status</span></AdminHeadRow>
-              {([["#GS-2041", "Camille Martin", "$86", "issue", "Print to ship"], ["#GS-2040", "Hugo Petit", "$21", "done", "Delivered"], ["#GS-2038", "Inès Moreau", "$136", "todo", "Printed"]] as const).map(([n, c, t, st, l]) => (
+              {([["#GS-2041", "Camille Martin", "$80", "issue", "Print to ship"], ["#GS-2040", "Hugo Petit", "$21", "done", "Delivered"], ["#GS-2038", "Inès Moreau", "$126", "todo", "Printed"]] as const).map(([n, c, t, st, l]) => (
                 <AdminRow key={n} cols="90px 1fr 70px 140px" className="hover:bg-surface-hover">
                   <span role="cell">{n}</span><span role="cell">{c}</span><span role="cell">{t}</span><span role="cell"><StatusChip state={st} label={l} /></span>
                 </AdminRow>

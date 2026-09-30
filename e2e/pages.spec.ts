@@ -16,7 +16,7 @@ test("method: steps, sizes, questions and the way to the shop", async ({ page })
   await page.goto("/method/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: "How Geste works" })).toBeVisible();
-  await expect(page.getByText("~3h30")).toBeVisible();
+  await expect(page.getByText("~4h40")).toBeVisible();
   if (isPhone(page)) {
     // MMethod: an accordion, the first question open.
     await expect(page.getByText("That is who Geste is for. Start with a Beginner work.")).toBeVisible();

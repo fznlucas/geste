@@ -2,7 +2,7 @@
  * Mock tables. Each type mirrors one table of supabase/migrations/0001_init.sql, in camelCase,
  * with storage paths (not URLs). Only `src/lib/api` reads these files; pages never import them.
  */
-import type { Orientation } from "@/lib/pricing";
+import type { Orientation, Proportion, QuantityKind } from "@/lib/pricing";
 import type {
   Address, DiagramStroke, FormatKey, FulfilmentStatus, ItemKind, LevelKey, OrderStatus, PaletteKey, PrintSize,
   ReviewStatus, ShippingMethod, Swatch, ThreadStatus, WorkStatus, GuidePrintContent,
@@ -19,7 +19,12 @@ export interface WorkRow {
   slug: string; // "n03"
   status: WorkStatus;
   publishAt: string | null;
+  /** The medium canvas of its proportion: the work page's default and the cards' price. */
   defaultFormat: FormatKey;
+  /** `works.proportion` (0004): its family of three canvases (3:4, 4:5, 5:6), in the work's own ratio. */
+  proportion: Proportion;
+  /** `works.base_level` (0004): the level of the work on its medium canvas, set by its complexity. */
+  baseLevel: LevelKey;
   /** `works.orientation` (0003): a landscape work sells its formats turned and is shown landscape. */
   orientation: Orientation;
   /** `works.signature` (0003): the guide costs SIGNATURE_CENTS more, "Signature" on the card and page. */
@@ -39,7 +44,6 @@ export interface WorkRow {
 export interface WorkFormatRow {
   workId: string;
   format: FormatKey;
-  defaultLevel: LevelKey;
   guidePriceCents: number; // any level; the Signature supplement is added by pricing.ts
   estMinutes: number;
   active: boolean;
@@ -92,14 +96,15 @@ export interface ShoppingItemRow {
   workId: string;
   position: number;
   name: string;
-  /** "Acrylic, {q}": {q} is replaced by quantityRule[format] (the canvas size, the tube). */
+  /** "Acrylic, {q}": {q} is replaced by the quantity of `quantityKind` on the canvas (pricing.ts quantityLabel). */
   standardLabel: string;
   budgetLabel: string;
   standardCents: number;
   budgetCents: number;
   standardUrl: string;
   budgetUrl: string;
-  quantityRule: Record<FormatKey, string> | null;
+  /** `shopping_items.quantity_kind` (0004): what the line scales with, by the canvas's surface; null = no quantity. */
+  quantityKind: QuantityKind | null;
 }
 
 export interface PrintEditionRow {

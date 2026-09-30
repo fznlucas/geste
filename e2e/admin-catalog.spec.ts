@@ -49,10 +49,14 @@ test("work editor: edit and save, the catalog shows the change", async ({ page }
   await expect(page.getByText("3 layers · 15 steps")).toBeVisible();
   await page.getByLabel("Description").fill("Wide strokes over a thin underlayer.");
   await page.getByRole("button", { name: "Formats & prices" }).click();
-  await expect(page.getByLabel("Price 60×80")).toHaveValue("$25");
-  await page.getByLabel("Price 60×80").fill("$27");
+  // N°03 is 5:6, Intermediate: 38×46 Beginner, 50×60 Intermediate, 60×73 Advanced.
+  await expect(page.getByLabel("Base level (medium)")).toHaveValue("intermediate");
+  await expect(page.getByRole("row", { name: /^38×46/ })).toContainText("Beginner");
+  await expect(page.getByRole("row", { name: /^60×73/ })).toContainText("Advanced");
+  await expect(page.getByLabel("Price 60×73")).toHaveValue("$25");
+  await page.getByLabel("Price 60×73").fill("$27");
   await page.getByLabel("Signature work · +$6 on every format").check();
-  await expect(page.getByRole("row", { name: /^60×80/ })).toContainText("$33");
+  await expect(page.getByRole("row", { name: /^60×73/ })).toContainText("$33");
   await expect(page.getByLabel("Price S")).toHaveValue("$55");
   await page.getByRole("button", { name: "SEO" }).click();
   await page.getByLabel("Page title").fill("N°03 — paint it · Geste");
@@ -61,7 +65,7 @@ test("work editor: edit and save, the catalog shows the change", async ({ page }
   await page.reload();
   await expect(page.getByLabel("Description")).toHaveValue("Wide strokes over a thin underlayer.");
   await page.getByRole("button", { name: "Formats & prices" }).click();
-  await expect(page.getByLabel("Price 60×80")).toHaveValue("$27");
+  await expect(page.getByLabel("Price 60×73")).toHaveValue("$27");
   await expect(page.getByLabel("Signature work · +$6 on every format")).toBeChecked();
   await expectNoAxeViolations(page);
   const log = await page.evaluate(() => JSON.parse(localStorage.getItem("geste.admin.v2") ?? "{}").audit?.[0]?.summary);

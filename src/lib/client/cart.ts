@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { priceCart, sameCartLine, type PriceCartOptions } from "@/lib/api/cart";
 import type { CartLineInput, PricedCart, StoredCartLine } from "@/lib/api/types";
-import { FORMATS, LEVELS } from "@/lib/pricing";
+import { LEVELS, isFormatKey } from "@/lib/pricing";
 import { createPersistentStore, isRecord, newId, useStore } from "./store";
 
 /**
@@ -21,7 +21,7 @@ function parseLine(raw: unknown): StoredCartLine | null {
   const { id, addedAt } = raw;
   switch (raw.kind) {
     case "guide":
-      if (typeof raw.workId !== "string" || typeof raw.format !== "string" || !(raw.format in FORMATS)) return null;
+      if (typeof raw.workId !== "string" || !isFormatKey(raw.format)) return null;
       if (typeof raw.level !== "string" || (raw.level !== "match" && !(raw.level in LEVELS))) return null;
       if (typeof raw.palette !== "string" || !PALETTE_KEYS.includes(raw.palette)) return null;
       return { id, addedAt, kind: "guide", workId: raw.workId, format: raw.format as never, level: raw.level as never, palette: raw.palette as never };

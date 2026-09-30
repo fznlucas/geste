@@ -1,21 +1,21 @@
 /**
- * Guides. Only N°03 · 60×80 · Intermediate has real content (supabase/seed.sql, version 1).
- * Every other work × format × level exists as a guide row so it can be bought and opened; the API
+ * Guides. Only N°03 · 50×60 · Intermediate has real content (supabase/seed.sql, version 1).
+ * Every other work × format (the three canvases of its proportion) × level exists as a guide row so it can be bought and opened; the API
  * serves N°03's content as a stand-in for them (flagged `isStandIn`).
  */
-import { FORMATS, LEVELS, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { LEVEL_ORDER, formatsOf, type FormatKey, type LevelKey } from "@/lib/pricing";
 import { works } from "./works";
 import type { GuidePrintContent, GuideRow, GuideVersionRow } from "./types";
 
 export const N03_GUIDE_ID = "00000000-0000-0000-0000-0000000000a3";
 
 export function guideId(slug: string, format: FormatKey, level: LevelKey): string {
-  return slug === "n03" && format === "60x80" && level === "intermediate" ? N03_GUIDE_ID : `guide-${slug}-${format}-${level}`;
+  return slug === "n03" && format === "50x60" && level === "intermediate" ? N03_GUIDE_ID : `guide-${slug}-${format}-${level}`;
 }
 
 export const guides: GuideRow[] = works.flatMap((w) =>
-  (Object.keys(FORMATS) as FormatKey[]).flatMap((format) =>
-    (Object.keys(LEVELS) as LevelKey[]).map((level) => ({
+  formatsOf(w.proportion).flatMap((format) =>
+    LEVEL_ORDER.map((level) => ({
       id: guideId(w.slug, format, level),
       workId: w.id,
       format,

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatPrice } from "@/lib/format";
+import { SIMPLIFIED_LABEL } from "@/lib/pricing";
 import type { CartItem } from "@/lib/types";
 import { Artwork } from "./Artwork";
 
@@ -26,7 +27,7 @@ export interface CartLineProps {
 
 /**
  * Cart row (boards Cart, MCart): thumb (turned for a landscape work), title link + price on one line,
- * detail and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a
+ * detail, "Simplified version" (a guide below the work's base level) and note in Stone, "Remove" text button. Guides and gift cards have quantity 1; prints get a
  * stepper up to the stock. A bundled line shows its full price struck, the discounted price and why.
  */
 export function CartLine({ item, href, note, bundleNote, issue, onRemove, onQuantity, maxQuantity, size = "md", onNavigate }: CartLineProps) {
@@ -57,6 +58,7 @@ export function CartLine({ item, href, note, bundleNote, issue, onRemove, onQuan
           )}
         </span>
         {item.detail && <span className="text-fg-muted">{item.detail}</span>}
+        {item.simplified && <span className="text-fg-muted">{SIMPLIFIED_LABEL}</span>}
         {note && !lg && <span className="text-fg-muted">{note}</span>}
         {discount > 0 && bundleNote && <span>{bundleNote}</span>}
         {issue && <span role="status" className="text-danger">{issue}</span>}

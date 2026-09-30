@@ -2,12 +2,12 @@
  * What the API returns. Pages depend on these types only, never on `src/data`: when the API moves
  * to Supabase, these stay and the pages do not change. Images are ready-to-use URLs.
  */
-import type { FormatKey, LevelKey, Orientation, PrintSize, ShippingMethod } from "@/lib/pricing";
+import type { FormatKey, LevelKey, Orientation, PrintSize, Proportion, ShippingMethod } from "@/lib/pricing";
 import type { DiagramStroke } from "@/components/reader/CanvasDiagram";
 import type { CartTotals } from "@/components/commerce/CartSummary";
 import type { CartItem, StaffRole } from "@/lib/types";
 
-export type { FormatKey, LevelKey, Orientation, PrintSize, ShippingMethod, DiagramStroke, CartTotals, StaffRole };
+export type { FormatKey, LevelKey, Orientation, PrintSize, Proportion, ShippingMethod, DiagramStroke, CartTotals, StaffRole };
 
 export type WorkStatus = "draft" | "scheduled" | "live" | "archived";
 export type PaletteKey = "original" | "warm" | "cool" | "earth";
@@ -37,6 +37,9 @@ export interface Address {
 export interface WorkFormat {
   format: FormatKey;
   label: string; // "60×80", "80×60" for a landscape work
+  /** [width, height] in cm, turned for a landscape work: the work page draws the canvas at this size. */
+  cm: [number, number];
+  /** The work's base level one step down on the small canvas, one up on the large one. */
   defaultLevel: LevelKey;
   levelLabel: string; // "Intermediate"
   layers: number;
@@ -71,10 +74,16 @@ export interface CatalogWork {
   seoTitle: string;
   seoDescription: string;
   sortOrder: number;
+  /** The medium canvas: the work page's default. */
   defaultFormat: FormatKey;
+  /** Family of its three canvases (3:4, 4:5, 5:6). */
+  proportion: Proportion;
+  /** Level on the medium canvas, by the work's complexity; below it a guide is a simplified version. */
+  baseLevel: LevelKey;
+  /** Its three canvases, small → large. */
   formats: WorkFormat[];
   palettes: WorkPalette[];
-  /** Card line (Home/Shop): the default format's price, shown with its level and time. */
+  /** Card line (Home/Shop): the medium canvas's price ("from $19"), shown with its level and time. */
   fromPriceCents: number;
   /** Cheapest guide of the work (any active format): "Start with N°06   from $21". */
   minPriceCents: number;
@@ -86,7 +95,7 @@ export interface CatalogWork {
 export interface WorksQuery {
   /** Default "live" (the store). The admin passes "all". */
   status?: WorkStatus | "all";
-  /** Level of the card (default format's level). */
+  /** The work's base level (the card's level). */
   level?: LevelKey;
   /** Works that offer this palette. */
   palette?: Exclude<PaletteKey, "original">;

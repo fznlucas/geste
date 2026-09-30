@@ -5,7 +5,7 @@
  * for display. Isomorphic and synchronous so the drawer can price on every change.
  */
 import { asset } from "@/lib/asset";
-import { BUNDLE_DISCOUNT_PCT, LEVELS, SHIPPING, bundleDiscountCents, formatLabel, guidePriceCents, printCm, resolveLevel, type ShippingMethod } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, LEVELS, SHIPPING, bundleDiscountCents, formatLabel, guidePriceCents, printCm, isSimplified, resolveLevel, type ShippingMethod } from "@/lib/pricing";
 import { printEditions } from "@/data/editions";
 import { includedVatCents } from "@/data/tax";
 import { palettes, workFormats, works } from "@/data/works";
@@ -89,7 +89,7 @@ function priceLine(line: StoredCartLine): PricedCartLine & { workId: string | nu
     const title = work ? `${work.number} — Guide` : "Guide";
     return { ...base, kind: "guide", title, detail: "", shortDetail: "", receiptTitle: title, note: null, href: null, unitPriceCents: 0, maxQuantity: 1, unavailable: "unknown" };
   }
-  const level = resolveLevel(line);
+  const level = resolveLevel(line, work.baseLevel);
   const query = new URLSearchParams({ format: line.format, level: line.level, palette: line.palette });
   const size = formatLabel(line.format, work.orientation);
   return {
@@ -101,6 +101,7 @@ function priceLine(line: StoredCartLine): PricedCartLine & { workId: string | nu
     // Checkout board: "60×80 · Intermediate" in the summary, "N°03 — Guide, 60×80" on the receipt.
     shortDetail: `${size} · ${LEVELS[level].label}`,
     receiptTitle: `${work.number} — Guide, ${size}`,
+    simplified: isSimplified(level, work.baseLevel),
     note: "+ shopping list",
     imageUrl: asset(work.previewPath),
     orientation: work.orientation,
@@ -173,7 +174,8 @@ export function priceCart(lines: StoredCartLine[], opts: PriceCartOptions = {}):
 /** Two inputs that are the same purchase: a guide config already in the cart, or the same edition. */
 export function sameCartLine(a: CartLineInput, b: CartLineInput): boolean {
   if (a.kind === "guide" && b.kind === "guide") {
-    return a.workId === b.workId && a.format === b.format && resolveLevel(a) === resolveLevel(b) && a.palette === b.palette;
+    const base = works.find((w) => w.id === a.workId)?.baseLevel ?? "intermediate";
+    return a.workId === b.workId && a.format === b.format && resolveLevel(a, base) === resolveLevel(b, base) && a.palette === b.palette;
   }
   if (a.kind === "print" && b.kind === "print") return a.editionId === b.editionId;
   return false; // gift cards are always separate lines
