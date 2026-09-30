@@ -1,7 +1,7 @@
 -- Seed: one live work (N°03, proportion 5:6) with its 50×60 intermediate guide, palettes, shopping list and an S print edition.
 -- Images are mock artworks from public/mock (same as the canvas).
-insert into works (id, number, slug, status, default_format, proportion, base_level, orientation, signature, description, preview_path, preview_width, preview_height, studio_tested, seo_title, seo_description, sort_order) values
-  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '50x60', '5:6', 'intermediate', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', 1064, 1200, true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
+insert into works (id, number, slug, status, default_format, proportion, original_size, base_level, orientation, signature, description, preview_path, preview_width, preview_height, studio_tested, seo_title, seo_description, sort_order) values
+  ('00000000-0000-0000-0000-000000000003', 'N°03', 'n03', 'live', '50x60', '5:6', '50x60', 'intermediate', 'portrait', false, 'Turquoise masses, a dark line and warm yellow over a peach ground.', 'mock/work-03.jpg', 1064, 1200, true, 'N°03 — paint it yourself · Geste', 'An intermediate abstract painting in 3 layers. Guide, shopping list, from $15.', 3);
 -- Its three canvases: 38×46 (Beginner, 1h20), 50×60 (Intermediate, 2h30), 60×73 (Advanced, 4h40).
 insert into work_formats (work_id, format, guide_price_cents, est_minutes) values
   ('00000000-0000-0000-0000-000000000003', '38x46', 1500, 80),

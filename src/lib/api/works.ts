@@ -3,7 +3,7 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { CANVASES, LEVELS, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind, type WorkPricing } from "@/lib/pricing";
+import { CANVASES, LEVELS, canvasArea, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind, type WorkPricing } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { orders } from "@/data/orders";
 import { guides } from "@/data/guides";
@@ -73,6 +73,8 @@ export function mapWork(row: WorkRow): CatalogWork {
     defaultFormat: row.defaultFormat,
     proportion: row.proportion,
     baseLevel: row.baseLevel,
+    originalSize: row.originalSize,
+    originalArea: canvasArea(row.originalSize),
     formats,
     palettes: palettes
       .filter((p) => p.workId === row.id && p.active)
@@ -145,6 +147,7 @@ export function toWorkCard(work: CatalogWork): WorkCardData {
     signature: work.signature,
     fromPriceCents: work.fromPriceCents,
     defaultFormat: work.defaultFormat,
+    originalArea: work.originalArea,
     levelLabel: work.levelLabel,
     duration: work.duration,
   };
@@ -270,6 +273,11 @@ export interface AdminWork {
   defaultFormat: FormatKey;
   proportion: Proportion;
   baseLevel: LevelKey;
+  /** Reference canvas of the grids (General tab) and its surface in cm². */
+  originalSize: FormatKey;
+  originalArea: number;
+  /** Width / height of the preview (4:5, 5:4 landscape, before it is uploaded). */
+  imageRatio: number;
   orientation: Orientation;
   signature: boolean;
   formatLabel: string;
@@ -323,6 +331,7 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
   const baseLevel = row.baseLevel ?? DRAFT_LEVEL;
   // The medium canvas of the proportion (the stored default may be of the proportion before a change).
   const defaultFormat = formatsOf(proportion)[1]!;
+  const originalSize = row.originalSize && formatsOf(proportion).includes(row.originalSize) ? row.originalSize : defaultFormat;
   const sold = allOrders()
     .filter((o) => o.status !== "refunded" && o.status !== "cancelled")
     .flatMap((o) => o.items)
@@ -344,6 +353,9 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     defaultFormat,
     proportion,
     baseLevel,
+    originalSize,
+    originalArea: canvasArea(originalSize),
+    imageRatio: imageRatio(row),
     orientation: row.orientation ?? "portrait",
     signature: !!row.signature,
     formatLabel: formatLabel(defaultFormat, row.orientation ?? "portrait"),

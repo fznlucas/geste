@@ -22,7 +22,7 @@ async function expectNoAxeViolations(page: Page) {
   expect(r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(" ")}`)).toEqual([]);
 }
 
-const cards = (page: Page) => page.locator("main ul > li");
+const cards = (page: Page) => page.locator("main [data-grid-item]");
 
 test("works: filter tabs and grid / list", async ({ page }) => {
   await asStaff(page);
@@ -30,7 +30,7 @@ test("works: filter tabs and grid / list", async ({ page }) => {
   await expect(cards(page)).toHaveCount(15);
   await page.getByRole("button", { name: "Needs test" }).click();
   await expect(cards(page)).toHaveCount(2); // N°06 and N°09 are not painted yet
-  await expect(page.getByText("Not painted")).toHaveCount(2);
+  await expect(page.getByText("Not painted").filter({ visible: true })).toHaveCount(2);
   await page.getByRole("button", { name: "Drafts" }).click();
   await expect(page.getByText("No works here yet.")).toBeVisible();
   await page.getByRole("button", { name: "All", exact: true }).click();

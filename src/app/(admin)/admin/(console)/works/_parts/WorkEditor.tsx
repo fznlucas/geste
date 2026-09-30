@@ -19,7 +19,7 @@ import { useAdminQuery } from "@/lib/client";
 import { STATUS_LABEL, markStudioTested, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
-import { BUNDLE_DISCOUNT_PCT, CANVASES, LEVELS, LEVEL_ORDER, PROPORTION_ORDER, SIGNATURE_CENTS, defaultLevel, estimatedTime, formatLabel, formatsOf, printCm, type Orientation, type Proportion } from "@/lib/pricing";
+import { BUNDLE_DISCOUNT_PCT, CANVASES, LEVELS, SIZES, LEVEL_ORDER, PROPORTION_ORDER, SIGNATURE_CENTS, defaultLevel, estimatedTime, formatLabel, formatsOf, printCm, type FormatKey, type Orientation, type Proportion } from "@/lib/pricing";
 import { AdminPage } from "../../../_admin/AdminPage";
 import { useAdmin } from "../../../_admin/AdminFrame";
 
@@ -41,6 +41,7 @@ interface Form {
   seoDescription: string;
   proportion: Proportion;
   baseLevel: LevelKey;
+  originalSize: FormatKey;
   formats: Array<{ format: WorkDraft["formats"][number]["format"]; price: string; active: boolean }>;
   palettes: WorkDraft["palettes"];
   shoppingList: WorkDraft["shoppingList"];
@@ -57,6 +58,7 @@ const toForm = (w: AdminWorkDetail): Form => ({
   seoDescription: w.seoDescription,
   proportion: w.proportion,
   baseLevel: w.baseLevel,
+  originalSize: w.originalSize,
   formats: w.formats.map((f) => ({ format: f.format, price: money(f.priceCents), active: f.active })),
   palettes: w.palettes.map((p) => ({ key: p.key, active: p.active })),
   shoppingList: w.shoppingList.map((i) => ({ position: i.position, url: i.url })),
@@ -116,6 +118,7 @@ function Editor({ work }: { work: AdminWorkDetail }) {
         seoDescription: form.seoDescription,
         proportion: form.proportion,
         baseLevel: form.baseLevel,
+        originalSize: form.originalSize,
         formats: form.formats.map((f) => ({ format: f.format, priceCents: parseMoney(f.price), active: f.active })),
         palettes: form.palettes,
         shoppingList: form.shoppingList,
@@ -227,6 +230,12 @@ function General({ work, form, edit }: TabProps) {
             <option value="landscape">Landscape</option>
           </Select>
         </Field>
+        {/* The reference canvas among its three: sizes the work in the grids only (Shop, Home, /prints, this catalog). */}
+        <Field label="Original size">
+          <Select value={form.originalSize} onChange={(e) => edit({ originalSize: e.target.value as FormatKey })}>
+            {formatsOf(form.proportion).map((f) => <option key={f} value={f}>{formatLabel(f, form.orientation)} · {SIZES[CANVASES[f].size].label}</option>)}
+          </Select>
+        </Field>
         {/* pb-6: the board's textarea sits on a text line, 6 px above the pictures' row. */}
         <Field label="Description" className={desktop ? "col-span-3 pb-6" : "pb-6"}>
           <Textarea rows={2} className="h-80 resize-y" value={form.description} onChange={(e) => edit({ description: e.target.value })} />
@@ -316,6 +325,7 @@ function Formats({ work, form, edit }: TabProps) {
   const setProportion = (proportion: Proportion) =>
     edit({
       proportion,
+      originalSize: formatsOf(proportion).includes(form.originalSize) ? form.originalSize : formatsOf(proportion)[1]!,
       formats: formatsOf(proportion).map((format) => {
         const had = work.formats.find((f) => f.format === format);
         return { format, price: money(had?.priceCents ?? CANVASES[format].guideCents), active: had?.active ?? true };

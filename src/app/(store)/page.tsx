@@ -7,7 +7,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ButtonLink, CanvasDiagram, FitLine, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
 import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
-import { fromPrice, formatPrice } from "@/lib/format";
+import { fromPrice } from "@/lib/format";
 import { PRINT_WITH_GUIDE, defaultLevel } from "@/lib/pricing";
 
 const STEPS = [
@@ -27,6 +27,9 @@ export default async function HomePage() {
   const phoneWorks = works.filter((w) => w.id !== hero.id).slice(0, 4);
 
   const prints = featuredPrints(editions);
+  // Grids by original size: the catalog's largest reference canvas fills a column.
+  const maxArea = Math.max(...works.map((w) => w.originalArea));
+  const areaOf = (workId: string) => works.find((w) => w.id === workId)?.originalArea ?? maxArea;
 
   return (
     <div className="mx-auto flex w-full max-w-1264 flex-col gap-64 px-16 pt-8 lg:gap-120 lg:px-32 lg:pt-24">
@@ -82,8 +85,8 @@ export default async function HomePage() {
       <section className="flex flex-col gap-14 lg:gap-24">
         <SectionHead title="New works" href="/shop" link={`See all ${works.length} works`} shortLink={`See all ${works.length}`} />
         {/* Phones show four works without the hero, desktop the first five: one grid each, so rows are computed on what is shown. */}
-        <ProportionalGrid className="lg:hidden" rowSpace="mb-24" items={phoneWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
-        <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" items={desktopWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
+        <ProportionalGrid className="lg:hidden" cols={{ base: 2 }} gap="[--gap:16px]" rowSpace="mb-24" maxArea={maxArea} items={phoneWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, area: w.originalArea, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
+        <ProportionalGrid className="hidden lg:flex" cols={{ base: 5 }} gap="[--gap:40px]" rowSpace="mb-0" maxArea={maxArea} items={desktopWorks.map((w) => ({ key: w.id, ratio: w.imageRatio, area: w.originalArea, node: <WorkCard work={toWorkCard(w)} variant="home" /> }))} />
       </section>
 
       {/* Limited prints */}
@@ -98,10 +101,10 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="lg:col-span-8 lg:col-start-5">
-            {/* Phones show the first print, desktop three: each on its Sand sheet, one height per row. */}
-            <ProportionalGrid className="lg:hidden" rowSpace="mb-0" items={prints.slice(0, 1).map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
-            {/* Eight columns of the 1200 px grid: 787 px. */}
-            <ProportionalGrid className="hidden lg:flex" rowSpace="mb-0" perRow={{ md: 3, lg: 3 }} contentWidth={787} items={prints.map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], node: <FeaturedPrint e={e} /> }))} />
+            {/* Phones show the first print, desktop three: each on its Sand sheet, by its work's original size. */}
+            <ProportionalGrid className="lg:hidden" cols={{ base: 2 }} gap="[--gap:16px]" rowSpace="mb-0" maxArea={maxArea} items={prints.slice(0, 1).map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], area: areaOf(e.workId), node: <FeaturedPrint e={e} /> }))} />
+            {/* Eight columns of the 1200 px grid: 787 px, three columns. */}
+            <ProportionalGrid className="hidden lg:flex" cols={{ base: 3 }} gap="[--gap:40px]" rowSpace="mb-0" maxArea={maxArea} items={prints.map((e) => ({ key: e.id, ratio: SHEET_RATIO[e.orientation], area: areaOf(e.workId), node: <FeaturedPrint e={e} /> }))} />
           </div>
         </section>
       )}
@@ -151,14 +154,14 @@ function SectionHead({ title, href, link, shortLink }: { title: string; href: st
 /** One print of the Home: its sheet, "N°07 print   $55", "Edition 12/100" (phone: "N°07 print · 12/100"). */
 function FeaturedPrint({ e }: { e: PrintEdition }) {
   return (
-    <Link href={`/prints/${e.workSlug}`} aria-label={`${e.workNumber} print, ${editionLabel(e, false)}, ${formatPrice(e.priceCents)}`} className="group flex flex-col gap-8 lg:gap-10">
+    <Link href={`/prints/${e.workSlug}`} aria-label={`${e.workNumber} print, ${editionLabel(e, false)}, ${fromPrice(e.priceCents)}`} className="group flex flex-col gap-8 lg:gap-10">
       <PrintPaper imageUrl={e.imageUrl} alt="" orientation={e.orientation} caption={`${e.workNumber} · Edition of ${e.editionSize}`} className="w-full" sizes="(min-width: 1200px) 400px, 100vw" />
       {/* One line each, as wide as the sheet (FitLine shortens "N°07 print" to "N°07" when needed). */}
       <span aria-hidden="true" className="lg:hidden">
-        <FitLine variants={[`${e.workNumber} print · ${editionLabel(e, true)}`, `${e.workNumber} · ${editionLabel(e, true)}`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: formatPrice(e.priceCents) }))} />
+        <FitLine variants={[`${e.workNumber} print · ${editionLabel(e, true)}`, `${e.workNumber} · ${editionLabel(e, true)}`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: fromPrice(e.priceCents) }))} />
       </span>
       <span aria-hidden="true" className="hidden flex-col gap-10 lg:flex">
-        <FitLine variants={[`${e.workNumber} print`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: formatPrice(e.priceCents) }))} />
+        <FitLine variants={[`${e.workNumber} print`, e.workNumber].map((t) => ({ left: <span className="underline-offset-3 group-hover:underline">{t}</span>, right: fromPrice(e.priceCents) }))} />
         <FitLine variants={[editionLabel(e, false), editionLabel(e, true)].map((t) => ({ left: <span className="text-fg-muted">{t}</span> }))} />
       </span>
     </Link>

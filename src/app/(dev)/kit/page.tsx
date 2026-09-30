@@ -31,7 +31,7 @@ const WORKS = [1, 2, 3, 4, 5].map((n) => ({
   id: `w${n}`, number: `N°0${n}`, slug: `n0${n}`, imageUrl: asset(`mock/work-0${n}.jpg`), imageAlt: `N°0${n}`,
   orientation: (n <= 2 ? "landscape" : "portrait") as "landscape" | "portrait", signature: n === 1,
   imageRatio: [2360 / 1760, 818 / 720, 1064 / 1200, 1001 / 1200, 960 / 1102][n - 1]!,
-  fromPriceCents: [2500, 1900, 1900, 1900, 1900][n - 1]!, defaultFormat: (["46x61", "50x60", "50x60", "50x60", "50x60"] as const)[n - 1]!,
+  fromPriceCents: [2500, 1900, 1900, 1900, 1900][n - 1]!, defaultFormat: (["46x61", "50x60", "50x60", "50x60", "50x60"] as const)[n - 1]!, originalArea: [2806, 3000, 3000, 3000, 3000][n - 1]!,
   levelLabel: ["Intermediate", "Advanced", "Intermediate", "Advanced", "Advanced"][n - 1]!, duration: ["2h30", "3h40", "2h30", "3h40", "3h40"][n - 1]!, soldOut: n === 5,
 }));
 const PALETTES = [
@@ -222,31 +222,31 @@ export default function KitPage() {
         </Board>
 
         <Board n="05" title="Commerce">
-          <State label="Proportional grid · shop cards, one height per row (260 px, less when the row passes the width), meta shown on the first">
-            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w, i) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} alwaysShowMeta={i === 0} /> }))} />
+          <State label="Proportional grid · shop cards by original size (long side: the largest surface, 50×60 here, = the reference size, the others √ of their surface, 70 % at least), space-between, bottoms aligned, meta shown on the first">
+            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w, i) => ({ key: w.id, ratio: w.imageRatio, area: w.originalArea, node: <WorkCard work={w} alwaysShowMeta={i === 0} /> }))} />
           </State>
-          <State label="Fit line · the same caption at 240, 170, 130 and 90 px: from $31 → $31, then Inter. · 3h30, then Inter.">
+          <State label="Fit line · the same caption at 240, 170 and 120 px: Intermediate · 3h30, then Inter. · 3h30, then Inter.; from $31 always">
             <div className="flex items-start gap-40">
-              {[240, 170, 130, 90].map((w) => (
+              {[240, 170, 120].map((w) => (
                 <div key={w} style={{ width: w }}>
-                  <FitLine variants={[["Intermediate · 3h30", "from $31"], ["Intermediate · 3h30", "$31"], ["Inter. · 3h30", "$31"], ["Inter.", "$31"]].map(([m, p]) => ({ left: <span className="text-fg-muted">{m}</span>, right: p }))} />
+                  <FitLine variants={[["Intermediate · 3h30", "from $31"], ["Inter. · 3h30", "from $31"], ["Inter.", "from $31"]].map(([m, p]) => ({ left: <span className="text-fg-muted">{m}</span>, right: p }))} />
                 </div>
               ))}
             </div>
           </State>
           <State label="Grid filter · Orientation (88 px label column on phones)"><GridFilter label="Orientation" labelWidth="w-88" value="landscape" options={[{ value: "all", label: "All" }, { value: "portrait", label: "Portrait" }, { value: "landscape", label: "Landscape" }]} onChange={() => {}} /></State>
           <State label="Proportional grid · home cards">
-            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w) => ({ key: w.id, ratio: w.imageRatio, node: <WorkCard work={w} variant="home" /> }))} />
+            <ProportionalGrid rowSpace="mb-0" items={WORKS.map((w) => ({ key: w.id, ratio: w.imageRatio, area: w.originalArea, node: <WorkCard work={w} variant="home" /> }))} />
           </State>
           <State label="Proportional grid · /prints cards on their Sand sheet (portrait 5:7, landscape 7:5), sizes struck when sold out, all sold out at 60 %">
             <ProportionalGrid
               rowSpace="mb-0"
               items={[
-                { n: "N°07", img: "07", o: "landscape" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
-                { n: "N°12", img: "12", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 9500 },
-                { n: "N°06", img: "06", o: "portrait" as const, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
-                { n: "N°13", img: "13", o: "portrait" as const, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: true }, { size: "L", soldOut: true }], price: null },
-              ].map((p) => ({ key: p.n, ratio: SHEET_RATIO[p.o], node: <PrintWorkCard href="#" imageUrl={asset(`mock/work-${p.img}.jpg`)} orientation={p.o} number={p.n} editionSize={p.sizes[0]!.soldOut ? 50 : 100} sizes={p.sizes} fromCents={p.price} /> }))}
+                { n: "N°07", img: "07", o: "landscape" as const, area: 2000, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
+                { n: "N°12", img: "12", o: "portrait" as const, area: 3000, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 9500 },
+                { n: "N°06", img: "06", o: "portrait" as const, area: 2806, sizes: [{ size: "S", soldOut: false }, { size: "M", soldOut: false }, { size: "L", soldOut: false }], price: 5500 },
+                { n: "N°13", img: "13", o: "portrait" as const, area: 3000, sizes: [{ size: "S", soldOut: true }, { size: "M", soldOut: true }, { size: "L", soldOut: true }], price: null },
+              ].map((p) => ({ key: p.n, ratio: SHEET_RATIO[p.o], area: p.area, node: <PrintWorkCard href="#" imageUrl={asset(`mock/work-${p.img}.jpg`)} orientation={p.o} number={p.n} editionSize={p.sizes[0]!.soldOut ? 50 : 100} sizes={p.sizes} fromCents={p.price} /> }))}
             />
           </State>
           <div className="grid grid-cols-2 gap-40">

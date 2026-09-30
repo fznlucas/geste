@@ -65,6 +65,19 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
     () => items.filter((i) => (level === "all" || i.level === level) && (palette === "all" || i.palettes.includes(palette))),
     [items, level, palette],
   );
+  // One scale for every filter: the reference size fits the widest row any Level × Palette choice can show.
+  const maxArea = Math.max(...items.map((i) => i.card.originalArea));
+  const scaleSets = useMemo(
+    () =>
+      LEVELS.flatMap((l) =>
+        PALETTES.map((p) =>
+          items
+            .filter((i) => (l.value === "all" || i.level === l.value) && (p.value === "all" || i.palettes.includes(p.value)))
+            .map((i) => ({ ratio: i.card.imageRatio, area: i.card.originalArea })),
+        ),
+      ),
+    [items],
+  );
   return (
     <>
       <div className="flex flex-col gap-20 lg:flex-row lg:items-center lg:justify-between">
@@ -80,7 +93,7 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
           <Button variant="text" className="underline" onClick={() => onChange({ level: "all", palette: "all" })}>Clear filters</Button>
         </p>
       ) : (
-        <ProportionalGrid items={shown.map((i, n) => ({ key: i.card.id, ratio: i.card.imageRatio, node: <WorkCard work={i.card} priority={n < 5} /> }))} />
+        <ProportionalGrid maxArea={maxArea} scaleSets={scaleSets} items={shown.map((i, n) => ({ key: i.card.id, ratio: i.card.imageRatio, area: i.card.originalArea, node: <WorkCard work={i.card} priority={n < 5} /> }))} />
       )}
     </>
   );

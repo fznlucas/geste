@@ -35,7 +35,8 @@ test("shop captions are one line", async ({ page }) => {
     const cards = page.locator("main a[href^='/works/']");
     for (let i = 0; i < (await cards.count()); i++) {
       await cards.nth(i).hover();
-      await page.waitForTimeout(450);
+      await page.waitForTimeout(100);
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
       await checkVisibleCaptions(page);
     }
   }

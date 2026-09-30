@@ -33,53 +33,6 @@ test("gallery: one print per work, filters in the URL, a work sold out in every 
   await expectNoAxeViolations(page);
 });
 
-/** Rows of a justified grid: the image (or sheet) boxes of its items grouped by top edge, with the grid's box. */
-async function gridRows(page: Page) {
-  return page.locator("main [data-grid-item]").first().locator("xpath=..").evaluate((grid) => {
-    const g = grid.getBoundingClientRect();
-    const boxes = Array.from(grid.querySelectorAll(":scope > [data-grid-item]")).map((item) => {
-      const r = item.querySelector("a > span")!.getBoundingClientRect();
-      return { left: r.left, right: r.right, top: Math.round(r.top), height: r.height };
-    });
-    const rows: Array<typeof boxes> = [];
-    for (const b of boxes) {
-      const row = rows.find((x) => x[0]!.top === b.top);
-      if (row) row.push(b);
-      else rows.push([b]);
-    }
-    return { left: g.left, right: g.right, rows };
-  });
-}
-
-/** Desktop guard-rail per grid: Shop 190–280 px, /prints 190–292 px (docs/decisions.md "Justified grid"). */
-const CEILING: Record<string, number> = { "/shop/": 280, "/prints/": 292 };
-
-for (const path of ["/shop/", "/prints/"]) {
-  test(`${path}: justified rows, left and right edges on the content, equal gaps`, async ({ page }) => {
-    await page.goto(path);
-    const { left, right, rows } = await gridRows(page);
-    const desktop = (page.viewportSize()?.width ?? 1440) >= 1200;
-    expect(rows.flat()).toHaveLength(15);
-    for (const row of rows) {
-      const h = row[0]!.height;
-      for (const b of row) expect(Math.abs(b.height - h)).toBeLessThanOrEqual(0.5);
-      expect(Math.abs(row[0]!.left - left)).toBeLessThanOrEqual(0.5);
-      const gaps = row.slice(1).map((b, k) => b.left - row[k]!.right);
-      for (const g of gaps) expect(Math.abs(g - (desktop ? 40 : 14))).toBeLessThanOrEqual(0.5);
-      // Every row of the full catalog is justified: right edge on the content too.
-      expect(Math.abs(row[row.length - 1]!.right - right)).toBeLessThanOrEqual(0.5);
-      if (desktop) {
-        expect(row).toHaveLength(5);
-        expect(h).toBeGreaterThanOrEqual(190);
-        expect(h).toBeLessThanOrEqual(CEILING[path]!);
-      } else {
-        // Phones: a landscape work alone on the full width, portraits in pairs.
-        expect(row.length === 1 ? row[0]!.right - row[0]!.left > row[0]!.height : row.length === 2).toBe(true);
-      }
-    }
-  });
-}
-
 test("print page: sizes turned for a landscape work, to scale, then the bundle in the cart", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());

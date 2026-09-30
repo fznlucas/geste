@@ -58,6 +58,20 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[];
     () => items.filter((w) => (orientation === "all" || w.orientation === orientation) && (!wanted || w.sizes.some((z) => z.size === wanted && !z.soldOut))),
     [items, orientation, wanted],
   );
+  const maxArea = Math.max(...items.map((w) => w.originalArea));
+  // One scale for every filter: the reference size fits the widest row any Orientation × Size choice can show.
+  const scaleSets = useMemo(
+    () =>
+      ORIENTATIONS.flatMap((o) =>
+        SIZES.map((z) => {
+          const want = z.value === "all" ? null : (z.value.toUpperCase() as PrintSize);
+          return items
+            .filter((w) => (o.value === "all" || w.orientation === o.value) && (!want || w.sizes.some((x) => x.size === want && !x.soldOut)))
+            .map((w) => ({ ratio: SHEET_RATIO[w.orientation], area: w.originalArea }));
+        }),
+      ),
+    [items],
+  );
   return (
     <>
       <div className="flex flex-col gap-20 lg:flex-row lg:items-center lg:justify-between">
@@ -74,11 +88,13 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[];
         </p>
       ) : (
         <ProportionalGrid
-          // Ceiling 292 px (Lucas, 30 Sept): the third row of the full gallery, all portrait sheets, is 291 px justified.
-          heights={{ min: 190, max: 292, fallback: 260 }}
+          // The whole gallery's largest reference canvas fills a column, filtered or not.
+          maxArea={maxArea}
+          scaleSets={scaleSets}
           items={shown.map((w, n) => ({
             key: w.workId,
             ratio: SHEET_RATIO[w.orientation],
+            area: w.originalArea,
             node: (
               <PrintWorkCard
                 href={`/prints/${w.slug}${wanted ? `?size=${size}` : ""}`}

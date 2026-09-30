@@ -101,6 +101,7 @@ export async function approveCandidate(id: string): Promise<string> {
     // The proportion of the canvas it was generated on; its medium canvas is the default.
     proportion,
     defaultFormat: mediumFormat(proportion),
+    originalSize: mediumFormat(proportion),
     baseLevel: "intermediate",
     orientation: "portrait",
     signature: false,

@@ -1,163 +1,135 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-/** Column gap: 14 px below 1200 px, 40 px from 1200 (boards Shop, MShop). */
-const GAP = { base: 14, md: 14, lg: 40 } as const;
-/** Desktop content width the guard-rail is measured on by default (Shop, /prints: 1264 − 2 × 32). */
-const CONTENT = 1200;
-/** Ratio of a 4:5 work: stands in for the missing partner of a lone portrait when there is no pair to copy. */
-const FILLER = 0.8;
+/** Smallest share of the reference column a work's long side takes. */
+export const GRID_MIN_SHARE = 0.7;
 
-type Breakpoint = keyof typeof GAP;
-
-export interface ProportionalGridItem {
-  key: string;
-  /** Width / height of the image (or of the print's sheet). */
+/** What sizes a work in the grid: its ratio and its reference surface. */
+export interface GridShape {
+  /** Width / height of the image (or of the print's sheet): shown whole, at this ratio. */
   ratio: number;
+  /** Surface in cm² of the work's reference canvas (works.original_size). */
+  area: number;
+}
+
+export interface ProportionalGridItem extends GridShape {
+  key: string;
   node: ReactNode;
 }
 
+type Cols = 1 | 2 | 3 | 4 | 5;
+type Bp = "base" | "md" | "lg";
+
 export interface ProportionalGridProps {
   items: ProportionalGridItem[];
-  /** Items per row on tablets (≥ 768 px) and desktop (≥ 1200 px). Phones: pairs, a landscape work alone. */
-  perRow?: { md: number; lg: number };
   /**
-   * Desktop guard-rail, in px at the 1200 px content width (default 190–280). A justified row taller
-   * than `max` is not forced: it stays at `max`, left-aligned (docs/decisions.md "Justified grid").
-   * `fallback`: height of a grid whose only row is incomplete (a filtered grid).
+   * Works per row: phones (base), from 768 px (md), from 1200 px (lg). Default 2 · 3 · 5.
+   * The admin passes { base: 2, md: 5 } (its desktop starts at 768 px).
    */
-  heights?: { min: number; max: number; fallback: number };
-  /** Phones: a landscape work takes a whole row. Off: pairs whatever the ratio. */
-  landscapeAlone?: boolean;
-  /** Desktop width of the grid at a 1440 px window, for the guard-rail (default 1200; Home prints 787). */
-  contentWidth?: number;
-  /** Space under each row: "mb-28 lg:mb-64". */
+  cols?: { base: Cols; md?: Cols; lg?: Cols };
+  /**
+   * The largest surface of the catalog: its long side is the reference size. Default: the largest of
+   * `items`; pass the catalog's when the grid shows part of it (filters, Home).
+   */
+  maxArea?: number;
+  /**
+   * Every list the grid can show (each filter combination of the page, the unfiltered one first). The
+   * reference size is the largest that lets the widest row of any of them fit with the minimum gap, so
+   * the scale never changes when filtering. Default: `[items]`.
+   */
+  scaleSets?: GridShape[][];
+  /** Minimum gap between works, as CSS variable classes: "[--gap:16px] lg:[--gap:40px]" (Shop). */
+  gap?: string;
+  /** Space from the captions' bottom to the next row: "mb-28 lg:mb-64" (boards Shop, MShop). */
   rowSpace?: string;
   className?: string;
 }
 
-interface Row {
-  items: number[];
-  /** Sum of the ratios the row is justified on (its own, or the row it copies). */
-  sum: number;
-  /** Gaps in that justified line. */
-  gaps: number;
-  /** Desktop: a fixed height in px instead of justified (guard-rail, or a lone incomplete row). */
-  fixed?: number;
+const SUM_VAR: Record<Bp, string> = { base: "[--sum:var(--sum-base)]", md: "md:[--sum:var(--sum-md)]", lg: "lg:[--sum:var(--sum-lg)]" };
+const COLS_VAR: Record<Bp, Record<Cols, string>> = {
+  base: { 1: "[--cols:1]", 2: "[--cols:2]", 3: "[--cols:3]", 4: "[--cols:4]", 5: "[--cols:5]" },
+  md: { 1: "md:[--cols:1]", 2: "md:[--cols:2]", 3: "md:[--cols:3]", 4: "md:[--cols:4]", 5: "md:[--cols:5]" },
+  lg: { 1: "lg:[--cols:1]", 2: "lg:[--cols:2]", 3: "lg:[--cols:3]", 4: "lg:[--cols:4]", 5: "lg:[--cols:5]" },
+};
+
+/** Classes that show an element only while `bp` is the active breakpoint of the grid. */
+function onlyAt(bp: Bp, cols: ProportionalGridProps["cols"] & object): string {
+  const next = bp === "base" ? (cols.md ? "md" : cols.lg ? "lg" : null) : bp === "md" ? (cols.lg ? "lg" : null) : null;
+  const show = bp === "base" ? "block" : bp === "md" ? "hidden md:block" : "hidden lg:block";
+  return cn(show, next === "md" && "md:hidden", next === "lg" && "lg:hidden");
 }
 
-const sumOf = (items: ProportionalGridItem[], idx: number[]) => idx.reduce((s, i) => s + items[i]!.ratio, 0);
-
-/** Tablets and desktop: rows of `n` in order, each justified; an incomplete last row keeps the previous row's height, left-aligned. */
-function chunkRows(items: ProportionalGridItem[], n: number): Row[] {
-  const rows: Row[] = [];
-  for (let start = 0; start < items.length; start += n) {
-    const idx = items.slice(start, start + n).map((_, k) => start + k);
-    const prev = rows[rows.length - 1];
-    rows.push(idx.length === n || !prev ? { items: idx, sum: sumOf(items, idx), gaps: idx.length - 1 } : { items: idx, sum: prev.sum, gaps: prev.gaps });
-  }
-  return rows;
+/** Long side of a work in reference sizes: √(its surface / the largest), at least 70 %. */
+export function gridShare(area: number, maxArea: number): number {
+  return Math.max(GRID_MIN_SHARE, Math.min(1, Math.sqrt(area / maxArea)));
 }
+
+/** Width of a work in reference sizes: its long side is `gridShare`, the other side follows its ratio. */
+const widthShare = (it: GridShape, max: number) => gridShare(it.area, max) * Math.min(1, it.ratio);
 
 /**
- * Phones: a landscape work alone on the full width; portrait works in pairs that fill the width. A
- * portrait left alone (before a landscape, or last) keeps the height of the nearest pair, left-aligned.
+ * Widest row, in reference sizes, among every list the grid can show cut into rows of `n`: the
+ * reference size is (width − (n − 1) × gap) / this.
  */
-function phoneRows(items: ProportionalGridItem[], landscapeAlone: boolean): Row[] {
-  const rows: Row[] = [];
-  const wide = (i: number) => landscapeAlone && items[i]!.ratio > 1;
-  for (let i = 0; i < items.length; ) {
-    if (wide(i)) {
-      rows.push({ items: [i], sum: items[i]!.ratio, gaps: 0 });
-      i += 1;
-    } else if (i + 1 < items.length && !wide(i + 1)) {
-      rows.push({ items: [i, i + 1], sum: sumOf(items, [i, i + 1]), gaps: 1 });
-      i += 2;
-    } else {
-      rows.push({ items: [i], sum: Number.NaN, gaps: 1 }); // lone portrait: resolved below
-      i += 1;
+export function widestRow(sets: GridShape[][], n: number, max: number): number {
+  let widest = 0;
+  for (const set of sets) {
+    for (let start = 0; start < set.length; start += n) {
+      widest = Math.max(widest, set.slice(start, start + n).reduce((sum, it) => sum + widthShare(it, max), 0));
     }
   }
-  rows.forEach((r, k) => {
-    if (!Number.isNaN(r.sum)) return;
-    const pair = rows.slice(0, k).reverse().find((x) => x.items.length === 2 && !Number.isNaN(x.sum)) ?? rows.slice(k + 1).find((x) => x.items.length === 2);
-    r.sum = pair ? pair.sum : items[r.items[0]!]!.ratio + FILLER;
-  });
-  return rows;
+  return widest || 1;
 }
 
-/** Desktop rows with the guard-rail applied: heights measured at the 1200 px content width. */
-function desktopRows(items: ProportionalGridItem[], n: number, heights: { max: number; fallback: number }, content: number): Row[] {
-  const rows = chunkRows(items, n);
-  return rows.map((r, k) => {
-    const h = (content - r.gaps * GAP.lg) / r.sum;
-    if (rows.length === 1 && r.items.length < n) return { ...r, fixed: Math.min(heights.fallback, h) };
-    if (h > heights.max) return { ...r, fixed: heights.max };
-    // An incomplete row copies its previous row, fixed height included.
-    const prev = k > 0 && r.items.length < n ? rows[k - 1]! : null;
-    if (prev && (content - prev.gaps * GAP.lg) / prev.sum > heights.max) return { ...r, fixed: heights.max };
-    return r;
-  });
-}
+/** CSS width of `share` reference sizes: the widest row plus its minimum gaps fills the content. */
+const refWidth = (share: number) => `calc((100% - (var(--cols) - 1) * var(--gap)) / var(--sum) * ${share})`;
 
 /**
- * Desktop row heights at the 1200 px content width, justified, before the guard-rail (to report rows
- * outside 190–280 px). Complete rows only.
+ * Grid by original size (Shop, Home, /prints, admin catalog; docs/decisions.md "Grid by original
+ * size"). Each work is shown whole at its own ratio, no ground; its long side is √(surface of its
+ * reference canvas / the catalog's largest) of the reference size, 70 % at least, so a work and its
+ * turned version are the same size. The reference size is the largest that fits the widest row the
+ * page can show (`scaleSets`) in the content width with the minimum gap, per breakpoint. Rows keep the same number of works (5,
+ * 3, 2): the first against the left edge, the last against the right edge, equal space between them, the minimum gap on the widest row
+ * (space-between); a short last row keeps the slots of a full one (zero-width fillers), so its works
+ * sit where a full row's would, from the left. Everything in a row
+ * stands on its bottom; the captions follow their image's width on one line; the space from the
+ * captions to the next row is constant (`rowSpace`). Pure CSS.
  */
-export function justifiedRowHeights(ratios: number[], perRow = 5): number[] {
-  const out: number[] = [];
-  for (let s = 0; s + perRow <= ratios.length; s += perRow) {
-    const row = ratios.slice(s, s + perRow);
-    out.push((CONTENT - (perRow - 1) * GAP.lg) / row.reduce((a, b) => a + b, 0));
-  }
-  return out;
-}
-
-/**
- * A justified grid of works (Shop, Home, /prints; docs/decisions.md "Justified grid"): every row fills
- * the content width exactly, left and right, with fixed gaps (14 px phones, 40 px desktop); a row's
- * height is what makes its widths plus gaps equal the width, so rows differ a little in height, and
- * each work is as wide as its ratio at that height. Desktop and tablets: `perRow` in catalog order
- * (5 and 3). Phones: pairs, a landscape work alone on the full width. Captions hang under each image,
- * as wide as it. Desktop guard-rail: a row taller than `heights.max` stays at that height,
- * left-aligned. Pure CSS (per-breakpoint widths from each row's ratios, a line break after each row),
- * so the static render is already right.
- */
-export function ProportionalGrid({ items, perRow = { md: 3, lg: 5 }, heights = { min: 190, max: 280, fallback: 260 }, landscapeAlone = true, contentWidth = CONTENT, rowSpace = "mb-28 lg:mb-64", className }: ProportionalGridProps) {
-  const layout: Record<Breakpoint, Row[]> = { base: phoneRows(items, landscapeAlone), md: chunkRows(items, perRow.md), lg: desktopRows(items, perRow.lg, heights, contentWidth) };
-  const rowOf = (bp: Breakpoint) => {
-    const m = new Map<number, Row>();
-    for (const r of layout[bp]) for (const i of r.items) m.set(i, r);
-    return m;
-  };
-  const maps = { base: rowOf("base"), md: rowOf("md"), lg: rowOf("lg") };
-  const width = (i: number, bp: Breakpoint) => {
-    const row = maps[bp].get(i)!;
-    const r = items[i]!.ratio;
-    if (row.fixed !== undefined) return `${row.fixed * r}px`;
-    // 0.1 px less over the whole row, so sub-pixel rounding never pushes the last work to the next line.
-    return `calc((100% - ${row.gaps * GAP[bp] + 0.1}px) * ${r / row.sum})`;
-  };
-  const ends = (bp: Breakpoint) => new Set(layout[bp].map((r) => r.items[r.items.length - 1]!));
-  const rowEnds = { base: ends("base"), md: ends("md"), lg: ends("lg") };
+export function ProportionalGrid({ items, cols = { base: 2, md: 3, lg: 5 }, maxArea, scaleSets, gap = "[--gap:16px] lg:[--gap:40px]", rowSpace = "mb-28 lg:mb-64", className }: ProportionalGridProps) {
+  const sets = scaleSets?.length ? scaleSets : [items];
+  const max = maxArea ?? Math.max(...sets.flat().map((it) => it.area));
+  const bps = (["base", "md", "lg"] as const).filter((bp) => cols[bp] !== undefined);
+  const n = (bp: Bp) => cols[bp]!;
   const last = items.length - 1;
+  const sums = Object.fromEntries(bps.map((bp) => [`--sum-${bp}`, widestRow(sets, n(bp), max)]));
   return (
-    <div className={cn("flex flex-wrap items-start gap-x-14 lg:gap-x-40", className)}>
+    <div
+      data-grid=""
+      className={cn(
+        "flex flex-wrap items-end justify-between gap-x-(--gap)",
+        COLS_VAR.base[cols.base], cols.md && COLS_VAR.md[cols.md], cols.lg && COLS_VAR.lg[cols.lg],
+        ...bps.map((bp) => SUM_VAR[bp]),
+        gap,
+        className,
+      )}
+      style={sums as CSSProperties}
+    >
       {items.map((it, i) => (
         <Fragment key={it.key}>
-          <div
-            data-grid-item=""
-            className={cn("w-(--w-base) md:w-(--w-md) lg:w-(--w-lg)", rowSpace)}
-            style={{ "--w-base": width(i, "base"), "--w-md": width(i, "md"), "--w-lg": width(i, "lg") } as CSSProperties}
-          >
+          <div data-grid-item="" data-share={gridShare(it.area, max)} className={cn("min-w-0", rowSpace)} style={{ width: refWidth(widthShare(it, max)) } as CSSProperties}>
             {it.node}
           </div>
           {/* Row ends, one per breakpoint (zero height, full basis). */}
-          {i < last && rowEnds.base.has(i) && <span aria-hidden="true" className="h-0 basis-full md:hidden" />}
-          {i < last && rowEnds.md.has(i) && <span aria-hidden="true" className="hidden h-0 basis-full md:block lg:hidden" />}
-          {i < last && rowEnds.lg.has(i) && <span aria-hidden="true" className="hidden h-0 basis-full lg:block" />}
+          {i < last && bps.map((bp) => ((i + 1) % n(bp) === 0 ? <span key={bp} aria-hidden="true" className={cn("h-0 basis-full", onlyAt(bp, cols))} /> : null))}
         </Fragment>
       ))}
+      {bps.flatMap((bp) => {
+        const missing = (n(bp) - (items.length % n(bp))) % n(bp);
+        return Array.from({ length: missing }, (_, k) => (
+          <span key={`${bp}-${k}`} aria-hidden="true" className={cn("h-0 w-0", onlyAt(bp, cols))} />
+        ));
+      })}
     </div>
   );
 }

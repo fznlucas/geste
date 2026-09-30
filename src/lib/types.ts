@@ -21,6 +21,8 @@ export interface Work {
   signature?: boolean;
   fromPriceCents: number;
   defaultFormat: Format;
+  /** Surface in cm² of its reference canvas (works.original_size): its width in the grids. */
+  originalArea: number;
   levelLabel: string; // "Intermediate"
   duration: string; // "3h30"
   soldOut?: boolean;

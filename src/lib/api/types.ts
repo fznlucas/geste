@@ -80,6 +80,9 @@ export interface CatalogWork {
   proportion: Proportion;
   /** Level on the medium canvas, by the work's complexity; below it a guide is a simplified version. */
   baseLevel: LevelKey;
+  /** Reference canvas of the grids (works.original_size) and its surface in cm². */
+  originalSize: FormatKey;
+  originalArea: number;
   /** Its three canvases, small → large. */
   formats: WorkFormat[];
   palettes: WorkPalette[];

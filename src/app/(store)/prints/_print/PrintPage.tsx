@@ -27,7 +27,7 @@ function UrlPrintPage(props: PrintPageData) {
   return <View {...props} requested={q.get("size")} onSize={(s) => router.replace(`${pathname}?size=${sizeKey(s)}`, { scroll: false })} />;
 }
 
-function View({ work, editions, others, requested, onSize }: PrintPageData & { requested: string | null; onSize: (s: PrintSize) => void }) {
+function View({ work, editions, others, maxArea, requested, onSize }: PrintPageData & { requested: string | null; onSize: (s: PrintSize) => void }) {
   const sizes = PRINT_SIZE_ORDER.map((s) => editions.find((e) => e.size === s)).filter((e) => e !== undefined);
   const firstOpen = sizes.find((e) => !e.soldOut) ?? sizes[0]!;
   const picked = sizes.find((e) => sizeKey(e.size) === requested && !e.soldOut) ?? firstOpen;
@@ -169,11 +169,14 @@ function View({ work, editions, others, requested, onSize }: PrintPageData & { r
             <Link href="/prints" className="underline underline-offset-3 hover:text-fg-muted">All prints</Link>
           </div>
           <ProportionalGrid
+            cols={{ base: 4 }}
+            gap="[--gap:40px]"
             rowSpace="mb-0"
-            perRow={{ md: 4, lg: 4 }}
+            maxArea={maxArea}
             items={others.map((o) => ({
               key: o.slug,
               ratio: SHEET_RATIO[o.orientation],
+              area: o.originalArea,
               node: <PrintCard href={`/prints/${o.slug}`} imageUrl={o.imageUrl} orientation={o.orientation} title={`${o.number} print`} price={fromPrice(o.fromCents)} note={o.note} sheetCaption={`${o.number} · Edition of ${o.editionSize}`} />,
             }))}
           />

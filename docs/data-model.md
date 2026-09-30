@@ -10,7 +10,7 @@ Money is integer cents in USD. Times are `timestamptz`. Ids are uuid, except the
 | --- | --- | --- |
 | People | `profiles` | id = auth.users.id, email, full_name, locale en/fr, newsletter, deleted_at |
 | | `staff_roles` | user_id, role owner/support/fulfilment/content |
-| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, proportion 3:4/4:5/5:6, base_level (on the medium canvas), default_format (the medium canvas), orientation portrait/landscape, signature, preview/result/studio images, studio_tested, seo |
+| Catalog | `works` | number "N°03", slug, status draft/scheduled/live/archived, publish_at, proportion 3:4/4:5/5:6, original_size (reference canvas of the grids, 0005), base_level (on the medium canvas), default_format (the medium canvas), orientation portrait/landscape, signature, preview/result/studio images, studio_tested, seo |
 | | `canvas_formats` | the nine stock canvases: format "50x60", proportion, size small/medium/large, width/height cm, default guide_price_cents (0004) |
 | | `work_formats` | work_id, format: one of the three canvases of the work's proportion (trigger), turned for a landscape work; guide_price_cents (any level; Signature +$6 added by pricing.ts), est_minutes (at the canvas's default level), active. The default level is not stored: `canvas_default_level(format, base_level)` |
 | | `palettes` | work_id, key, name, swatches [{hex,name}], preview_filter |

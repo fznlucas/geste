@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, ButtonLink, PillButton, StatusChip, useToast } from "@/components";
+import { AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, ButtonLink, FitLine, PillButton, ProportionalGrid, StatusChip, useToast } from "@/components";
 import { getAdminWorks, type AdminWork } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { createWork } from "@/lib/client/admin/catalog";
@@ -32,6 +32,7 @@ export function WorkStatus({ work }: { work: Pick<AdminWork, "status" | "publish
 }
 
 const testLabel = (w: AdminWork) => (w.studioTested ? "Tested ✓" : "Not painted");
+const SHORT_LEVEL: Record<string, string> = { Beginner: "Beg.", Intermediate: "Inter.", Advanced: "Adv." };
 
 function filter(works: AdminWork[], tab: Tab) {
   if (tab === "Live") return works.filter((w) => w.status === "live");
@@ -49,6 +50,10 @@ export function CatalogPage() {
   const [creating, setCreating] = useState(false);
   const q = useAdminQuery(getAdminWorks, []);
   const works = q.data ? filter(q.data, tab) : [];
+  // Grid by original size: the largest reference canvas of the whole catalog fills a column, whatever the tab.
+  const maxArea = q.data?.length ? Math.max(...q.data.map((w) => w.originalArea)) : 1;
+  // One scale for every tab: the reference size fits the widest row any tab can show.
+  const scaleSets = q.data ? TABS.map((t) => filter(q.data!, t).map((w) => ({ ratio: w.imageRatio, area: w.originalArea }))) : [];
 
   const newWork = async () => {
     setCreating(true);
@@ -89,25 +94,50 @@ export function CatalogPage() {
       ) : works.length === 0 ? (
         <p className="py-40 text-center text-fg-muted">{tab === "Needs test" ? "Every work has been painted by the studio." : "No works here yet."}</p>
       ) : view === "grid" ? (
-        <ul className={cn("grid gap-x-16 gap-y-24", desktop ? "grid-cols-5" : "grid-cols-2")}>
-          {works.map((w) => (
-            <li key={w.id}>
-              <Link href={w.editorHref} className="group flex flex-col gap-6 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-fg">
+        // Same grid as the store, by original size; each caption line is one line (the longest wording that fits).
+        <ProportionalGrid
+          cols={{ base: 2, md: 5 }}
+          gap="[--gap:16px] md:[--gap:40px]"
+          rowSpace="mb-24"
+          maxArea={maxArea}
+          scaleSets={scaleSets}
+          items={works.map((w) => ({
+            key: w.id,
+            ratio: w.imageRatio,
+            area: w.originalArea,
+            node: (
+              <Link
+                href={w.editorHref}
+                aria-label={`${w.number}${w.signature ? ", Signature" : ""}, ${workStatusLabel(w)}, ${w.formatLabel}, ${w.levelLabel}, ${w.soldCount} sold, ${testLabel(w)}`}
+                className="group flex w-full flex-col gap-6 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-fg"
+              >
                 {w.imageUrl ? (
-                  <Artwork src={w.imageUrl} align="bottom" className="w-full" sizes="(min-width: 768px) 211px, 50vw" imgClassName={cn("group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
+                  <Artwork src={w.imageUrl} ratio={w.imageRatio} className="w-full" sizes="(min-width: 768px) 211px, 50vw" imgClassName={cn("group-hover:opacity-90", w.status !== "live" && "opacity-60")} />
                 ) : (
-                  <span className="flex aspect-[4/5] w-full items-center justify-center border border-dashed border-border-dashed text-fg-muted">No preview yet</span>
+                  <span className="flex w-full items-center justify-center border border-dashed border-border-dashed text-center text-fg-muted" style={{ aspectRatio: w.imageRatio }}>No preview yet</span>
                 )}
-                <span className="flex justify-between gap-8">
-                  <span className="font-medium">{w.number}{w.signature && <span className="font-normal text-fg-muted"> · Signature</span>}</span>
-                  <WorkStatus work={w} />
+                <span aria-hidden="true" className="flex flex-col gap-6">
+                  <FitLine
+                    variants={[
+                      { left: <span className="font-medium">{w.number}{w.signature && <span className="font-normal text-fg-muted"> · Signature</span>}</span>, right: <WorkStatus work={w} /> },
+                      { left: <span className="font-medium">{w.number}</span>, right: <WorkStatus work={w} /> },
+                    ]}
+                  />
+                  <FitLine
+                    className="text-fg-muted"
+                    variants={[
+                      `${w.formatLabel} · ${w.levelLabel} · ${w.soldCount} sold`,
+                      `${w.formatLabel} · ${SHORT_LEVEL[w.levelLabel] ?? w.levelLabel} · ${w.soldCount} sold`,
+                      `${SHORT_LEVEL[w.levelLabel] ?? w.levelLabel} · ${w.soldCount} sold`,
+                      `${w.soldCount} sold`,
+                    ].map((left) => ({ left }))}
+                  />
+                  <FitLine className={w.studioTested ? "text-fg-muted" : "text-danger"} variants={[{ left: testLabel(w) }]} />
                 </span>
-                <span className="text-fg-muted">{w.formatLabel} · {w.levelLabel} · {w.soldCount} sold</span>
-                <span className={w.studioTested ? "text-fg-muted" : "text-danger"}>{testLabel(w)}</span>
               </Link>
-            </li>
-          ))}
-        </ul>
+            ),
+          }))}
+        />
       ) : (
         <div className="overflow-x-auto border border-border bg-surface px-20">
           <div role="table" aria-label="Works" className="flex min-w-640 flex-col gap-14">

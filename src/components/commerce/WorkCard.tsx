@@ -6,7 +6,7 @@ import { Artwork } from "./Artwork";
 import { FitLine, type FitLineVariant } from "./FitLine";
 import { PriceMorph } from "./PriceMorph";
 import { PrintPaper } from "./PrintPaper";
-import { formatPrice, fromPrice } from "@/lib/format";
+import { fromPrice } from "@/lib/format";
 import type { Orientation } from "@/lib/pricing";
 import type { Work } from "@/lib/types";
 
@@ -25,34 +25,31 @@ const short = (level: string) => SHORT_LEVEL[level] ?? level;
 
 /**
  * Work tile: the work whole on the page at its own ratio (no ground, no crop), as wide as the grid
- * gives it (ProportionalGrid: one height for the whole grid, 260 px at most on desktop); no shadow, no
- * image hover, the whole tile is one link. "Signature" works carry the word on the image.
+ * gives it (ProportionalGrid: by its original size); no shadow, no image hover, the whole tile is one
+ * link. "Signature" works carry the word on the image.
  * Desktop shop: only the meta line morphs in on hover or keyboard focus. Desktop home: "N°01   from $15"
- * then "Beginner · 1h30". Phone (< 1200 px, no hover): one line "Beg. · 1h30   from $15".
- * Every caption line is one line as wide as the image: when it does not fit, "from $31" → "$31", then
- * the level is shortened with the time kept ("Inter. · 3h30"), and only then the time goes
- * (docs/decisions.md "Captions on one line"). The full wording is the link's aria-label. Sold out: image at 60%, "Sold out" replaces the price.
+ * then "Beginner · 1h30". Phone (< 1200 px, no hover): one line "Intermediate · 3h30   from $31".
+ * Every caption line is one line as wide as the image, chosen card by card on its real width: the full
+ * wording; if it does not fit, the level shortened with the time kept ("Inter. · 3h30   from $31");
+ * then without the time; as a last resort (96 px phone cards) the price alone. "from" always stays: never a bare "$31" (docs/decisions.md "Captions on one
+ * line"). The full wording is the link's aria-label. Sold out: image at 60%, "Sold out" replaces the price.
  */
 export function WorkCard({ work, variant = "shop", alwaysShowMeta, priority }: WorkCardProps) {
   const [hover, setHover] = useState(false);
   const soldOut = !!work.soldOut;
   const price = soldOut ? "Sold out" : fromPrice(work.fromPriceCents);
-  const bare = soldOut ? "Sold out" : formatPrice(work.fromPriceCents);
   const level = work.levelLabel;
   const time = work.duration;
-  // Desktop shop line (meta + price), longest first.
+  // The meta line, longest first; the price keeps its "from" in every wording.
   const desktop = [
     { meta: `${level} · ${time}`, price },
-    { meta: `${level} · ${time}`, price: bare },
-    { meta: `${short(level)} · ${time}`, price: bare },
-    { meta: short(level), price: bare },
+    { meta: `${short(level)} · ${time}`, price },
+    { meta: short(level), price },
+    // Last resort, a 4:5 portrait at 70 % on a phone (96 px): the price alone, "from" kept.
+    { meta: "", price },
   ];
-  // Phones start from the boards' short level ("Beg. · 1h30").
-  const phone: FitLineVariant[] = [
-    { left: `${short(level)} · ${time}`, right: price },
-    { left: `${short(level)} · ${time}`, right: bare },
-    { left: short(level), right: bare },
-  ].map((v) => ({ left: <span className="text-fg-muted">{v.left}</span>, right: v.right }));
+  // Phones: the same wordings, chosen on the card's own width.
+  const phone: FitLineVariant[] = desktop.map((v) => ({ left: <span className="text-fg-muted">{v.meta}</span>, right: v.price }));
   return (
     <Link
       href={`/works/${work.slug}`}
@@ -73,7 +70,7 @@ export function WorkCard({ work, variant = "shop", alwaysShowMeta, priority }: W
       </span>
       {variant === "home" ? (
         <span aria-hidden="true" className="hidden flex-col gap-10 lg:flex">
-          <FitLine variants={[price, bare].map((p) => ({ left: <span className="underline-offset-3 group-hover:underline">{work.number}</span>, right: p }))} />
+          <FitLine variants={[{ left: <span className="underline-offset-3 group-hover:underline">{work.number}</span>, right: price }]} />
           <FitLine variants={[`${level} · ${time}`, `${short(level)} · ${time}`, short(level)].map((m) => ({ left: <span className="text-fg-muted">{m}</span> }))} />
         </span>
       ) : (
@@ -102,14 +99,13 @@ export interface PrintWorkCardProps {
 
 /**
  * One work in the /prints gallery, shown as a print: the Sand sheet (PrintPaper), then one line
- * "N°06   S · M · L   from $55" (sold-out sizes struck). When the line does not fit its sheet: "$55",
- * then "S·M·L"; as a last resort (not reached with the catalog) the sizes go, then "Sold out" → "Sold". The grid gives it its width (ProportionalGrid). Every size sold out:
+ * "N°06   S · M · L   from $55" (sold-out sizes struck). When the line does not fit its sheet: "S·M·L",
+ * then the sizes go; "from $55" always stays; a sold-out work on the narrowest sheet: "Sold". The grid gives it its width (ProportionalGrid). Every size sold out:
  * the work at 60 % and "Sold out".
  */
 export function PrintWorkCard({ href, imageUrl, orientation, number, editionSize, sizes, fromCents, priority }: PrintWorkCardProps) {
   const allSold = fromCents === null;
   const price = allSold ? "Sold out" : fromPrice(fromCents);
-  const bare = allSold ? "Sold out" : formatPrice(fromCents);
   const label = `${number} print, ${sizes.map((z) => `${z.size}${z.soldOut ? " sold out" : ""}`).join(", ")}, ${price}`;
   const num = <span className="underline-offset-3 group-hover:underline">{number}</span>;
   const withSizes = (sep: string): ReactNode => (
@@ -132,11 +128,12 @@ export function PrintWorkCard({ href, imageUrl, orientation, number, editionSize
         <FitLine
           variants={[
             { left: withSizes(" · "), right: price },
-            { left: withSizes(" · "), right: bare },
-            { left: withSizes("·"), right: bare },
-            { left: num, right: bare },
-            // A sold-out work on the narrowest phone sheets (88 px).
+            { left: withSizes("·"), right: price },
+            { left: num, right: price },
+            // A sold-out work on the narrowest phone sheets (86 px).
             ...(allSold ? [{ left: num, right: "Sold" }] : []),
+            // Last resort, a sheet at 70 % on a phone (86 px): the price alone, "from" kept.
+            { left: "", right: price },
           ]}
         />
       </span>

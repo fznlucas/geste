@@ -6,7 +6,9 @@ export interface PrintPageData {
   work: CatalogWork;
   editions: PrintEdition[];
   /** "Other editions": other works' S edition, cheapest open price per work ("from $55"). */
-  others: Array<{ slug: string; number: string; imageUrl: string; orientation: Orientation; fromCents: number; note: string; editionSize: number }>;
+  others: Array<{ slug: string; number: string; imageUrl: string; orientation: Orientation; fromCents: number; note: string; editionSize: number; originalArea: number }>;
+  /** Largest reference surface of the catalog (grid by original size). */
+  maxArea: number;
 }
 
 /** Works that sell prints, in the editions' order (N°07 first: the Home leads with it). */
@@ -17,15 +19,16 @@ export async function printSlugs(): Promise<string[]> {
 export async function getPrintPage(slug: string): Promise<PrintPageData | null> {
   const work = await getWork(slug);
   if (!work) return null;
-  const all = await getEditions();
+  const [all, catalog] = await Promise.all([getEditions(), getWorks()]);
+  const areaOf = (slug: string) => catalog.find((w) => w.slug === slug)?.originalArea ?? work.originalArea;
   const editions = all.filter((e) => e.workId === work.id);
   if (editions.length === 0) return null;
   const others = [...new Set(all.filter((e) => e.workId !== work.id && e.size === PRINT_WITH_GUIDE && !e.soldOut).map((e) => e.workSlug))].slice(0, 4).map((s) => {
     const own = all.filter((e) => e.workSlug === s && !e.soldOut);
     const first = own.find((e) => e.size === PRINT_WITH_GUIDE)!;
-    return { slug: s, number: first.workNumber, imageUrl: first.imageUrl, orientation: first.orientation, fromCents: Math.min(...own.map((e) => e.priceCents)), note: `${first.nextNumber}/${first.editionSize}`, editionSize: first.editionSize };
+    return { slug: s, number: first.workNumber, imageUrl: first.imageUrl, orientation: first.orientation, fromCents: Math.min(...own.map((e) => e.priceCents)), note: `${first.nextNumber}/${first.editionSize}`, editionSize: first.editionSize, originalArea: areaOf(s) };
   });
-  return { work, editions, others };
+  return { work, editions, others, maxArea: Math.max(...catalog.map((w) => w.originalArea)) };
 }
 
 export interface GalleryWork {
@@ -34,6 +37,8 @@ export interface GalleryWork {
   number: string;
   imageUrl: string;
   orientation: Orientation;
+  /** Surface of the work's reference canvas: the sheet's width in the grid. */
+  originalArea: number;
   /** Edition size of the smallest size on sale ("Edition of 100" on the sheet). */
   editionSize: number;
   /** S, M, L that the work sells, in order. */
@@ -60,6 +65,7 @@ export async function getPrintGallery(): Promise<GalleryWork[]> {
         number: w.number,
         imageUrl: w.imageUrl,
         orientation: w.orientation,
+        originalArea: w.originalArea,
         editionSize: (open[0] ?? own[0]!).editionSize,
         sizes: own.map((e) => ({ size: e.size, soldOut: e.soldOut })),
         fromCents: open.length ? Math.min(...open.map((e) => e.priceCents)) : null,

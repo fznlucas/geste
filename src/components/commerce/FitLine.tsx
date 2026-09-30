@@ -33,7 +33,8 @@ export function FitLine({ variants, className, style }: FitLineProps) {
     const m = measurer.current;
     if (!el || !m) return;
     const fit = () => {
-      const width = el.clientWidth;
+      // Fractional width: grids size cards to the sub-pixel, clientWidth would round a fitting wording away.
+      const width = el.getBoundingClientRect().width;
       if (width === 0) return; // hidden at this breakpoint: measured when it shows
       const rows = Array.from(m.children) as HTMLElement[];
       const i = rows.findIndex((r) => r.getBoundingClientRect().width <= width + 0.5);

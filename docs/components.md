@@ -60,7 +60,7 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | Commerce | `StickyBuyBar` | `src/components/commerce/StickyBuyBar.tsx` | MProduct |
 | Commerce | `WorkCard` | `src/components/commerce/WorkCard.tsx` | Shop, Home |
 | Commerce | `PrintWorkCard` | `src/components/commerce/WorkCard.tsx` | /prints |
-| Commerce | `ProportionalGrid` | `src/components/commerce/ProportionalGrid.tsx` | Shop, Home, /prints |
+| Commerce | `ProportionalGrid` | `src/components/commerce/ProportionalGrid.tsx` | Shop, Home, /prints, admin catalog |
 | Commerce | `PrintPaper` | `src/components/commerce/PrintPaper.tsx` | /prints, Print, Home |
 | Commerce | `Artwork` | `src/components/commerce/Artwork.tsx` | every work image |
 | Commerce | `GridFilter` | `src/components/commerce/GridFilter.tsx` | Shop, /prints |
@@ -821,12 +821,12 @@ interface ArtworkProps { src: string; alt?: string; orientation?: "portrait" | "
 
 ## ProportionalGrid
 
-`src/components/commerce/ProportionalGrid.tsx` · used on Shop, Home, /prints, /prints/[slug] (Other editions)
+`src/components/commerce/ProportionalGrid.tsx` · used on Shop, Home, /prints, /prints/[slug] (Other editions), /admin/works
 
-**ProportionalGrid** — A justified grid: every row fills the content width exactly (left and right edges), fixed gaps (14 px phones, 40 px desktop), each row's height set so its widths plus gaps equal the width; each work as wide as its ratio. Desktop / tablets: `perRow` in order (5 / 3). Phones: a landscape work alone on the full width, portraits in pairs; a lone portrait keeps the nearest pair's height, left-aligned. Desktop guard-rail `heights` (190–280 px at `contentWidth`, 1200 by default): a row taller than 280 px stays at 280, left-aligned; an incomplete last row keeps the previous row's height. Pure CSS (per-breakpoint widths, one line break per row and breakpoint). Items carry `data-grid-item` (tests).
+**ProportionalGrid** — Grid by original size: rows of the same number of works (2 phones, 3 tablets, 5 desktop by default; `cols`), first against the left edge, last against the right, equal space between (space-between; a short last row gets invisible fillers so it is spaced like a full one). Each work whole at its own ratio, no ground; its long side is `gridShare(area, maxArea)` of the reference size: √(surface of its reference canvas / the catalog's largest), 70 % at least, so a work and its turned version match. The reference size is the largest that fits the widest row of any list the page can show (`scaleSets`: every filter combination) in the content width with the minimum `--gap` (40 px desktop, 16 px phones), per breakpoint, so filtering never changes the scale (`maxArea` defaults to the largest of the sets). A short last row keeps a full row's slots (zero-width fillers). Rows stand on their bottom (`items-end`), the one-line captions share a line, tops free; `rowSpace` (margin under each work) keeps the space from the captions to the next row constant. Pure CSS. The grid carries `data-grid` and `--cols`, items `data-grid-item` and `data-share` (tests).
 
 ```ts
-interface ProportionalGridProps { items: Array<{ key: string; ratio: number; node: ReactNode }>; perRow?: { md: number; lg: number }; heights?: { min: number; max: number; fallback: number }; landscapeAlone?: boolean; contentWidth?: number; rowSpace?: string; className?: string }
+interface ProportionalGridProps { items: Array<{ key: string; ratio: number; area: number; node: ReactNode }>; cols?: { base: 1–5; md?: 1–5; lg?: 1–5 }; maxArea?: number; scaleSets?: Array<Array<{ ratio: number; area: number }>>; gap?: string /* "[--gap:16px] lg:[--gap:40px]" */; rowSpace?: string /* "mb-28 lg:mb-64" */; className?: string }
 ```
 
 ## PrintPaper
@@ -857,7 +857,7 @@ interface ProportionalGridProps { items: Array<{ key: string; ratio: number; nod
 
 `src/components/commerce/WorkCard.tsx` · used on Shop, MShop, Home, MHome
 
-**WorkCard** — Work tile: the work whole at its own ratio, straight on the page (Artwork `ratio`), as wide as ProportionalGrid makes it (one height per row, 260 px on desktop); "Signature" on the image for Signature works; captions as wide as the image (the price wraps under a narrow one); no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): one line "Beg. · 1h30   from $12", always visible. Sold out: image at 60%, "Sold out" replaces the price.
+**WorkCard** — Work tile: the work whole at its own ratio, straight on the page (Artwork `ratio`), as wide as ProportionalGrid makes it (by its original size); "Signature" on the image for Signature works; captions as wide as the image, one line each, chosen card by card on its real width: "Intermediate · 3h30   from $31", then "Inter. · 3h30   from $31", then "Inter.   from $31", as a last resort "from $31" alone ("from" is never dropped); no shadow, no image hover, the whole tile is one link. Desktop `shop`: only the meta line morphs in on hover or keyboard focus. Desktop `home`: "N°01   from $12" (number underlined on hover) then "Beginner · 1h30". Below 1200 px (no hover): the same one line, always visible. Sold out: image at 60%, "Sold out" replaces the price.
 
 ```ts
 export interface WorkCardProps {

@@ -23,6 +23,11 @@ export interface WorkRow {
   defaultFormat: FormatKey;
   /** `works.proportion` (0004): its family of three canvases (3:4, 4:5, 5:6), in the work's own ratio. */
   proportion: Proportion;
+  /**
+   * `works.original_size` (0005): the reference canvas among its three, for the grids only (the largest of
+   * the catalog fills a column, the others by the square root of their surface).
+   */
+  originalSize: FormatKey;
   /** `works.base_level` (0004): the level of the work on its medium canvas, set by its complexity. */
   baseLevel: LevelKey;
   /** `works.orientation` (0003): a landscape work sells its formats turned and is shown landscape. */

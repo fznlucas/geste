@@ -92,6 +92,8 @@ export const works: WorkRow[] = PROPORTION.map((proportion, i) => {
     publishAt: null,
     defaultFormat: mediumFormat(proportion),
     proportion,
+    // Reference canvas of the grids: the medium one for every work (docs/decisions.md, 30 Sept).
+    originalSize: mediumFormat(proportion),
     baseLevel: level,
     orientation: (LANDSCAPE.has(n) ? "landscape" : "portrait") as Orientation,
     signature,
