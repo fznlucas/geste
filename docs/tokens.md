@@ -71,7 +71,7 @@ Tailwind spacing unit is **1 px** (`--spacing: 1px`), so utilities read in pixel
 | --- | --- |
 | Radius | 0 everywhere · `rounded-bar` 3 px on chart bar data ends · `rounded-full` status dots |
 | Border | 1 px · focus ring 1 px Ink, offset 2–3 px (`outline-offset-3` on buttons) |
-| Shadows | `shadow-pop` 0 16 40 rgba(17,17,17,.16) menus/popovers · `shadow-modal` 0 20 48 rgba(17,17,17,.18) · `shadow-mat` 0 10 30 rgba(17,17,17,.10) and `shadow-mat-sm` 0 8 24 (print on its mat, Print / MPrint) · `shadow-card` 0 16 40 rgba(17,17,17,.14) and `shadow-card-sm` 0 10 28 (gift card preview, GiftCard / MGiftCard) · `shadow-levitate` 0 40 60 −30 rgba(17,17,17,.35) + 0 2 6 rgba(17,17,17,.06) (the canvas floating above its ground, work page only; docs/decisions.md "Levitation shadow") · nothing else (no card shadows on tiles, no other image shadows) |
+| Shadows | `shadow-pop` 0 16 40 rgba(17,17,17,.16) menus/popovers · `shadow-modal` 0 20 48 rgba(17,17,17,.18) · `shadow-mat` 0 10 30 rgba(17,17,17,.10) and `shadow-mat-sm` 0 8 24 (print on its mat, Print / MPrint) · `shadow-card` 0 16 40 rgba(17,17,17,.14) and `shadow-card-sm` 0 10 28 (gift card preview, GiftCard / MGiftCard) · `shadow-levitate` 0 40 60 −30 rgba(17,17,17,.65) + 0 2 6 rgba(17,17,17,.06) (the canvas floating above its ground, work page only; docs/decisions.md "Levitation shadow") · nothing else (no card shadows on tiles, no other image shadows) |
 | Z-index | base 0 · sticky 10 · popover 20 · drawer 30 · modal 40 · toast 50 (`z-sticky`…`z-toast`) |
 | Hit targets | 44 px min · 48 px primary · 32 px dense admin |
 

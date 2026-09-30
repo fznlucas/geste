@@ -31,7 +31,7 @@ async function touch(page: Page, type: "pointerdown" | "pointermove" | "pointeru
 test("work page: the canvas floats above its ground, nothing clips the shadow; prints and grids stay flat", async ({ page }) => {
   await page.goto("/works/n08/");
   const canvas = page.locator("[data-canvas]");
-  await expect(canvas).toHaveCSS("box-shadow", /rgba\(17, 17, 17, 0\.35\) 0px 40px 60px -30px/);
+  await expect(canvas).toHaveCSS("box-shadow", /rgba\(17, 17, 17, 0\.65\) 0px 40px 60px -30px/);
   const stage = page.locator("[data-stage]");
   await expect(stage).toHaveCSS("overflow", "visible");
   // The shadow's visible part (offset 40 − spread 30 + half the blur, 30) ends inside the ground.
