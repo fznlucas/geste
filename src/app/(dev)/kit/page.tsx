@@ -15,6 +15,7 @@ import {
 import { N03_LAYERS, N03_STROKES } from "@/components/reader/sampleN03";
 import { ShellKit } from "./_admin/ShellKit";
 import { InfoKit } from "./_store/InfoKit";
+import { FaviconKit } from "./_brand/FaviconKit";
 import { LightboxKit } from "./_store/LightboxKit";
 import { DashboardKit } from "./_admin/DashboardKit";
 import { OrdersKit } from "./_admin/OrdersKit";
@@ -164,6 +165,7 @@ export default function KitPage() {
               <AppIcon size={128} rounded />
             </div>
           </State>
+          <FaviconKit />
           <div className="grid grid-cols-10 gap-16">
             {ICON_NAMES.map((n) => (
               <div key={n} className="flex flex-col gap-8">

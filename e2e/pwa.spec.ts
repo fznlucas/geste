@@ -35,6 +35,8 @@ test("the manifest describes the reader app with the BrandFavicon icons", async 
   const m = await res.json();
   expect(m).toMatchObject({ name: "Geste", short_name: "Geste", start_url: "/learn/", scope: "/learn/", display: "standalone", background_color: "#FAFAF8", theme_color: "#111111" });
   for (const icon of m.icons) expect((await page.request.get(icon.src)).ok()).toBe(true);
+  // The declared icons: under reduced motion the favicon does not loop (AnimatedFavicon swaps their href).
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", /manifest\.webmanifest/);
   await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute("href", /icon\.svg/);

@@ -1,6 +1,7 @@
 /**
  * Motion tokens. Every animation in Geste reads from here.
  * Rules: nothing loops, nothing bounces, everything is off under prefers-reduced-motion.
+ * One exception, on purpose: the favicon (FAVICON below, docs/decisions.md "Animated favicon").
  */
 export const ease = {
   standard: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -31,6 +32,13 @@ export function penSchedule(durations: readonly number[] = PEN_DURATIONS, overla
     return item;
   });
 }
+
+/**
+ * Favicon loop — the one animation that loops (docs/decisions.md "Animated favicon"). The "g" is drawn
+ * along the logo's two pen strokes (PEN_DURATIONS[0..1], stretched to `draw`), held whole, erased
+ * backwards, then the Ink square rests. 12 images a second: smoother is invisible at 16 px.
+ */
+export const FAVICON = { fps: 12, draw: 1250, hold: 500, erase: 1250, pause: 830 } as const;
 
 /** Price morph states for WorkCard meta line. */
 export const priceMorph = {

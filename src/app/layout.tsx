@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import { AnimatedFavicon } from "@/components/brand/AnimatedFavicon";
 import "./globals.css";
 
 // JetBrains Mono 400 + 500 only, self-hosted by next/font. Exposed as --font-mono (overrides tokens.css fallback).
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={mono.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* The looping favicon, everywhere (store, reader, admin); static under reduced motion and on Safari. */}
+        <AnimatedFavicon />
+      </body>
     </html>
   );
 }

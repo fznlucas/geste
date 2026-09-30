@@ -1,6 +1,6 @@
 # Motion
 
-Motion is rare and slow enough to feel drawn. Nothing loops, nothing bounces, nothing flies. Every animation is off under `prefers-reduced-motion` (end state shown at once: CSS variables drop to 0 ms in `tokens.css`, and `theme.css` forces 0 ms globally). All values live in `src/lib/motion.ts`.
+Motion is rare and slow enough to feel drawn. Nothing loops (one exception on purpose: the favicon, §9), nothing bounces, nothing flies. Every animation is off under `prefers-reduced-motion` (end state shown at once: CSS variables drop to 0 ms in `tokens.css`, and `theme.css` forces 0 ms globally). All values live in `src/lib/motion.ts`.
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -64,6 +64,17 @@ Step change: text cross-fades and slides 8 px in the direction of travel (320 ms
 ## 8 · Accordion
 
 Height from 0 to content (`--radix-accordion-content-height`), 240 ms. Plus/minus swap without rotation.
+
+## 9 · Favicon (the one loop)
+
+`AnimatedFavicon` (root layout), `FAVICON` in `src/lib/motion.ts`. The favicon's "g" is drawn along the logo's two strokes of the g (§1: bowl, then tail, `ease.pen`, same 20 ms overlap, stretched from 400 ms to 1.25 s), held whole 0.5 s, erased backwards in 1.25 s, then the empty Ink square rests 0.83 s; again. 12 images a second (46 per loop), clocked by a Web Worker so a background tab keeps the pace. Static under `prefers-reduced-motion`, on Safari and on touch-only devices. Decision and details: docs/decisions.md "Animated favicon".
+
+| Phase | Duration | Images |
+| --- | --- | --- |
+| Draw (bowl, tail) | 1.25 s | 15 |
+| Hold, whole | 0.5 s | 6 |
+| Erase (tail, bowl, backwards) | 1.25 s | 15 |
+| Rest, empty | 0.83 s | 10 |
 
 ## Don'ts
 

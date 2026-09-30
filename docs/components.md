@@ -8,6 +8,7 @@ Rules: components own their colour, type and spacing; pages pass only layout cla
 | --- | --- | --- | --- |
 | Brand | `Icon` | `src/components/brand/Icon.tsx` | BrandIcons |
 | Brand | `Logo` | `src/components/brand/Logo.tsx` | BrandLogo, every header |
+| Brand | `AnimatedFavicon`, `faviconFrames` | `src/components/brand/AnimatedFavicon.tsx` | BrandFavicon (the loop: docs/motion.md §9) |
 | Primitives | `Accordion` | `src/components/primitives/Accordion.tsx` | Product details, Help |
 | Primitives | `Badge` | `src/components/primitives/Badge.tsx` | Admin sidebar |
 | Primitives | `Button` | `src/components/primitives/Button.tsx` | all CTAs — Product, Checkout, Admin |
@@ -93,6 +94,19 @@ export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
   /** Accessible name. Omit when the icon sits next to visible text (it is then aria-hidden). */
   label?: string;
 }
+```
+
+
+## AnimatedFavicon
+
+`src/components/brand/AnimatedFavicon.tsx` (+ `faviconFrames.ts`) · mounted once in `src/app/layout.tsx`
+
+**AnimatedFavicon** — Renders nothing; loops the favicon (docs/motion.md §9). `faviconLoop()` lists the loop's images (drawn share of the g's two strokes), `faviconFrameSvg(size, frame)` draws one on the static favicon's geometry; the component rasterises each distinct image once on a canvas (16 and 32 px), then a Web Worker clock sets it on every `<link rel="icon">` 12 times a second. Static under reduced motion, on Safari and on touch-only devices; the static links are restored when it stops.
+
+```ts
+export function AnimatedFavicon(): null;
+export function faviconLoop(): FaviconFrame[]; // [bowl, tail], 0 → 1, one per image at FAVICON.fps
+export function faviconFrameSvg(size: number, frame: FaviconFrame): string;
 ```
 
 

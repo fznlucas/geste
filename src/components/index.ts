@@ -2,6 +2,8 @@
 export * from "./brand/Logo";
 export * from "./brand/Icon";
 export * from "./brand/AppIcon";
+export * from "./brand/AnimatedFavicon";
+export * from "./brand/faviconFrames";
 
 export * from "./primitives/Button";
 export * from "./primitives/IconButton";
