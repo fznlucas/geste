@@ -47,6 +47,7 @@ export function StickyBuyBar({ watch, title, detail, price, onAdd, added }: Stic
   return (
     <div
       ref={bar}
+      data-sticky-buy-bar=""
       aria-hidden={hidden}
       className="fixed inset-x-0 bottom-0 z-sticky flex items-center gap-12 border-t border-border bg-bg px-16 pb-24 pt-12 transition-transform duration-panel ease-standard lg:hidden"
       style={{ transform: hidden ? "translateY(100%)" : "translateY(0)" }}

@@ -93,7 +93,8 @@ function Grid({ items, level, palette, onChange }: { items: ShopItem[]; level: L
           <Button variant="text" className="underline" onClick={() => onChange({ level: "all", palette: "all" })}>Clear filters</Button>
         </p>
       ) : (
-        <ProportionalGrid maxArea={maxArea} scaleSets={scaleSets} items={shown.map((i, n) => ({ key: i.card.id, ratio: i.card.imageRatio, area: i.card.originalArea, node: <WorkCard work={i.card} priority={n < 5} /> }))} />
+        // The row space sits under every row: the last row's is cancelled so the footer spacing starts at the captions.
+        <ProportionalGrid className="-mb-28 lg:-mb-64" maxArea={maxArea} scaleSets={scaleSets} items={shown.map((i, n) => ({ key: i.card.id, ratio: i.card.imageRatio, area: i.card.originalArea, node: <WorkCard work={i.card} priority={n < 5} /> }))} />
       )}
     </>
   );

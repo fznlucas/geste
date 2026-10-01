@@ -80,7 +80,7 @@ export function SiteFooter({ locale, onLocaleChange, subscribe }: SiteFooterProp
           <span>USD $</span>
           <span aria-hidden="true" className="hidden md:inline">·</span>
           {(["en", "fr"] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange(l)} className={locale === l ? "inline-flex min-h-32 items-center text-fg underline underline-offset-4" : "inline-flex min-h-32 items-center text-fg"}>
+            <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange(l)} className={locale === l ? "inline-flex min-h-32 items-center text-fg underline underline-offset-4" : "inline-flex min-h-32 items-center text-fg underline-offset-4"}>
               {l.toUpperCase()}
             </button>
           ))}

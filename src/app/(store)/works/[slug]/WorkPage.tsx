@@ -104,7 +104,7 @@ function View({ work, print, outlines, config, onChange }: Props & { config: Gui
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-1264 flex-col gap-22 px-16 pb-120 lg:gap-24 lg:px-32 lg:pb-0 lg:pt-24">
+    <div className="mx-auto flex w-full max-w-1264 flex-col gap-22 px-16 lg:gap-24 lg:px-32 lg:pt-24">
       {/* Product board: no line-height on main (normal ≈ 16 px); MProduct: 20 px. */}
       <nav aria-label="Breadcrumb" className="flex gap-8 text-fg-muted lg:leading-[16px]">
         <Link href="/shop" className="hover:text-fg">Shop</Link>

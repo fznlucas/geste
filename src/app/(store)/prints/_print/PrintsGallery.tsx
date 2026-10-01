@@ -88,6 +88,8 @@ function Gallery({ items, orientation, size, onChange }: { items: GalleryWork[];
         </p>
       ) : (
         <ProportionalGrid
+          // The row space sits under every row: the last row's is cancelled so the footer spacing starts at the captions.
+          className="-mb-28 lg:-mb-64"
           // The whole gallery's largest reference canvas fills a column, filtered or not.
           maxArea={maxArea}
           scaleSets={scaleSets}

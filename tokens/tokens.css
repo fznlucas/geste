@@ -56,6 +56,8 @@
   --space-64: 64px;
   --space-72: 72px;
   --space-80: 80px;
+  --space-120: 120px; /* Phone: room under the footer for the sticky buy bar */
+  --space-180: 180px; /* Desktop: end of a store page's content to the footer (Shop board) */
   --radius-bar: 3px;
   --shadow-pop: 0 16px 40px rgba(17,17,17,0.16);
   --shadow-modal: 0 20px 48px rgba(17,17,17,0.18);

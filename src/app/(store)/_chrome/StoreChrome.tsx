@@ -78,14 +78,16 @@ function Frame({ children }: { children: ReactNode }) {
 
   return (
     <CartDrawerContext.Provider value={api}>
-      <div className="flex min-h-dvh flex-col">
+      {/* Phones: room under the footer for a page's sticky buy bar, so the page's end is never hidden under it. */}
+      <div className="flex min-h-dvh flex-col has-[[data-sticky-buy-bar]]:pb-120 lg:has-[[data-sticky-buy-bar]]:pb-0">
         <div className="hidden lg:block">
           <SiteHeader active={active} cartCount={cart.count} signedIn={signedIn} onCartClick={() => setOpen(true)} />
         </div>
         <div className="lg:hidden">
           <MobileHeader cartCount={cart.count} signedIn={signedIn} onCartClick={() => router.push("/cart")} locale="en" onLocaleChange={onLocaleChange} />
         </div>
-        <main id="main" className="flex flex-1 flex-col">{children}</main>
+        {/* Boards: the footer follows the content on phones (its own 64 px padding); 180 px above it on desktop (Shop). */}
+        <main id="main" className="flex flex-1 flex-col lg:pb-180">{children}</main>
         {/* MCheckout draws no footer: on phones the checkout ends with its own buttons. */}
         <div className={checkout ? "hidden lg:block" : undefined}>
           <SiteFooter locale="en" onLocaleChange={onLocaleChange} subscribe={subscribe} />

@@ -50,7 +50,7 @@ export default function AboutPage() {
         ))}
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center lg:gap-x-40 lg:border-t lg:border-border lg:py-40">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center lg:gap-x-40 lg:border-t lg:border-border lg:pt-40">
         <div className="hidden flex-col gap-6 lg:col-span-6 lg:flex">
           <span className="font-medium">[Founder note — two or three lines in your own words]</span>
           <span className="text-fg-muted">Write to us: hello@geste.studio</span>

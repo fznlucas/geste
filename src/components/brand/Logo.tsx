@@ -9,8 +9,8 @@ export interface LogoProps {
   size?: number;
   /** "full" = geste.studio, "short" = geste (avatars, stamps, small spaces). */
   variant?: "full" | "short";
-  /** "ink" on light grounds, "paper" on Ink. */
-  tone?: "ink" | "paper";
+  /** "ink" on light grounds, "paper" on Ink, "current": "geste" in the text colour (desktop store header: Stone on hover, as on the desktop boards). */
+  tone?: "ink" | "paper" | "current";
   /** Draw the letters stroke by stroke on hover/focus of the closest link or button. Desktop only. */
   animateOnHover?: boolean;
   className?: string;
@@ -59,8 +59,8 @@ export function Logo({ size = 12, variant = "full", tone = "ink", animateOnHover
 
   const vbWidth = variant === "full" ? 6980 : 2900;
   const width = (vbWidth / 1000) * size;
-  const ink = tone === "ink" ? "var(--color-fg)" : "var(--color-fg-inverse)";
-  const grey = tone === "ink" ? "var(--color-fg-muted)" : "var(--color-fg-muted-on-dark)";
+  const ink = tone === "paper" ? "var(--color-fg-inverse)" : tone === "current" ? "currentColor" : "var(--color-fg)";
+  const grey = tone === "paper" ? "var(--color-fg-muted-on-dark)" : "var(--color-fg-muted)";
 
   const schedule = penSchedule(PEN_STROKES.map((s) => s.duration));
   const strokes = PEN_STROKES.map((s, i) => ({ ...s, delay: schedule[i]!.delay }));

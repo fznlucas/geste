@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Logo } from "../brand/Logo";
 import { Drawer } from "../overlay/Drawer";
 import { MAIN_NAV } from "./SiteHeader";
+import { cn } from "@/lib/cn";
 
 export interface MobileMenuProps {
   open: boolean;
@@ -14,8 +15,9 @@ export interface MobileMenuProps {
 }
 
 /**
- * Full-screen menu (board MMenu): logo + "Close", 28 px links, then Log in / My library / Gift cards /
- * Help, and "USD $ · EN FR" pinned at the bottom.
+ * Full-screen menu (board MMenu): logo + "Close", 28 px links (-0.02 em), then Log in / My library / Gift cards /
+ * Help (44 px rows, the board draws 36: docs/decisions.md "Phone menu targets"), and "USD $ · EN FR"
+ * pinned at the bottom (32 px EN / FR as in the footer, each touched on a 44 × 44 area).
  */
 export function MobileMenu({ open, onOpenChange, signedIn, locale = "en", onLocaleChange }: MobileMenuProps) {
   const close = () => onOpenChange(false);
@@ -39,7 +41,7 @@ export function MobileMenu({ open, onOpenChange, signedIn, locale = "en", onLoca
     >
       <nav aria-label="Main" className="flex flex-col px-16 pt-40">
         {MAIN_NAV.map((n) => (
-          <Link key={n.href} href={n.href} onClick={close} className="text-lg leading-[1.5] hover:text-fg-muted">
+          <Link key={n.href} href={n.href} onClick={close} className="text-lg leading-[1.5] tracking-heading hover:text-fg-muted">
             {n.label}
           </Link>
         ))}
@@ -53,7 +55,20 @@ export function MobileMenu({ open, onOpenChange, signedIn, locale = "en", onLoca
         <span>USD $</span>
         <div className="flex gap-12">
           {(["en", "fr"] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={locale === l} onClick={() => onLocaleChange?.(l)} className={locale === l ? "min-h-44 text-fg underline underline-offset-4" : "min-h-44 text-fg"}>
+            <button
+              key={l}
+              type="button"
+              aria-pressed={locale === l}
+              onClick={() => onLocaleChange?.(l)}
+              // Drawn 32 px tall (MMenu), touched on an invisible 44 × 44 area: EN's reaches left, FR's to the
+              // screen's edge (past the row's 16 px padding). They share 1.6 px, left to EN (on top), so all of
+              // "EN" stays EN: two 44 px areas need 88 px, the labels and the edge leave 86.4.
+              className={cn(
+                "relative inline-flex min-h-32 items-center text-fg underline-offset-4 before:absolute before:top-1/2 before:h-44 before:w-44 before:-translate-y-1/2 before:content-['']",
+                locale === l && "underline",
+                l === "en" ? "z-10 before:right-0" : "before:-right-16",
+              )}
+            >
               {l.toUpperCase()}
             </button>
           ))}

@@ -11,7 +11,7 @@ export function CartPage() {
   const cart = useCart({ shippingMethod: "mondial_relay" });
   const { remove, undo, quantity } = useUndoableCart();
   return (
-    <div className="mx-auto flex w-full max-w-560 flex-col gap-18 p-16 md:py-48">
+    <div className="mx-auto flex w-full max-w-560 flex-col gap-18 px-16 pt-16 md:pt-48">
       <div className="flex items-center justify-between">
         <h1 className="text-lg">Cart ({cart.count})</h1>
         <Link href="/shop" className="underline underline-offset-3 hover:text-fg-muted">Keep browsing</Link>

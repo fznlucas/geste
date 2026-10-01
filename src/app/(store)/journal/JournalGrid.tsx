@@ -38,8 +38,9 @@ function View({ items, filter, onFilter }: { items: JournalItem[]; filter: Filte
         </div>
         <Segmented<Filter> label="Category" gap="gap-x-16 lg:gap-x-20" value={filter} onChange={onFilter} options={FILTERS} />
       </div>
-      {/* Min heights as drawn: the footer does not jump when a filter leaves fewer posts. */}
-      <div className="flex min-h-1500 flex-col gap-32 lg:grid lg:min-h-1060 lg:grid-cols-3 lg:content-start lg:gap-x-40 lg:gap-y-56">
+      {/* Min heights: the footer does not jump when a filter leaves fewer posts. Desktop: two rows of cards
+          (2 × 410 + 56), what "All" fills, so the footer sits its 180 px under them. */}
+      <div className="flex min-h-1500 flex-col gap-32 lg:grid lg:min-h-876 lg:grid-cols-3 lg:content-start lg:gap-x-40 lg:gap-y-56">
         {shown.map((a) => (
           <ArticleCard key={a.slug} href={`/journal/${a.slug}`} imageUrl={a.coverUrl} title={a.title} category={a.category} date={a.date} excerpt={a.excerpt} />
         ))}

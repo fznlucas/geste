@@ -149,7 +149,7 @@ export default async function MethodPage() {
       </section>
 
       {/* Closing call: desktop row with two buttons, phone a single full-width "Browse works". */}
-      <section aria-label="Ready for your first canvas?" className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center lg:gap-x-40 lg:border-t lg:border-border lg:py-40">
+      <section aria-label="Ready for your first canvas?" className="flex flex-col lg:grid lg:grid-cols-12 lg:items-center lg:gap-x-40 lg:border-t lg:border-border lg:pt-40">
         <div className="hidden flex-col gap-6 lg:col-span-6 lg:flex">
           <span className="font-medium">Ready for your first canvas?</span>
           <span className="text-fg-muted">Start with a Beginner work: two layers, about an hour.</span>

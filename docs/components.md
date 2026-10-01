@@ -114,7 +114,7 @@ export function faviconFrameSvg(size: number, frame: FaviconFrame): string;
 
 `src/components/brand/Logo.tsx` · used on BrandLogo, every header
 
-**Logo** — The wordmark is typed, never redrawn: filled glyphs of JetBrains Mono 500. The pencil animation reveals "geste" through a mask of 7 centre-line strokes (stroke-dashoffset 1 -> 0 on pathLength=1). ".studio" never moves.
+**Logo** — The wordmark is typed, never redrawn: filled glyphs of JetBrains Mono 500. The pencil animation reveals "geste" through a mask of 7 centre-line strokes (stroke-dashoffset 1 -> 0 on pathLength=1). ".studio" never moves. `tone`: ink, paper, or current ("geste" in the text colour: the desktop header's logo turns Stone on hover, as on the desktop boards).
 
 ```ts
 export interface LogoProps {
@@ -533,7 +533,7 @@ export interface PopoverProps {
 
 `src/components/layout/MobileHeader.tsx` · used on all phone pages
 
-**MobileHeader** — Phone header (< 1200 px): logo left, account, cart (n), "Menu" text button. Padding 4 4 4 16.
+**MobileHeader** — Phone header (< 1200 px): logo left, account, cart (n), "Menu" text button (68 px). Padding 4 4 4 16. Hover: Stone on the icons and "Menu"; the logo stays Ink (MHome, MShop).
 
 ```ts
 export interface MobileHeaderProps {
@@ -550,7 +550,7 @@ export interface MobileHeaderProps {
 
 `src/components/layout/MobileMenu.tsx` · used on MMenu
 
-**MobileMenu** — Full-screen menu (board MMenu): logo + "Close", 28 px links, then Log in (signed out) / My library / Gift cards / Help, and "USD $ · EN FR" pinned at the bottom.
+**MobileMenu** — Full-screen menu (board MMenu): logo + "Close" (68 px, as "Menu"), 28 px links at -0.02 em, then Log in (signed out) / My library / Gift cards / Help (44 px rows: docs/decisions.md "Phone menu targets"), and "USD $ · EN FR" pinned at the bottom (65 px row, EN / FR drawn 32 px, centred, touched on 44 × 44 invisible areas).
 
 ```ts
 export interface MobileMenuProps {
@@ -567,7 +567,7 @@ export interface MobileMenuProps {
 
 `src/components/layout/SiteFooter.tsx` · used on all store pages
 
-**SiteFooter** — Desktop: 6-column grid (32 px gaps), newsletter spans 2 (340 px max, 10 px gaps), 72 px above the bottom row. Column titles in Stone, 6 px under each (desktop only); links stacked at 22 px, each with a 24 px hit area (1 px padding cancelled by a -1 px margin, in a flex column so the margins do not collapse). EN/FR are 32 px buttons. Phone (< 768 px, board MHome): "Letters from the studio.", 2×2 columns of three merged links, "© 2026 Geste Studio" and "USD $ EN FR". Padding 56 32 28 (phone 64 16 24).
+**SiteFooter** — Desktop: 6-column grid (32 px gaps), newsletter spans 2 (340 px max, 10 px gaps), 72 px above the bottom row. Column titles in Stone, 6 px under each (desktop only); links stacked in 24 px rows (the boards draw 22: docs/decisions.md "Footer link rows"). EN/FR are 32 px buttons. Phone (< 768 px, board MHome): "Letters from the studio.", 2×2 columns of three merged links, "© 2026 Geste Studio" and "USD $ EN FR". Padding 56 32 28 (phone 64 16 24).
 
 ```ts
 export interface SiteFooterProps {
@@ -583,7 +583,7 @@ export interface SiteFooterProps {
 
 `src/components/layout/SiteHeader.tsx` · used on all desktop pages
 
-**SiteHeader** — Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover), nav (Shop Prints Method Journal About, 24 px apart) sits 28 px from the icons on the right. Cart count cross-fades in 150 ms. Padding 8 × 32.
+**SiteHeader** — Desktop header (≥ 1200 px): no bottom rule. Logo left (animates and turns Stone on hover), nav (Shop Prints Method Journal About, 24 px apart, normal line height: 16 px boxes as on the boards) sits 28 px from the icons on the right. Cart count cross-fades in 150 ms. Padding 8 × 32.
 
 ```ts
 export interface SiteHeaderProps {
@@ -805,7 +805,7 @@ export interface ShoppingItem {
 
 `src/components/commerce/StickyBuyBar.tsx` · used on MProduct
 
-**StickyBuyBar** — Phone work page (< 1200 px): bar pinned to the bottom, "N°03 · 60×80" / "Guide + list" on the left, primary "Add   $19" filling the rest (padding 12 16 24, Line rule on top). Always shown, as on MProduct; pass `watch` to slide it in (420 ms) only once that element leaves the viewport. While shown it sets `--sticky-bar-h` so toasts sit above it.
+**StickyBuyBar** — Phone work page (< 1200 px): bar pinned to the bottom, "N°03 · 60×80" / "Guide + list" on the left, primary "Add   $19" filling the rest (padding 12 16 24, Line rule on top). Always shown, as on MProduct; pass `watch` to slide it in (420 ms) only once that element leaves the viewport. While shown it sets `--sticky-bar-h` so toasts sit above it. `data-sticky-buy-bar`: the store frame keeps 120 px under the footer while the page has one, so the page's end is never under it.
 
 ```ts
 export interface StickyBuyBarProps {

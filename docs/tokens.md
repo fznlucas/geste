@@ -55,11 +55,13 @@ Emphasis = weight 500 or Ink vs Stone. Links are underlined with offset 3–4 px
 
 ## Space
 
-Tailwind spacing unit is **1 px** (`--spacing: 1px`), so utilities read in pixels: `p-16`, `gap-24`, `mt-40`. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48, 56, 64, 72, 80.
+Tailwind spacing unit is **1 px** (`--spacing: 1px`), so utilities read in pixels: `p-16`, `gap-24`, `mt-40`. Allowed steps: 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, 40, 48, 56, 64, 72, 80, 120, 180.
 
 | Pattern | Value |
 | --- | --- |
 | Page padding | 16 phone · 32 desktop (store header 8 × 32) |
+| Content end → footer | 0 phone (the footer's 64 px padding) · 180 desktop (`space.180`, `main` `lg:pb-180`, the Shop board; docs/decisions.md "Space above the footer") |
+| Under the footer, phone work pages | 120 (`space.120`): room for the sticky buy bar |
 | Section rhythm | 48 phone · 72 desktop |
 | Shop grid | 5 × 208 px columns, 40 px column gap, 64 px row gap (1200 px) |
 | Admin | sidebar 232, top bar 14 × 32, main 24 32 40, gaps 16/24 |

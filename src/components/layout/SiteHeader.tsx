@@ -20,14 +20,15 @@ export interface SiteHeaderProps {
 }
 
 /**
- * Desktop header (≥ 1200 px): no bottom rule. Logo left (animates on hover),
- * nav (links 24 px apart) sits 28 px from the icons on the right. Padding 8 × 32.
+ * Desktop header (≥ 1200 px): no bottom rule. Logo left (animates and turns Stone on hover),
+ * nav (links 24 px apart) sits 28 px from the icons on the right. Padding 8 × 32. Line height
+ * normal (16 px links), as the desktop boards set none.
  */
 export function SiteHeader({ active, cartCount, signedIn, onCartClick }: SiteHeaderProps) {
   return (
-    <header className="flex items-center justify-between px-32 py-8">
-      <Link href="/" aria-label="geste.studio, home" className="flex min-h-44 items-center">
-        <Logo size={12} animateOnHover />
+    <header className="flex items-center justify-between px-32 py-8 leading-[normal]">
+      <Link href="/" aria-label="geste.studio, home" className="flex min-h-44 items-center hover:text-fg-muted">
+        <Logo size={12} tone="current" animateOnHover />
       </Link>
       <div className="flex items-center gap-28">
         <nav aria-label="Main" className="flex gap-24">
