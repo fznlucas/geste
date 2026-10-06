@@ -13,6 +13,9 @@ import { dashboard, todoItems, type Dashboard, type TodoItem } from "@/lib/metri
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { parisHour } from "@/lib/clock";
 import { formatPrice } from "@/lib/format";
+
+/** The books' figures: EUR excl. VAT (docs/admin-v2/02); order totals stay what the customer paid (USD). */
+const eur = (cents: number) => formatPrice(cents, "en", "EUR");
 import type { StatusState } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
@@ -74,12 +77,12 @@ function DesktopDashboard() {
   const d = data.data;
   const k = d.last30d;
   const tiles = [
-    owner && { label: "Revenue · 30 d", value: formatPrice(k.revenueCents), context: k.revenueDelta, href: "/admin/finance/" },
+    owner && { label: "Revenue · 30 d", value: eur(k.revenueCents), context: k.revenueDelta, href: "/admin/finance/" },
     { label: "Orders · 30 d", value: String(k.orders), context: k.ordersDelta, href: seesOrders ? "/admin/orders/" : undefined },
-    owner && { label: "Avg. order", value: `$${(k.avgOrderCents / 100).toFixed(1)}`, context: k.avgOrderDelta, href: "/admin/analytics/" },
+    owner && { label: "Avg. order", value: `€${(k.avgOrderCents / 100).toFixed(1)}`, context: k.avgOrderDelta, href: "/admin/analytics/" },
     { label: "Conversion", value: `${k.conversionPct}%`, context: k.conversionDelta, href: owner ? "/admin/analytics/" : undefined },
     { label: "Guides finished", value: `${k.guidesFinishedPct}%`, context: "of guides started", href: owner ? "/admin/analytics/" : undefined },
-    owner && { label: "Affiliate · 30 d", value: formatPrice(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/" },
+    owner && { label: "Affiliate · 30 d", value: eur(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/" },
   ].filter((t): t is { label: string; value: string; context: string; href: string | undefined } => !!t);
   const myTodos = todos.filter((t) => hasRole(staff.role, t.roles));
 
@@ -136,8 +139,8 @@ function RevenueChart({ d }: { d: Dashboard }) {
       <BarChart
         caption={title}
         note={note ? `${note.label} · ${note.text}` : ""}
-        format={(v) => formatPrice(v)}
-        data={days.map((x) => ({ label: x.label, value: x.revenueCents, tip: `${x.label} · ${formatPrice(x.revenueCents)} · ${plural(x.orders, "order", "orders")}` }))}
+        format={(v) => eur(v)}
+        data={days.map((x) => ({ label: x.label, value: x.revenueCents, tip: `${x.label} · ${eur(x.revenueCents)} · ${plural(x.orders, "order", "orders")}` }))}
       />
     </AdminBox>
   );
@@ -241,7 +244,7 @@ function PhoneToday() {
   if (data.status === "loading" || orders.status === "loading" || !counts) return <div aria-busy="true" aria-label="Loading" className="h-480 bg-surface-muted" />;
   const t = data.data.today;
   const tiles = [
-    owner && { label: "Revenue", value: formatPrice(t.revenueCents), context: t.revenueDelta },
+    owner && { label: "Revenue", value: eur(t.revenueCents), context: t.revenueDelta },
     { label: "Orders", value: String(t.orders), context: `${plural(t.guides, "guide", "guides")} · ${plural(t.prints, "print", "prints")}` },
     { label: "Visitors", value: String(t.visitors), context: `${t.phonePct}% phone` },
     { label: "Conversion", value: `${t.conversionPct}%`, context: t.conversionDelta },

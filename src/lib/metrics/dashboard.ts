@@ -10,9 +10,10 @@ import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { clone } from "@/lib/api/clone";
 import { allCampaigns, allSocialPosts, allTraffic, allWorks } from "@/lib/api/local";
 import { metric } from "./define";
+import { dailyStoreTurnover, storeTurnoverEurCents, storeTurnoverUntil } from "./finance";
 import { dayLabel, previousPeriod, rollingDays, type Period } from "./period";
 import {
-  affiliateEarnedEurCents, averageOrderCents, conversionPct, dailySales, eurToUsdCents, guidesFinishedPct, guidesSoldByWork, paidOrders, storeReceiptsCents,
+  affiliateEarnedEurCents, conversionPct, dailySales, guidesFinishedPct, guidesSoldByWork, paidOrders,
 } from "./sales";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -43,6 +44,8 @@ export interface DashboardTopWork {
 }
 
 export interface Dashboard {
+  /** Money figures are EUR excl. VAT (the books); orders and visits are counts. */
+  currency: "EUR";
   last30d: {
     revenueCents: number;
     /** "+38% vs Aug" */
@@ -82,9 +85,9 @@ export interface Dashboard {
 
 /** Definitions shown next to each dashboard figure (docs/admin-v2/06 §2). */
 export const DASHBOARD_DEFINITIONS = {
-  revenue: storeReceiptsCents.definition,
+  revenue: storeTurnoverEurCents.definition,
   orders: paidOrders.definition,
-  avgOrder: averageOrderCents.definition,
+  avgOrder: "Store turnover excl. VAT ÷ paid orders, same period (EUR).",
   conversion: conversionPct.definition,
   guidesFinished: guidesFinishedPct.definition,
   affiliate: affiliateEarnedEurCents.definition,
@@ -106,9 +109,9 @@ function todayFigures() {
   const todayP = { from: today, to: today };
   const lastP = { from: lastWeek, to: lastWeek };
   const orders = paidOrders(todayP);
-  const before = paidOrders(lastP).filter((o) => Date.parse(o.paidAt) <= now - 7 * 86_400_000);
-  const revenueCents = orders.reduce((s, o) => s + o.totalCents, 0);
-  const beforeCents = before.reduce((s, o) => s + o.totalCents, 0);
+  // Money in EUR excl. VAT from the books, as in Finance (docs/admin-v2/02).
+  const revenueCents = storeTurnoverUntil(todayP, now);
+  const beforeCents = storeTurnoverUntil(lastP, now - 7 * 86_400_000);
   const traffic = allTraffic().find((d) => d.day === today);
   const visitors = traffic?.visits ?? 0;
   const lastTraffic = allTraffic().find((d) => d.day === lastWeek);
@@ -137,9 +140,14 @@ export const dashboard = metric("Dashboard figures: revenue, orders, average ord
   // "vs prior 30 d": one line in the tile, as drawn; the exact dates go in the tile's tooltip (06 §2).
   const vs = `vs prior ${range} d`;
 
-  const revenueCents = storeReceiptsCents(period);
+  // Revenue = the store's turnover in the books (EUR excl. VAT), the same figure as Finance for the same days.
+  const revenueCents = storeTurnoverEurCents(period);
   const orders = paidOrders(period).length;
-  const avgOrderCents = averageOrderCents(period);
+  const avgOrderCents = orders ? Math.round(revenueCents / orders) : 0;
+  const previousOrders = paidOrders(previous).length;
+  const previousRevenue = storeTurnoverEurCents(previous);
+  const previousAvg = previousOrders ? Math.round(previousRevenue / previousOrders) : 0;
+  const perDay = dailyStoreTurnover(rollingDays(90));
   const conversion = conversionPct(period);
   const conversionBefore = conversionPct(previous);
   const chart = rollingDays(90);
@@ -148,17 +156,18 @@ export const dashboard = metric("Dashboard figures: revenue, orders, average ord
   return clone({
     last30d: {
       revenueCents,
-      revenueDelta: `${signed(pctChange(revenueCents, storeReceiptsCents(previous)))} ${vs}`,
+      revenueDelta: `${signed(pctChange(revenueCents, previousRevenue))} ${vs}`,
       orders,
-      ordersDelta: signed(pctChange(orders, paidOrders(previous).length)),
+      ordersDelta: signed(pctChange(orders, previousOrders)),
       avgOrderCents,
-      avgOrderDelta: signed(pctChange(avgOrderCents, averageOrderCents(previous))),
+      avgOrderDelta: signed(pctChange(avgOrderCents, previousAvg)),
       conversionPct: conversion,
       conversionDelta: signed(Math.round((conversion - conversionBefore) * 10) / 10, "pt"),
       guidesFinishedPct: guidesFinishedPct(),
-      affiliateCents: eurToUsdCents(affiliateEarnedEurCents(period)),
+      affiliateCents: affiliateEarnedEurCents(period),
     },
-    days: days.map((d) => ({ ...d, label: adminDay(`${d.day}T12:00:00Z`) })),
+    currency: "EUR",
+    days: days.map((d) => ({ ...d, revenueCents: perDay.get(d.day) ?? 0, label: adminDay(`${d.day}T12:00:00Z`) })),
     monthName: MONTH_NAMES[Number(period.to.slice(5, 7)) - 1]!,
     notes: notesIn(chart).map((n) => ({ ...n, label: adminDay(`${n.day}T12:00:00Z`) })),
     today: todayFigures(),
