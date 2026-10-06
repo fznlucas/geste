@@ -11,6 +11,7 @@ import { useId, useMemo, useState } from "react";
 import { AdminTabs, Button, MessageList, PillButton, Textarea, ThreadListItem, UnderLink, useToast } from "@/components";
 import { getCustomer, getSavedReplies, getSupportThread, getSupportThreads, type SupportThread } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
+import { durationLabel, firstReplyMinutes } from "@/lib/metrics";
 import { markThreadRead, reply, setThreadStatus, startThread } from "@/lib/client/admin/support";
 import { cn } from "@/lib/cn";
 import { simNow } from "@/lib/clock";
@@ -249,7 +250,7 @@ function Aside({ name, customerId, orderNumber }: { name: string; customerId: st
       <span className="font-medium">{name}</span>
       {customerId && <UnderLink href={`/admin/customers/${customerId}`} className="self-start">Customer profile</UnderLink>}
       {orderNumber && <UnderLink href={`/admin/orders/detail?number=${orderNumber}`} className="self-start">Order #{orderNumber}</UnderLink>}
-      <span className="text-fg-muted">Replies go out from hello@geste.studio. Average first reply this week: 3h 10.</span>
+      <span className="text-fg-muted">Replies go out from hello@geste.studio. Average first reply this week: {durationLabel(firstReplyMinutes())}.</span>
     </div>
   );
 }

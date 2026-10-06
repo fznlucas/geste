@@ -12,10 +12,17 @@ export default defineConfig([
     },
   },
   {
-    // Pages never read the mock tables directly: they go through @/lib/api (docs/mock-plan.md).
+    // Pages never read the mock tables, the simulation or the business config directly: rows come from
+    // @/lib/api, figures from @/lib/metrics (docs/mock-plan.md, docs/admin-v2/PROMPT.md).
     files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [{ group: ["@/data", "@/data/*"], message: "Read data through @/lib/api." }] }],
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@/data", "@/data/*"], message: "Read data through @/lib/api." },
+          { group: ["@/sim", "@/sim/*"], message: "Read simulated rows through @/lib/api and figures through @/lib/metrics." },
+          { group: ["@/config", "@/config/*"], message: "Read business settings through @/lib/api or @/lib/metrics." },
+        ],
+      }],
     },
   },
   globalIgnores([".next/**", "out/**", "node_modules/**", "next-env.d.ts", "reference/**", "public/**", "tsconfig.tsbuildinfo"]),

@@ -10,8 +10,9 @@ import { works } from "@/data/works";
 import { clone } from "./clone";
 import { VAT_RATES } from "@/data/tax";
 import { allCustomers, allEntitlements, allOrders, allPrintCopies, allRefunds, allShipments, allSupportThreads } from "./local";
+import { inOrderTab, ordersThisMonth } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
-import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrdersTab, OrderTracking, RefundOption, TrackingStep } from "./types";
+import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrderTracking, RefundOption, TrackingStep } from "./types";
 
 /** Least advanced print decides the status of an order with prints. */
 const PRINT_STATUS: Array<[FulfilmentStatus, OrderDisplayStatus]> = [
@@ -41,11 +42,6 @@ function itemFulfilment(itemId: string, fallback: FulfilmentStatus): FulfilmentS
   return PRINT_STATUS.find(([f]) => copies.some((c) => c.fulfilment === f))?.[0] ?? fallback;
 }
 
-const TABS: Record<Exclude<OrdersTab, "all">, OrderDisplayStatus[]> = {
-  to_ship: ["To ship", "Printed", "Packed"],
-  issues: ["Refund asked", "Pending"],
-  done: ["Shipped", "Delivered", "Refunded", "Partly refunded", "Cancelled"],
-};
 
 export function mapOrder(row: OrderRow): Order {
   const customer = allCustomers().find((c) => c.id === row.userId)!;
@@ -151,7 +147,7 @@ export async function getOrders(query: OrdersQuery = {}): Promise<Order[]> {
       .filter((o) => !query.customerId || o.userId === query.customerId)
       .filter((o) => !query.kind || o.items.some((i) => i.kind === query.kind))
       .map(mapOrder)
-      .filter((o) => !query.tab || query.tab === "all" || TABS[query.tab].includes(o.displayStatus))
+      .filter((o) => !query.tab || inOrderTab(o, query.tab))
       .filter((o) => !search || [o.number, o.customer.fullName, o.customer.email].some((v) => v.toLowerCase().includes(search)))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   );
@@ -201,8 +197,8 @@ export async function getRefundOptions(number: string): Promise<RefundOption[]> 
   return clone(options.filter((o) => o.amountCents > 0));
 }
 
-/** "187 this month" under AdminOrders: the board's month figure (the mock holds only the latest orders). */
-export const ORDERS_THIS_MONTH = 187;
+/** @deprecated Read `ordersThisMonth()` from `@/lib/metrics` (one source per number). Kept so existing imports work. */
+export const ORDERS_THIS_MONTH = ordersThisMonth();
 
 // ── Customer side (Account › Orders, confirmation, tracking) ────────────────
 

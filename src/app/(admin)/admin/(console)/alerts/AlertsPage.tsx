@@ -7,7 +7,8 @@
  */
 import Link from "next/link";
 import { AdminBox, AdminRow, AdminTitle, PillButton } from "@/components";
-import { PUSH_TOPICS, getAdminAlerts, getPushSettings, type AdminAlert } from "@/lib/api";
+import { PUSH_TOPICS, getPushSettings } from "@/lib/api";
+import { alerts as getAlerts, type AdminAlert } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { markAlertRead, setPushTopic } from "@/lib/client/admin/alerts";
 import { cn } from "@/lib/cn";
@@ -24,7 +25,7 @@ export function AlertsPage() {
 
 function useAlerts(phone: boolean) {
   const { staff } = useAdmin();
-  const q = useAdminQuery(getAdminAlerts, []);
+  const q = useAdminQuery(getAlerts, []);
   if (q.status === "loading") return null;
   const mine = q.data.filter((a) => hasRole(staff.role, a.roles));
   return phone

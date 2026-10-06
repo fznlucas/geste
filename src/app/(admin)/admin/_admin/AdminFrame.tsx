@@ -8,7 +8,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, type ReactNode } from "react";
 import { AdminSidebar, ToastProvider, activeNavHref } from "@/components";
-import { getAdminCounts, type AdminCounts } from "@/lib/api";
+import { todoCounts, type AdminCounts } from "@/lib/metrics";
 import { signOutStaff, useAdminQuery, useRequireStaff, type StaffSession } from "@/lib/client";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
@@ -29,7 +29,7 @@ export function useAdmin(): AdminContext {
 
 export function AdminFrame({ children }: { children: ReactNode }) {
   const state = useRequireStaff();
-  const counts = useAdminQuery(getAdminCounts, []);
+  const counts = useAdminQuery(todoCounts, []);
   const desktop = useMediaQuery("(min-width: 768px)");
   const path = usePathname();
   const router = useRouter();

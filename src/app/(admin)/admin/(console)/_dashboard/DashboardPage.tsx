@@ -8,11 +8,12 @@
  */
 import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
-import { getDashboard, getLowEdition, getOrders, type Dashboard, type Order } from "@/lib/api";
+import { getOrders, type Order } from "@/lib/api";
+import { dashboard, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { parisHour } from "@/lib/clock";
 import { formatPrice } from "@/lib/format";
-import type { StaffRole, StatusState } from "@/lib/types";
+import type { StatusState } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
@@ -44,29 +45,10 @@ function dashboardStatus(o: Order): { state: StatusState; label: string } {
   }
 }
 
-interface Todo {
-  key: string;
-  text: string;
-  issue: boolean;
-  href: string;
-  phoneHref?: string;
-  roles: StaffRole[];
-}
-
-/** "To do today": one line per module with something waiting, for the roles that can act on it. */
-function useTodos(): Todo[] | null {
-  const { counts } = useAdmin();
-  const low = useAdminQuery(getLowEdition, []);
-  if (!counts || low.status === "loading") return null;
-  const list: Array<Todo | null> = [
-    counts.fulfilment ? { key: "ship", text: `${plural(counts.fulfilment, "print", "prints")} to pack and ship`, issue: true, href: "/admin/fulfilment", roles: ["owner", "fulfilment"] } : null,
-    counts.support ? { key: "support", text: plural(counts.support, "support message", "support messages"), issue: false, href: "/admin/support", roles: ["owner", "support"] } : null,
-    counts.reviews ? { key: "reviews", text: `${plural(counts.reviews, "review", "reviews")} to moderate`, issue: false, href: "/admin/reviews", roles: ["owner", "support", "content"] } : null,
-    counts.ai ? { key: "ai", text: `${plural(counts.ai, "AI work", "AI works")} to validate`, issue: false, href: "/admin/ai", roles: ["owner", "content"] } : null,
-    low.data ? { key: "edition", text: low.data.label, issue: true, href: "/admin/editions", roles: ["owner", "fulfilment"] } : null,
-    { key: "newsletter", text: "October newsletter draft", issue: false, href: "/admin/marketing", roles: ["owner"] },
-  ];
-  return list.filter((t): t is Todo => t !== null);
+/** "To do today": one line per module with something waiting (`todoItems`, the same counts as the sidebar). */
+function useTodos(): TodoItem[] | null {
+  const items = useAdminQuery(todoItems, []);
+  return items.status === "loading" ? null : items.data;
 }
 
 export function DashboardPage() {
@@ -82,7 +64,7 @@ export function DashboardPage() {
 
 function DesktopDashboard() {
   const { staff } = useAdmin();
-  const data = useAdminQuery(getDashboard, []);
+  const data = useAdminQuery(dashboard, []);
   const orders = useAdminQuery(() => getOrders(), []);
   const todos = useTodos();
   const owner = staff.role === "owner";
@@ -251,7 +233,7 @@ function Skeleton() {
 
 function PhoneToday() {
   const { staff, counts } = useAdmin();
-  const data = useAdminQuery(getDashboard, []);
+  const data = useAdminQuery(dashboard, []);
   const orders = useAdminQuery(() => getOrders(), []);
   const owner = staff.role === "owner";
   const seesOrders = hasRole(staff.role, ["support", "fulfilment"]);

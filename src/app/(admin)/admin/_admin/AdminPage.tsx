@@ -11,7 +11,8 @@ import {
   AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, ButtonLink, DemoRoleMenu, ROLE_LABEL,
   useToast, type AdminPhoneTab, type Crumb,
 } from "@/components";
-import { getAdminAlerts, getCustomers, getOrders, getWorks } from "@/lib/api";
+import { getCustomers, getOrders, getWorks } from "@/lib/api";
+import { alerts as getAlerts } from "@/lib/metrics";
 import { adminStore, hasRole, setDemoRole, useAdminQuery } from "@/lib/client";
 import type { StaffRole } from "@/lib/types";
 import { useAdmin } from "./AdminFrame";
@@ -100,7 +101,7 @@ function DemoMenu() {
 
 function Alerts() {
   const { staff } = useAdmin();
-  const alerts = useAdminQuery(getAdminAlerts, []);
+  const alerts = useAdminQuery(getAlerts, []);
   const list = (alerts.data ?? []).filter((a) => hasRole(staff.role, a.roles));
   return <AlertsPopover alerts={list} />;
 }

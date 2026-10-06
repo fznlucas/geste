@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, KpiTile, PillButton, StatusChip } from "@/components";
-import { financeCsv, getFinance, type Finance } from "@/lib/api";
+import { finance, financeCsv, type Finance } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
 import { exportForAccountant } from "@/lib/client/admin/marketing";
 import { formatPrice } from "@/lib/format";
@@ -22,7 +22,7 @@ const day = (iso: string) => {
 };
 
 export function FinancePage() {
-  const q = useAdminQuery(getFinance, []);
+  const q = useAdminQuery(finance, []);
   return (
     <AdminPage title="Finance" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/finance">
       {q.status === "loading" ? <div aria-busy="true" aria-label="Loading" className="h-640 bg-surface-muted" /> : <Body f={q.data} />}

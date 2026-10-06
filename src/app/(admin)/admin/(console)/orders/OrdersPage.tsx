@@ -10,7 +10,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStatusChip, PillButton, PillLink, useToast } from "@/components";
-import { ORDERS_THIS_MONTH, copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
+import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
+import { inOrderTab, ordersThisMonth } from "@/lib/metrics";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
 import { markShipped } from "@/lib/client/admin/orders";
 import { simToday } from "@/lib/clock";
@@ -70,13 +71,8 @@ function DesktopOrders({ orders, q, onExport, exported }: { orders: Order[] | un
   const canShip = hasRole(staff.role, "fulfilment");
 
   const rows = useMemo(() => {
-    const TAB: Record<Exclude<OrdersTab, "all">, string[]> = {
-      to_ship: ["To ship", "Printed", "Packed"],
-      issues: ["Refund asked", "Pending"],
-      done: ["Shipped", "Delivered", "Refunded", "Partly refunded", "Cancelled"],
-    };
     return (orders ?? [])
-      .filter((o) => tab === "all" || TAB[tab].includes(o.displayStatus))
+      .filter((o) => inOrderTab(o, tab))
       .filter((o) => !kind || o.items.some((i) => i.kind === kind));
   }, [orders, tab, kind]);
   const shown = all ? rows : rows.slice(0, PAGE);
@@ -156,7 +152,7 @@ function DesktopOrders({ orders, q, onExport, exported }: { orders: Order[] | un
       </AdminBox>
       <p className="flex gap-8 text-fg-muted">
         <span>
-          {shown.length} orders shown{q ? ` for “${q}”` : ""} · {ORDERS_THIS_MONTH} this month
+          {shown.length} orders shown{q ? ` for “${q}”` : ""} · {ordersThisMonth()} this month
         </span>
         {!all && rows.length > PAGE && (
           <button type="button" onClick={() => setAll(true)} className="cursor-pointer text-fg underline underline-offset-3 hover:text-fg-muted">

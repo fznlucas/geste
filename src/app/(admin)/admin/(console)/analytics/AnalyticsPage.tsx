@@ -7,13 +7,13 @@
  */
 import { useState } from "react";
 import { AdminBox, AdminTabs, AdminTitle, GUIDE_EDITOR_HREF, HBar, UnderLink } from "@/components";
-import { ANALYTICS_RANGES, getAnalytics, type Analytics, type AnalyticsRange } from "@/lib/api";
+import { ANALYTICS_RANGES, analytics, type Analytics, type AnalyticsRange } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
 import { AdminPage } from "../../_admin/AdminPage";
 
 export function AnalyticsPage() {
   const [range, setRange] = useState<AnalyticsRange>("30 days");
-  const q = useAdminQuery(() => getAnalytics(range), [range]);
+  const q = useAdminQuery(() => analytics(range), [range]);
   return (
     <AdminPage title="Analytics" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/analytics">
       <div className="flex flex-wrap justify-between gap-12">
