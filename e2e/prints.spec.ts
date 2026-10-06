@@ -1,5 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { copiesLeft, nextCopyNumber } from "./helpers";
+
+/** Stock at the e2e clock: pre-launch copies, fixtures and simulated sales (docs/admin-v2/PLAN.md Q1). */
+const N07_S = await nextCopyNumber("ed-07-s");
+const N07_S_LEFT = await copiesLeft("ed-07-s");
 
 /** /prints gallery and /prints/[slug]: filters, sizes, to scale, and the guide + print bundle in the cart (docs/screens/store.md §Prints). */
 
@@ -38,9 +43,9 @@ test("print page: sizes turned for a landscape work, to scale, then the bundle i
   await page.evaluate(() => localStorage.clear());
   await page.goto("/prints/n07/");
   await expect(page.getByText("42 × 30 cm · A3").filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText("89 of 100 left")).toBeVisible();
+  await expect(page.getByText(`${N07_S_LEFT} of 100 left`)).toBeVisible();
   // The print page's sheet always carries its printed caption.
-  await expect(page.getByText("N°07 · 12/100").first()).toBeVisible();
+  await expect(page.getByText(`N°07 · ${N07_S}/100`).first()).toBeVisible();
 
   await page.getByRole("radio", { name: "M", exact: true }).click();
   await expect(page).toHaveURL(/size=m/);

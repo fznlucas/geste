@@ -173,13 +173,27 @@ const copiesMemo = memo(() => {
   const s = frozenSim();
   const all = merged("print_copies", [...local().copies, ...s.copies, ...printCopies, ...PRE_LAUNCH_COPIES])
     .map((c) => ({ ...c, paidAt: c.paidAt ?? (c.orderItemId ? paidOfItem.get(c.orderItemId) : undefined) ?? "2026-06-30T10:00:00Z" }));
-  // Numbers follow payment order within each edition (pre-launch copies first).
+  // Numbers follow payment order within each edition (pre-launch copies first). A copy bought in this
+  // browser keeps the number its buyer was shown (sold-out race: "Take 13/100 and pay"); the others skip it.
+  const browserIds = new Set(local().copies.map((c) => c.id));
   const byEdition = new Map<string, PrintCopyRow[]>();
   for (const c of [...all].sort((a, b) => byPaid({ paidAt: a.paidAt!, id: a.id }, { paidAt: b.paidAt!, id: b.id }))) {
     byEdition.set(c.editionId, [...(byEdition.get(c.editionId) ?? []), c]);
   }
   const numbered = new Map<string, number>();
-  for (const list of byEdition.values()) list.forEach((c, i) => numbered.set(c.id, i + 1));
+  for (const list of byEdition.values()) {
+    const kept = new Set(list.filter((c) => browserIds.has(c.id)).map((c) => c.number));
+    let n = 0;
+    for (const c of list) {
+      if (browserIds.has(c.id)) {
+        numbered.set(c.id, c.number);
+        continue;
+      }
+      do n++;
+      while (kept.has(n));
+      numbered.set(c.id, n);
+    }
+  }
   const rows = all.map((c) => {
     const number = numbered.get(c.id)!;
     const work = c.editionId.split("-")[1];

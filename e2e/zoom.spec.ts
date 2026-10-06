@@ -1,5 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { nextCopyNumber } from "./helpers";
+
+const N07_S = await nextCopyNumber("ed-07-s");
 
 /**
  * Levitation shadow of the work page's canvas, and the loupe (LightboxZoom) of the work and print
@@ -8,6 +11,8 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 async function expectNoAxeViolations(page: Page) {
+  // Colours are checked once the dialog has finished opening (a fading text fails contrast mid-way).
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
   expect(r.violations.map((v) => v.id)).toEqual([]);
 }
@@ -183,7 +188,7 @@ test("loupe on a print: the whole white sheet, margin and number", async ({ page
   await expect(dialog).toBeVisible();
   const picture = dialog.getByRole("button", { name: "Zoom in" });
   // The sheet (A3 turned, 42 × 30) with its printed number, not only the image.
-  await expect(dialog.getByText("N°07 · 12/100")).toBeVisible();
+  await expect(dialog.getByText(`N°07 · ${N07_S}/100`)).toBeVisible();
   const [p, img] = [await picture.boundingBox(), await dialog.locator("img").boundingBox()];
   expect(p!.width / p!.height).toBeCloseTo(42 / 30, 2);
   expect(img!.width).toBeLessThan(p!.width * 0.9);

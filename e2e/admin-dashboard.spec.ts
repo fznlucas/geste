@@ -1,7 +1,25 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { alerts, dashboard, formatPrice, getOrders, nextOrderNumber, plural, re, todoCounts } from "./helpers";
 
 /** M6 dashboard: admin login (password + code, passkey), guard, role switch, dashboard, phone Today, alerts. */
+
+/**
+ * The figures come from the simulated history at the e2e clock: the tests read them through the app's own
+ * metrics (docs/admin-v2/01 §2), and check that the page shows them where the board draws them.
+ */
+const D = await dashboard();
+const COUNTS = await todoCounts();
+const ORDERS = await getOrders();
+const ALERTS = (await alerts()).filter((a) => a.roles.includes("owner"));
+const NEXT = nextOrderNumber();
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthOf = (day: string) => MONTHS[Number(day.slice(5, 7)) - 1]!;
+const span = (days: Array<{ day: string }>) => {
+  const [a, b] = [monthOf(days[0]!.day), monthOf(days.at(-1)!.day)];
+  return a === b ? a : `${a}–${b}`;
+};
+const short = (name: string) => `${name.split(" ")[0]} ${name.split(" ")[1]?.[0] ?? ""}.`;
 
 const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1440) < 768;
 
@@ -61,21 +79,24 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   test.skip(isPhone(page), "desktop board");
   await fresh(page, { staff: true });
   await page.goto("/admin/");
-  await expect(page.getByRole("link", { name: /Revenue · 30 d\s*\$5,278\s*\+38% vs Aug/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Orders · 30 d\s*187/ })).toHaveAttribute("href", /\/admin\/orders\/?$/);
-  await expect(page.getByRole("heading", { name: "Revenue per day, September" })).toBeVisible();
+  const k = D.last30d;
+  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(formatPrice(k.revenueCents))}\\s*${re(k.revenueDelta)}`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${k.orders}\\b`) })).toHaveAttribute("href", /\/admin\/orders\/?$/);
+  await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days.slice(-30))}` })).toBeVisible();
   await page.getByRole("button", { name: "7 d" }).click();
   await expect(page.getByRole("button", { name: "7 d" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("img", { name: /^Sep \d+ · / })).toHaveCount(7);
+  await expect(page.getByRole("img", { name: /^[A-Z][a-z]{2} \d+ · / })).toHaveCount(7);
   await page.getByRole("button", { name: "90 d" }).click();
-  await expect(page.getByRole("heading", { name: "Revenue per day, July–September" })).toBeVisible();
-  await expect(page.getByRole("img", { name: /^(Jul|Aug|Sep) \d+ · / })).toHaveCount(90);
+  await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days)}` })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^[A-Z][a-z]{2} \d+ · / })).toHaveCount(90);
   await page.getByRole("img", { name: /^Sep 22 · / }).hover();
-  await expect(page.getByRole("tooltip")).toHaveText(/^Sep 22 · \$\d+ · \d+ orders$/);
-  await expect(page.getByRole("link", { name: /3 prints to pack and ship/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /4 reviews to moderate/ })).toHaveAttribute("href", /\/admin\/reviews\/?$/);
-  await expect(page.getByRole("link", { name: /#GS-2041\s*Camille Martin\s*Guide N°03 · Print N°07\s*\$80\s*Print to ship/ })).toHaveAttribute("href", /\/admin\/orders\/detail\/?\?number=GS-2041/);
-  await expect(page.getByRole("link", { name: /^N°03\s.*62$/ })).toBeVisible();
+  await expect(page.getByRole("tooltip")).toHaveText(/^Sep 22 · \$[\d,.]+ · \d+ orders?$/);
+  await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.fulfilment, "print", "prints")} to pack and ship`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.reviews, "review", "reviews")} to moderate`) })).toHaveAttribute("href", /\/admin\/reviews\/?$/);
+  const latest = ORDERS[0]!;
+  await expect(page.getByRole("link", { name: new RegExp(`#${latest.number}\\s*${re(latest.customer.fullName)}`) })).toHaveAttribute("href", new RegExp(`/admin/orders/detail/?\\?number=${latest.number}`));
+  const top = D.topWorks[0]!;
+  await expect(page.getByRole("link", { name: new RegExp(`^${top.number}\\s.*${top.guides}$`) })).toBeVisible();
   await expectNoAxeViolations(page);
 });
 
@@ -83,15 +104,16 @@ test("an order paid at checkout tops the dashboard and moves the numbers", async
   await fresh(page, { staff: true, purchase: true });
   await page.goto("/admin/");
   if (isPhone(page)) {
-    await expect(page.getByRole("link", { name: /#GS-2042 · Camille M\.\s*Guide N°03\s*\$19/ })).toBeVisible();
-    await expect(page.getByText("12", { exact: true })).toBeVisible(); // orders today: 11 + 1
+    await expect(page.getByRole("link", { name: new RegExp(`#${NEXT} · Camille M\\.\\s*Guide N°03\\s*\\$19`) })).toBeVisible();
+    await expect(page.getByText(String(D.today.orders + 1), { exact: true })).toBeVisible(); // orders today + this one
     return;
   }
-  await expect(page.getByRole("link", { name: /Orders · 30 d\s*188/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Revenue · 30 d\s*\$5,297/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${D.last30d.orders + 1}\\b`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(formatPrice(D.last30d.revenueCents + 1900))}`) })).toBeVisible();
   const latest = page.getByRole("list", { name: "Latest orders" }).getByRole("link");
-  await expect(latest.first()).toContainText("#GS-2042");
-  await expect(page.getByRole("link", { name: /^N°03\s.*63$/ })).toBeVisible();
+  await expect(latest.first()).toContainText(`#${NEXT}`);
+  const n03 = D.topWorks.find((w) => w.number === "N°03")!.guides;
+  await expect(page.getByRole("link", { name: new RegExp(`^N°03\\s.*${n03 + 1}$`) })).toBeVisible();
 });
 
 test("the Demo data menu switches role: nav, revenue and to-do follow", async ({ page }) => {
@@ -109,7 +131,7 @@ test("the Demo data menu switches role: nav, revenue and to-do follow", async ({
   await expect(page.getByText("Revenue · 30 d")).toHaveCount(0);
   await expect(page.getByText(/Revenue per day/)).toHaveCount(0);
   await expect(page.getByText("Orders · 30 d")).toBeVisible();
-  await expect(page.getByRole("link", { name: /2 support messages/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(plural(COUNTS.support, "support message", "support messages")) })).toBeVisible();
   await expect(page.getByRole("link", { name: /prints to pack and ship/ })).toHaveCount(0);
 
   await page.getByRole("button", { name: /Demo data/ }).click();
@@ -127,11 +149,11 @@ test("alerts: popover on desktop, Mark read and push topics on the phone page", 
   await fresh(page, { staff: true });
   if (!isPhone(page)) {
     await page.goto("/admin/");
-    const button = page.getByRole("button", { name: "Alerts, 6 unread" });
+    const button = page.getByRole("button", { name: `Alerts, ${ALERTS.length} unread` });
     await button.click();
     const panel = page.getByRole("dialog", { name: "Alerts" });
-    await expect(panel.getByRole("link")).toHaveCount(6);
-    await expect(panel.getByRole("link").first()).toContainText("3 prints to ship today");
+    await expect(panel.getByRole("link")).toHaveCount(ALERTS.length);
+    await expect(panel.getByRole("link").first()).toContainText(`${plural(COUNTS.fulfilment, "print", "prints")} to ship today`);
     await expectNoAxeViolations(page);
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
@@ -142,15 +164,16 @@ test("alerts: popover on desktop, Mark read and push topics on the phone page", 
   await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name: "Alerts" }).click();
   await expect(page).toHaveURL(/\/admin\/alerts\/?$/);
   await expect(page.getByRole("heading", { name: "Alerts" })).toBeVisible();
-  await expect(page.getByText("New order #GS-2041 · $80")).toBeVisible();
-  await page.getByRole("button", { name: "Mark read: New order #GS-2041 · $80" }).click();
-  await expect(page.getByRole("button", { name: "New order #GS-2041 · $80: read" })).toHaveText("Read");
+  const newOrder = `New order #${ORDERS[0]!.number} · $${Math.round(ORDERS[0]!.totalCents / 100)}`;
+  await expect(page.getByText(newOrder)).toBeVisible();
+  await page.getByRole("button", { name: `Mark read: ${newOrder}` }).click();
+  await expect(page.getByRole("button", { name: `${newOrder}: read` })).toHaveText("Read");
   const topic = page.getByRole("checkbox", { name: "Support message" });
   await expect(topic).toBeChecked();
   await topic.uncheck();
   await page.reload();
   await expect(page.getByRole("checkbox", { name: "Support message" })).not.toBeChecked();
-  await expect(page.getByRole("button", { name: "New order #GS-2041 · $80: read" })).toBeVisible();
+  await expect(page.getByRole("button", { name: `${newOrder}: read` })).toBeVisible();
   await expectNoAxeViolations(page);
 });
 
@@ -160,8 +183,8 @@ test("phone Today: KPIs, to-do and latest orders", async ({ page }) => {
   await page.goto("/admin/");
   await expect(page.getByRole("heading", { name: "Today · Oct 2" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByText("+22% vs Tue")).toBeVisible();
-  await expect(page.getByRole("link", { name: /3 prints to ship before 16:00/ })).toHaveAttribute("href", /\/admin\/orders\/?$/);
-  await expect(page.getByRole("link", { name: /#GS-2039 · Léa D\.\s*Gift card\s*\$50/ })).toBeVisible();
+  await expect(page.getByText(D.today.revenueDelta)).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.fulfilment, "print", "prints")} to ship before 16:00`) })).toHaveAttribute("href", /\/admin\/orders\/?$/);
+  await expect(page.getByRole("link", { name: new RegExp(`#${ORDERS[0]!.number} · ${re(short(ORDERS[0]!.customer.fullName))}`) })).toBeVisible();
   await expectNoAxeViolations(page);
 });

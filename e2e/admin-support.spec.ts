@@ -1,5 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { getReviews, getSupportThreads, orderNumber } from "./helpers";
+
+/** Inbox and moderation queue at the e2e clock: board threads and reviews plus simulated ones. */
+const UNREAD = (await getSupportThreads({ status: "open", unread: true })).length;
+const OPEN = (await getSupportThreads({ status: "open" })).length;
+const PENDING = (await getReviews({ status: "pending" })).length;
+const badge = (label: string, n: number) => (n ? new RegExp(`${label}\\s*${n}$`) : new RegExp(`^${label}$`));
 
 /** M6: support inbox, reviews moderation, content (docs/screens/admin.md). */
 
@@ -35,14 +42,14 @@ test("support: open, reply with a saved reply, mark as done", async ({ page }) =
   test.skip(isPhone(page), "desktop inbox");
   await adminLogIn(page);
   await page.goto("/admin/support/");
-  await expect(supportBadge(page)).toHaveText(/Support inbox\s*2/);
+  await expect(supportBadge(page)).toHaveText(badge("Support inbox", UNREAD));
   const list = page.getByRole("list").filter({ has: page.getByRole("button", { name: /Yanis Benali/ }) });
-  await expect(list.getByRole("button")).toHaveCount(4);
+  await expect(list.getByRole("button")).toHaveCount(OPEN);
 
   // Opening Sarah's new thread: one new message left.
   await page.getByRole("button", { name: /Sarah Cohen/ }).click();
   await expect(page.getByRole("heading", { name: "When will my print ship?" })).toBeVisible();
-  await expect(supportBadge(page)).toHaveText(/Support inbox\s*1/);
+  await expect(supportBadge(page)).toHaveText(badge("Support inbox", UNREAD - 1));
 
   await page.getByRole("button", { name: /Yanis Benali/ }).click();
   await expect(page.getByRole("heading", { name: "Refund for N°04?" })).toBeVisible();
@@ -53,12 +60,12 @@ test("support: open, reply with a saved reply, mark as done", async ({ page }) =
   await page.getByRole("button", { name: "Send reply" }).click();
   await expect(page.getByRole("list", { name: "Messages" }).getByRole("listitem")).toHaveCount(2);
   await expect(page.getByLabel("Reply")).toHaveValue("");
-  await expect(page.getByRole("link", { name: "Order #GS-2035" })).toHaveAttribute("href", /\/admin\/orders\/detail\/?\?number=GS-2035/);
+  await expect(page.getByRole("link", { name: `Order #${orderNumber("order-2035")}` })).toHaveAttribute("href", new RegExp(`/admin/orders/detail/?\\?number=${orderNumber("order-2035")}`));
 
   await page.getByRole("button", { name: "Mark as done" }).click();
   await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible();
   await expect(list.getByRole("button", { name: /Yanis Benali/ })).toHaveCount(0);
-  await expect(supportBadge(page)).toHaveText(/^Support inbox$/);
+  await expect(supportBadge(page)).toHaveText(badge("Support inbox", UNREAD - 2));
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByRole("button", { name: /Yanis Benali/ })).toBeVisible();
   await expectNoAxeViolations(page);
@@ -72,14 +79,14 @@ test("reviews: approve, feature, hide, undo, reply privately", async ({ page }) 
   test.skip(isPhone(page), "desktop grid");
   await adminLogIn(page);
   await page.goto("/admin/reviews/");
-  await expect(reviewsBadge(page)).toHaveText(/Reviews & results\s*4/);
+  await expect(reviewsBadge(page)).toHaveText(badge("Reviews & results", PENDING));
   const cards = page.getByRole("listitem");
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(PENDING);
   await cards.filter({ hasText: "Hugo Petit" }).getByRole("button", { name: "Approve" }).click();
   await cards.filter({ hasText: "Emma Roux" }).getByRole("button", { name: "Feature" }).click();
   await cards.filter({ hasText: "Tom Laurent" }).getByRole("button", { name: "Hide" }).click();
-  await expect(cards).toHaveCount(1);
-  await expect(reviewsBadge(page)).toHaveText(/Reviews & results\s*1/);
+  await expect(cards).toHaveCount(PENDING - 3);
+  await expect(reviewsBadge(page)).toHaveText(badge("Reviews & results", PENDING - 3));
 
   await page.getByRole("button", { name: "Published", exact: true }).click();
   await expect(cards.filter({ hasText: "Hugo Petit · N°01" })).toContainText("Published");

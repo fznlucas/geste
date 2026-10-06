@@ -1,7 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { nextCopyNumber, nextOrderNumber } from "./helpers";
 
 /** /checkout: every payment outcome of the Checkout board with Stripe's test cards (docs/screens/checkout.md). */
+
+/** Read from the app at the e2e clock: the next order number and the next N°07 S copy (docs/admin-v2/01 §2). */
+const NEXT = nextOrderNumber();
+const N07_S = await nextCopyNumber("ed-07-s");
 
 const CART = [
   { id: "l1", addedAt: "2026-10-01T10:00:00Z", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", format: "50x60", level: "match", palette: "original" },
@@ -74,9 +79,9 @@ test("declined card, then 3D Secure, then paid", async ({ page }) => {
 
   await pay(page);
   await page.getByRole("button", { name: /Complete/ }).click();
-  await expect(page).toHaveURL(/\/checkout\/success\/\?order=GS-2042/);
+  await expect(page).toHaveURL(new RegExp(`/checkout/success/\\?order=${NEXT}`));
   await expect(page.getByRole("heading", { name: "Thank you, Sarah." })).toBeVisible();
-  await expect(page.getByText(/N°07, 12\/100/).first()).toBeVisible();
+  await expect(page.getByText(`N°07, ${N07_S}/100`).first()).toBeVisible();
   await expectNoAxeViolations(page);
   const stored = await page.evaluate(() => ({ cart: localStorage.getItem("geste.cart.v2"), purchases: JSON.parse(localStorage.getItem("geste.purchases.v2") ?? "{}") }));
   expect(stored.cart).toBeNull();
@@ -98,10 +103,10 @@ test("sold-out number: take the next one and pay", async ({ page }) => {
   await toPayment(page);
   await fillCard(page, "4242 4242 4242 4242");
   await pay(page);
-  await expect(page.locator("main").getByRole("alert")).toContainText("Edition 12/100 of N°07 just sold out");
-  await page.getByRole("button", { name: /Take 13\/100 and pay/ }).click();
+  await expect(page.locator("main").getByRole("alert")).toContainText(`Edition ${N07_S}/100 of N°07 just sold out`);
+  await page.getByRole("button", { name: `Take ${N07_S + 1}/100 and pay` }).click();
   await expect(page).toHaveURL(/checkout\/success/);
-  await expect(page.getByText(/N°07, 13\/100/).first()).toBeVisible();
+  await expect(page.getByText(`N°07, ${N07_S + 1}/100`).first()).toBeVisible();
 });
 
 test("express checkout goes straight to the confirmation", async ({ page }) => {

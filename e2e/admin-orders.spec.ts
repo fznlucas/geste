@@ -1,5 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { getOrders, orderNumber } from "./helpers";
+
+/** Orders at the e2e clock: numbers in payment order, the phone's "To ship" list (docs/admin-v2/01 §2). */
+const INES = orderNumber("order-2038");
+const SARAH = orderNumber("order-2036");
+const TO_SHIP = (await getOrders()).filter((o) => o.displayStatus === "To ship").length;
 
 /**
  * M6 admin orders (docs/screens/admin.md): a checkout order reaches the admin, is shipped and refunded;
@@ -119,9 +125,9 @@ test("Support refunds up to $50 only", async ({ page }) => {
   await page.getByRole("menuitemradio", { name: /^Support/ }).click();
   await expect(page.getByText("Lucas · Support")).toBeVisible();
 
-  await page.goto("/admin/orders/detail/?number=GS-2038");
+  await page.goto(`/admin/orders/detail/?number=${INES}`);
   await page.getByRole("button", { name: "Refund…" }).click();
-  const dialog = page.getByRole("dialog", { name: "Refund #GS-2038" });
+  const dialog = page.getByRole("dialog", { name: `Refund #${INES}` });
   await dialog.getByRole("button", { name: /Full order/ }).click();
   await expect(dialog.getByRole("alert")).toContainText("Support can refund up to $50");
   await expect(dialog.getByRole("button", { name: /^Refund \$126/ })).toBeDisabled();
@@ -146,14 +152,14 @@ test("phone: one-tap mark as shipped", async ({ page }) => {
   await fresh(page);
   await adminLogin(page);
   await page.goto("/admin/orders/");
-  await expect(page.getByRole("heading", { name: "To ship · 3" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `To ship · ${TO_SHIP}` })).toBeVisible();
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Mark as shipped" }).first().click();
   await expect(page.getByRole("button", { name: /Shipped · customer notified/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "To ship · 2" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `To ship · ${TO_SHIP - 1}` })).toBeVisible();
 
-  await page.getByRole("link", { name: "#GS-2036" }).click();
-  await expect(page.getByRole("heading", { name: "#GS-2036 · $66.90" })).toBeVisible();
+  await page.getByRole("link", { name: `#${SARAH}` }).click();
+  await expect(page.getByRole("heading", { name: `#${SARAH} · $66.90` })).toBeVisible();
   await page.getByLabel("Tracking number").fill("6A 123 456 789 01");
   await page.getByRole("button", { name: "Mark as shipped" }).click();
   await expect(page.getByRole("button", { name: "Shipped · Sarah notified" })).toBeVisible();

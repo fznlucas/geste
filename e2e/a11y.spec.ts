@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { orderNumber } from "./helpers";
 
 /**
  * M7: axe (WCAG 2.2 AA) on every route of the export, at 1440 and 390 (docs/mock-plan.md §4).
@@ -35,9 +36,9 @@ function exportedRoutes(): string[] {
     [/^\/admin\/works\/n\d+\/$/, "/admin/works/n03/"],
   ];
   const QUERY: Record<string, string> = {
-    "/admin/orders/detail/": "/admin/orders/detail/?number=GS-2041",
-    "/track/": "/track/?order=GS-2028",
-    "/checkout/success/": "/checkout/success/?order=GS-2041",
+    "/admin/orders/detail/": `/admin/orders/detail/?number=${orderNumber("order-2041")}`,
+    "/track/": `/track/?order=${orderNumber("order-2028")}`,
+    "/checkout/success/": `/checkout/success/?order=${orderNumber("order-2041")}`,
     "/admin/works/draft/": "/admin/works/draft/?slug=n03",
   };
   const routes = new Set<string>();

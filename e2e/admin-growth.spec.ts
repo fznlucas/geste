@@ -1,5 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { analytics, orderNumber } from "./helpers";
+
+/** The analytics of the simulated history at the e2e clock (docs/admin-v2/01 §2). */
+const A = await analytics("30 days");
+const DROPS = A.completion.steps.filter((s) => s.drop);
 
 /** M6 growth: /admin/analytics, /admin/finance, /admin/marketing, /admin/settings (owner only). */
 
@@ -33,8 +38,8 @@ test("analytics: funnel, completion drops and ranges", async ({ page }) => {
   await asStaff(page);
   await page.goto("/admin/analytics/");
   await expect(page.getByRole("heading", { name: "Funnel · last 30 days" })).toBeVisible();
-  await expect(page.getByText("Biggest leak: work → cart (11.8%).", { exact: false })).toBeVisible();
-  await expect(page.getByText("Drops at 2a (−6 pts) and 2e (−7 pts)")).toBeVisible();
+  await expect(page.getByText(`Biggest leak: ${A.leak.from} → ${A.leak.to} (${A.leak.pct}%).`, { exact: false })).toBeVisible();
+  await expect(page.getByText(`Drops at ${DROPS.map((d) => `${d.step} (−${d.drop!.points} pts)`).join(" and ")}`)).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit these steps" })).toHaveAttribute("href", /\/admin\/works\/n03\/guide\//);
   await expectNoAxeViolations(page);
   await tab(page, "7 days").click();
@@ -118,7 +123,7 @@ test("settings: invite, audit log, remove", async ({ page }) => {
   await tab(page, "Security").click();
   const log = page.getByRole("table", { name: "Audit log, newest first" });
   await expect(log.getByRole("row").first()).toContainText("Lucas invited nora@example.com as Content editor");
-  await expect(log).toContainText("Lucas marked #GS-2033 as shipped");
+  await expect(log).toContainText(`Lucas marked #${orderNumber("order-2033")} as shipped`);
 
   await tab(page, "Team & roles").click();
   await page.getByRole("button", { name: "Remove nora@example.com" }).click();

@@ -10,7 +10,7 @@ import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { clone } from "@/lib/api/clone";
 import { allCampaigns, allSocialPosts, allTraffic, allWorks } from "@/lib/api/local";
 import { metric } from "./define";
-import { dayLabel, periodLabel, previousPeriod, rollingDays, type Period } from "./period";
+import { dayLabel, previousPeriod, rollingDays, type Period } from "./period";
 import {
   affiliateEarnedEurCents, averageOrderCents, conversionPct, dailySales, eurToUsdCents, guidesFinishedPct, guidesSoldByWork, paidOrders, storeReceiptsCents,
 } from "./sales";
@@ -134,7 +134,9 @@ function todayFigures() {
 export const dashboard = metric("Dashboard figures: revenue, orders, average order, conversion, guides finished, affiliate, revenue per day, today and top works.", async function dashboard(range = 30): Promise<Dashboard> {
   const period = rollingDays(range);
   const previous = previousPeriod(period);
-  const vs = `vs ${periodLabel(previous)}`;
+  // "vs prior 30 d": one line in the tile, as drawn; the exact dates go in the tile's tooltip (06 §2).
+  const vs = `vs prior ${range} d`;
+
   const revenueCents = storeReceiptsCents(period);
   const orders = paidOrders(period).length;
   const avgOrderCents = averageOrderCents(period);

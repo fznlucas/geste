@@ -1,5 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { orderNumber } from "./helpers";
+
+const CAMILLE = orderNumber("order-2041");
 
 /** M5: guide reader, drying timer, print preview, and the Library following the reader (docs/screens/reader.md). */
 
@@ -91,13 +94,13 @@ test("Print opens the sheet, Prepare PDF shows the watermarked pages", async ({ 
   const sheet = page.getByRole("dialog", { name: "Print this guide" });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText("2 of 3 prints left")).toBeVisible();
-  await expect(sheet.getByText(/Camille M\. · #GS-2041/)).toBeVisible();
+  await expect(sheet.getByText(new RegExp(`Camille M\\. · #${CAMILLE}`))).toBeVisible();
   await expectNoAxeViolations(page);
   await sheet.getByRole("button", { name: /Prepare PDF/ }).click();
   await expect(page.getByRole("region", { name: "Page 1 of 8" })).toBeVisible();
   await expect(page.getByRole("region", { name: /^Page \d of 8$/ })).toHaveCount(8);
   await expect(page.getByText("Licensed to Camille M. · camille.martin@mail.com").first()).toBeVisible();
-  await expect(page.getByText("order #GS-2041").first()).toBeVisible();
+  await expect(page.getByText(`order #${CAMILLE}`).first()).toBeVisible();
 
   await page.getByRole("button", { name: "← Print options" }).click();
   await page.getByLabel("Current layer only · 1 page").check();

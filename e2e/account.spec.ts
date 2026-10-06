@@ -1,7 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { nextOrderNumber, orderNumber } from "./helpers";
 
 /** M4: log in, library, orders, settings, tracking, and a checkout order landing in the account (docs/screens/account.md). */
+
+/** Order numbers are given in payment order at read time (docs/admin-v2/01 §2): read them, never type them. */
+const CAMILLE_PRINT = orderNumber("order-2041");
+const CAMILLE_SHIPPED = orderNumber("order-2028");
+const NEXT = nextOrderNumber();
 
 const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1440) < 1200;
 
@@ -24,7 +30,7 @@ test("the account is guarded, login honours next", async ({ page }) => {
   await page.getByRole("button", { name: /^Log in/ }).click();
   await expect(page).toHaveURL(/\/account\/orders\/?$/);
   await expect(page.getByRole("heading", { name: "Hi Camille" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /#GS-2041/ })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: new RegExp(`#${CAMILLE_PRINT}`) })).toHaveAttribute("aria-expanded", "true");
   await expectNoAxeViolations(page);
 });
 
@@ -96,19 +102,19 @@ test("an order paid at checkout shows in the library, the orders and the trackin
   await page.getByRole("radio", { name: "PayPal" }).check({ force: true }); // desktop: sr-only native radio under its row
   await page.locator("label", { hasText: "I accept the" }).locator("input").check();
   await page.getByRole("button", { name: /^Pay now/ }).click();
-  await expect(page).toHaveURL(/\/checkout\/success\/?\?order=GS-2042/);
+  await expect(page).toHaveURL(new RegExp(`/checkout/success/?\\?order=${NEXT}`));
 
   await page.getByRole("link", { name: "Open my library" }).click();
   await expect(page).toHaveURL(/\/account\/?$/);
   await expect(page.getByText("N°05", { exact: true })).toBeVisible();
 
   await page.goto("/account/orders/");
-  const first = page.getByRole("button", { name: /#GS-2042/ });
+  const first = page.getByRole("button", { name: new RegExp(`#${NEXT}`) });
   await expect(first).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByText("N°05 — Guide, 50×60")).toBeVisible();
   await expect(page.getByText(/N°07 — Print S, \d+\/100/).first()).toBeVisible();
   await page.getByRole("link", { name: /^Track/ }).first().click();
-  await expect(page).toHaveURL(/\/track\/?\?order=GS-2042/);
+  await expect(page).toHaveURL(new RegExp(`/track/?\\?order=${NEXT}`));
   await expect(page.getByRole("listitem").filter({ hasText: "Ordered" })).toHaveAttribute("aria-current", "step");
   if (!isPhone(page)) await expect(page.getByText("1000 Bruxelles, Belgium")).toBeVisible();
 });
@@ -119,9 +125,9 @@ test("a shipped print shows its full carrier timeline, GS-2041 stays in preparat
   await page.getByRole("button", { name: /passkey|Face ID/ }).click();
   await page.goto("/account/orders/");
   // Phones show the first part of the status ("Print shipped").
-  await expect(page.getByRole("button", { name: /#GS-2028/ })).toHaveAccessibleName(isPhone(page) ? /Print shipped$/ : /Print shipped · arriving Sept 30–Oct 2/);
-  await expect(page.getByRole("button", { name: /#GS-2041/ })).toHaveAccessibleName(isPhone(page) ? /Print in preparation$/ : /Print in preparation · arriving Oct 6–8/);
-  await page.goto("/track/?order=GS-2028");
+  await expect(page.getByRole("button", { name: new RegExp(`#${CAMILLE_SHIPPED}`) })).toHaveAccessibleName(isPhone(page) ? /Print shipped$/ : /Print shipped · arriving Sept 30–Oct 2/);
+  await expect(page.getByRole("button", { name: new RegExp(`#${CAMILLE_PRINT}`) })).toHaveAccessibleName(isPhone(page) ? /Print in preparation$/ : /Print in preparation · arriving Oct 6–8/);
+  await page.goto(`/track/?order=${CAMILLE_SHIPPED}`);
   await expect(page.getByRole("heading", { name: "Friday, Oct 2" })).toBeVisible();
   for (const label of ["Ordered", "Printed and signed", "Handed to Colissimo"]) await expect(page.getByRole("listitem").filter({ hasText: label })).not.toHaveAttribute("aria-current");
   await expect(page.getByRole("listitem").filter({ hasText: "In transit" })).toHaveAttribute("aria-current", "step");
