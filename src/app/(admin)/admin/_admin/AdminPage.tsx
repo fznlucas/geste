@@ -17,6 +17,7 @@ import { asset } from "@/lib/asset";
 import { clockOverride, setClockOverride } from "@/lib/clock";
 import { purchasesStore } from "@/lib/client/purchases";
 import { adminStore, hasRole, setDemoRole, useAdminQuery } from "@/lib/client";
+import { markAlertRead } from "@/lib/client/admin/alerts";
 import type { StaffRole } from "@/lib/types";
 import { useAdmin } from "./AdminFrame";
 
@@ -131,8 +132,8 @@ const clockLabel = (iso: string) => new Date(iso).toLocaleString("en-GB", { mont
 function Alerts() {
   const { staff } = useAdmin();
   const alerts = useAdminQuery(getAlerts, []);
-  const list = (alerts.data ?? []).filter((a) => hasRole(staff.role, a.roles));
-  return <AlertsPopover alerts={list} />;
+  const list = (alerts.data ?? []).filter((a) => a.desktop && hasRole(staff.role, a.roles));
+  return <AlertsPopover alerts={list} onOpen={(id) => markAlertRead(id)} />;
 }
 
 /** Order number → the order; customer name or email → the customer; "N°03" → the work; otherwise the orders list. */

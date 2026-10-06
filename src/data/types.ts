@@ -213,6 +213,8 @@ export interface RefundRow {
   restock: boolean;
   revokeAccess: boolean;
   createdAt: string;
+  /** The share paid back onto gift cards (the order was paid with them), in the order's currency; the rest goes to the bank card. */
+  giftCards?: Array<{ giftCardId: string; cents: number }>;
 }
 
 export interface ShipmentRow {

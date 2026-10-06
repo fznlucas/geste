@@ -18,8 +18,9 @@ export interface AlertItem {
  * Top bar "Alerts · 6" (AdminDashboard, state notif): a 380 px white panel pinned 64 px from the top and
  * 32 px from the right of the content column (its nearest positioned ancestor), one 53 px row per alert
  * (a link to its module) + "Close". Escape, a click outside or a link closes it; focus returns to the button.
+ * `onOpen`: following an alert's link marks it read.
  */
-export function AlertsPopover({ alerts }: { alerts: AlertItem[] }) {
+export function AlertsPopover({ alerts, onOpen }: { alerts: AlertItem[]; onOpen?: (id: string) => void }) {
   const unread = alerts.filter((a) => !a.read).length;
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
@@ -58,7 +59,10 @@ export function AlertsPopover({ alerts }: { alerts: AlertItem[] }) {
             <Link
               key={a.id}
               href={a.href}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                if (!a.read) onOpen?.(a.id);
+                setOpen(false);
+              }}
               className={cn(
                 "box-content grid min-h-52 grid-cols-[1fr_auto] items-center gap-x-12 border-b border-border px-16 hover:bg-surface-hover focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg",
                 a.read && "text-fg-muted",

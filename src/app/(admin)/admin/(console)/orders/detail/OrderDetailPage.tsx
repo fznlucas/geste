@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, Tooltip, UnderLink,
   fulfilmentLabel, useToast,
@@ -16,7 +16,7 @@ import {
 import { copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import {
-  CARRIER_OPTIONS, PARCELS, REFUND_REASONS, addOrderNote, createLabel, generateCertificate, markShipped, refundLimitCents, refundOrder, resendAccess, resendReceipt,
+  CARRIER_OPTIONS, PARCELS, REFUND_REASONS, addOrderNote, refundBlocked, createLabel, generateCertificate, markShipped, refundLimitCents, refundOrder, resendAccess, resendReceipt,
   type Carrier,
 } from "@/lib/client/admin/orders";
 import { adminDateTime } from "@/lib/dates";
@@ -300,7 +300,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
           open={refundOpen}
           onOpenChange={setRefundOpen}
           orderNumber={o.number}
-          options={options.data}
+          options={options.data.map((x) => ({ ...x, blocked: refundBlocked(x, staff.role) }))}
           reasons={REFUND_REASONS}
           restockLabel={prints.length ? `Put edition ${prints.map(copyNumbersLabel).join(", ")} back in stock` : null}
           limitCents={limit}
@@ -374,6 +374,12 @@ function PhoneOrder({ order: o }: { order: OrderDetail }) {
   const toast = useToast();
   const [tracking, setTracking] = useState(o.shipment ? formatTrackingNo(o.shipment.trackingNo) : "");
   const [scanning, setScanning] = useState(false);
+  // Stable, so the scanner's camera effect does not restart on every render.
+  const onScanned = useCallback((code: string) => {
+    setTracking(formatTrackingNo(code.replace(/\s+/g, "").toUpperCase()));
+    setScanning(false);
+  }, []);
+  const closeScanner = useCallback(() => setScanning(false), []);
   const field = useRef<HTMLInputElement>(null);
   const shipped = isShipped(o);
   const canShip = hasRole(staff.role, "fulfilment") && o.items.some((i) => i.kind === "print");
@@ -430,13 +436,7 @@ function PhoneOrder({ order: o }: { order: OrderDetail }) {
         </>
       )}
       {scanning && (
-        <BarcodeScanner
-          onCode={(code) => {
-            setTracking(formatTrackingNo(code.replace(/\s+/g, "").toUpperCase()));
-            setScanning(false);
-          }}
-          onClose={() => setScanning(false)}
-        />
+        <BarcodeScanner onCode={onScanned} onClose={closeScanner} />
       )}
     </div>
   );

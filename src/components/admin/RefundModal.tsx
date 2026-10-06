@@ -12,6 +12,8 @@ export interface RefundChoice {
   key: string;
   label: string;
   amountCents: number;
+  /** Why the signed-in role cannot make this one ("The guide was opened: only the owner can take it back."). */
+  blocked?: string | null;
 }
 
 export interface RefundModalProps {
@@ -31,7 +33,7 @@ export interface RefundModalProps {
 /**
  * AdminOrderDetail refund dialog: the choices as 40 px outline rows (selected = Ink border, amount at
  * the right), the reason sent to the customer, restock, Cancel + a Signal "Refund $51  →".
- * Above the role's limit the confirm is disabled and says why.
+ * Above the role's limit, or when the choice is blocked for the role, the confirm is disabled and says why.
  */
 export function RefundModal(props: RefundModalProps) {
   // Mounted on open: every opening starts from the first choice, no leftover error.
@@ -47,8 +49,9 @@ function RefundDialog({ open, onOpenChange, orderNumber, options, reasons, resto
 
   const picked = options.find((o) => o.key === choice) ?? options[0];
   const over = !!picked && picked.amountCents > limitCents;
+  const blocked = picked?.blocked ?? (over ? `Support can refund up to ${formatPrice(limitCents)}. Ask the owner for this one.` : null);
   const confirm = async () => {
-    if (!picked || over) return;
+    if (!picked || blocked) return;
     setBusy(true);
     setError(null);
     try {
@@ -71,7 +74,7 @@ function RefundDialog({ open, onOpenChange, orderNumber, options, reasons, resto
       actions={
         <>
           <Button variant="ghost" className="grow" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button variant="danger-solid" className="grow-2" style={{ gap: 0 }} trailing="→" loading={busy} disabled={!picked || over} onClick={confirm}>
+          <Button variant="danger-solid" className="grow-2" style={{ gap: 0 }} trailing="→" loading={busy} disabled={!picked || !!blocked} onClick={confirm}>
             Refund {picked ? formatPrice(picked.amountCents) : ""}
           </Button>
         </>
@@ -108,7 +111,7 @@ function RefundDialog({ open, onOpenChange, orderNumber, options, reasons, resto
           <span>{restockLabel}</span>
         </label>
       )}
-      {over && <p role="alert" className="text-danger">Support can refund up to {formatPrice(limitCents)}. Ask the owner for this one.</p>}
+      {blocked && <p role="alert" className="text-danger">{blocked}</p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
     </Modal>
   );

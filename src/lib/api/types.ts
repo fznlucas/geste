@@ -369,6 +369,8 @@ export interface Refund {
   restock: boolean;
   revokeAccess: boolean;
   createdAt: string;
+  /** Paid back onto gift cards rather than the bank card. */
+  giftCards?: Array<{ giftCardId: string; cents: number }>;
 }
 
 export interface Shipment {
@@ -415,6 +417,8 @@ export interface Order {
   id: string;
   number: string; // "GS-2041"
   status: OrderStatus;
+  /** Gift cards used to pay (in the order's currency). */
+  giftCardRedemptions: Array<{ giftCardId: string; cents: number }>;
   displayStatus: OrderDisplayStatus;
   customer: { id: string; fullName: string; email: string };
   /** "Guide N°03 · Print N°07 S" (AdminOrders "Items" column). */
@@ -456,6 +460,8 @@ export interface RefundOption {
   key: "print" | "guide" | "full";
   label: string;
   amountCents: number;
+  /** Set when only the owner may make this refund: the guide was opened, so taking it back needs a decision. */
+  ownerOnly: string | null;
 }
 
 // ── People ─────────────────────────────────────────────────────────────────

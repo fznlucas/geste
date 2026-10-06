@@ -22,7 +22,7 @@ function State({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function OrdersKit() {
-  const [open, setOpen] = useState<null | "owner" | "support" | "error">(null);
+  const [open, setOpen] = useState<null | "owner" | "support" | "opened" | "error">(null);
   return (
     <div className="flex flex-col gap-24">
       <State label="OrderStatusChip · order status (Signal = needs a hand, filled = finished, hollow = in between)">
@@ -42,10 +42,11 @@ export function OrdersKit() {
           <OrderStatusChip status={fulfilmentLabel("gift_card", "not_required")} />
         </div>
       </State>
-      <State label="RefundModal · owner / Support above $50 / failed">
+      <State label="RefundModal · owner / Support above $50 / guide opened (owner only) / failed">
         <div className="flex gap-10">
           <Button variant="danger" onClick={() => setOpen("owner")}>Refund…</Button>
           <Button variant="ghost" onClick={() => setOpen("support")}>As Support ($50 max)</Button>
+          <Button variant="ghost" onClick={() => setOpen("opened")}>Guide opened, as Support</Button>
           <Button variant="ghost" onClick={() => setOpen("error")}>Refund that fails</Button>
         </div>
       </State>
@@ -53,10 +54,14 @@ export function OrdersKit() {
         open={open !== null}
         onOpenChange={(o) => !o && setOpen(null)}
         orderNumber="GS-2041"
-        options={open === "support" ? [...OPTIONS].reverse() : OPTIONS}
+        options={
+          open === "support" ? [...OPTIONS].reverse()
+          : open === "opened" ? OPTIONS.map((o) => ({ ...o, blocked: o.key === "print" ? null : "The guide was opened: only the owner can take it back." })).reverse()
+          : OPTIONS
+        }
         reasons={REASONS}
         restockLabel="Put edition 12/50 back in stock"
-        limitCents={open === "support" ? 5000 : Number.POSITIVE_INFINITY}
+        limitCents={open === "support" || open === "opened" ? 5000 : Number.POSITIVE_INFINITY}
         onConfirm={async () => {
           await new Promise((r) => setTimeout(r, 600));
           if (open === "error") throw new Error("Stripe refused the refund. Try again in a minute.");

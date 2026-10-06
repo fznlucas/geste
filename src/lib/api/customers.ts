@@ -3,6 +3,7 @@ import { CUSTOMER_SOURCES } from "@/data/customers";
 import { passkeys, passwordChangedAt } from "@/data/security";
 import type { ProfileRow } from "@/data/types";
 import { clone } from "./clone";
+import { customerTotals } from "./customer-totals";
 import { mapLibraryItem } from "./library";
 import { allCustomers, allEntitlements, allReviews, customerById, ordersOfCustomer } from "./local";
 import { mapOrder } from "./orders";
@@ -16,7 +17,7 @@ const SOURCE_LABEL: Record<string, string> = { tiktok: "TikTok", instagram: "Ins
 const HOME_COUNTRY = "FR";
 
 function mapCustomer(row: ProfileRow): CustomerSummary {
-  const paid = ordersOfCustomer(row.id).filter((o) => o.status !== "refunded" && o.status !== "cancelled" && o.status !== "pending");
+  const totals = customerTotals(row.id);
   return {
     id: row.id,
     fullName: row.fullName,
@@ -25,9 +26,7 @@ function mapCustomer(row: ProfileRow): CustomerSummary {
     newsletter: row.newsletter,
     country: row.defaultAddress.country,
     city: row.defaultAddress.city,
-    ordersCount: paid.length,
-    spentCents: paid.reduce((s, o) => s + o.totalCents, 0),
-    lastOrderAt: paid.map((o) => o.createdAt).sort().at(-1) ?? null,
+    ...totals,
     createdAt: row.createdAt,
     deletionScheduledAt: row.deletionScheduledAt ?? null,
   };

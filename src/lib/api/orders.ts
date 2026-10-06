@@ -8,9 +8,10 @@ import { printEditions } from "@/data/editions";
 import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
+import { customerTotals } from "./customer-totals";
 import { includedVatCents } from "@/data/tax";
 import { vatRateAt } from "./vat";
-import { allOrders, copiesOfItem, customerById, entitlementOfItem, orderByNumber, ordersOfCustomer, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
+import { allOrders, copiesOfItem, customerById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
 import { inOrderTab } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
 import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrderTracking, RefundOption, TrackingStep } from "./types";
@@ -88,6 +89,7 @@ export function mapOrder(row: OrderRow): Order {
     id: row.id,
     number: row.number,
     status: row.status,
+    giftCardRedemptions: row.giftCardRedemptions ?? [],
     displayStatus: displayStatus(row),
     customer: { id: customer.id, fullName: customer.fullName, email: customer.email },
     summary,
@@ -105,7 +107,7 @@ export function mapOrder(row: OrderRow): Order {
     paidAt: row.paidAt,
     createdAt: row.createdAt,
     refunds: refundsOfOrder(row.id)
-      .map(({ id, amountCents, reason, restock, revokeAccess, createdAt }) => ({ id, amountCents, reason, restock, revokeAccess, createdAt })),
+      .map(({ id, amountCents, reason, restock, revokeAccess, createdAt, giftCards }) => ({ id, amountCents, reason, restock, revokeAccess, createdAt, ...(giftCards ? { giftCards } : {}) })),
     shipment: shipment
       ? { id: shipment.id, labelCreatedAt: shipment.labelCreatedAt ?? null, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, inTransitAt: shipment.inTransitAt, outForDeliveryAt: shipment.outForDeliveryAt, deliveredAt: shipment.deliveredAt }
       : null,
@@ -156,12 +158,12 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
   const row = orderByNumber(normalizeNumber(number));
   if (!row) return null;
   const order = mapOrder(row);
-  const history = ordersOfCustomer(row.userId).filter((o) => o.createdAt <= row.createdAt && o.status !== "refunded");
+  const history = customerTotals(row.userId, row.createdAt);
   return clone({
     ...order,
     timeline: timeline(order),
-    customerOrdersCount: history.length,
-    customerLifetimeCents: history.reduce((s, o) => s + o.totalCents, 0),
+    customerOrdersCount: history.ordersCount,
+    customerLifetimeCents: history.spentCents,
     customerPhone: customerById(row.userId)?.phone ?? null,
     vatLabel: vatLabel(row),
     supportThreads: threadsOfOrder(row.id).map(mapThread),
@@ -182,23 +184,40 @@ function vatLabel(row: OrderRow): string | null {
   return rate && orderVatCents(row) > 0 ? `VAT included (${whose} ${Math.round(rate * 1000) / 10}%)` : null;
 }
 
+/** Paid orders can be refunded, partly refunded ones while money is left (docs/admin-v2/05 "Refunds"). */
+export const REFUNDABLE_STATUSES: ReadonlyArray<OrderRow["status"]> = ["paid", "partially_refunded"];
+
+/** Has any print of the order left the studio (handed to the carrier)? */
+function anyPrintShipped(row: OrderRow): boolean {
+  const shipment = shipmentOfOrder(row.id);
+  if (shipment?.shippedAt) return true;
+  return row.items.some((i) => i.kind === "print" && copiesOfItem(i.id).some((c) => c.fulfilment === "shipped" || c.fulfilment === "delivered"));
+}
+
 /**
- * Refund modal choices (AdminOrderDetail): the prints with the shipping ("returned"), the guides
- * (revokes library access), the whole order. Amounts leave out what was already refunded; a choice
- * appears only when the order has that kind of line.
+ * Refund modal choices (AdminOrderDetail): the prints ("returned"; with the shipping only while nothing
+ * has shipped), the guides (revokes library access), the whole order. Amounts leave out what was
+ * already refunded; a choice appears only when the order has that kind of line. Only paid orders.
+ * Taking back a guide the customer opened is the owner's decision (`ownerOnly`).
  */
 export async function getRefundOptions(number: string): Promise<RefundOption[]> {
   const row = orderByNumber(normalizeNumber(number));
-  if (!row) return [];
+  if (!row || !REFUNDABLE_STATUSES.includes(row.status)) return [];
   const refunded = refundsOfOrder(row.id).reduce((s, r) => s + r.amountCents, 0);
   const left = Math.max(0, row.totalCents - refunded);
   // Net of the bundle discount: what the customer paid for those lines.
   const sum = (kind: string) => row.items.filter((i) => i.kind === kind).reduce((s, i) => s + i.unitPriceCents * i.quantity - (i.discountCents ?? 0), 0);
+  const opened = row.items.some((i) => {
+    const ent = i.kind === "guide" ? entitlementOfItem(i.id) : undefined;
+    return !!ent?.openedAt && !ent.revokedAt;
+  });
+  const openedRule = opened ? "The guide was opened: only the owner can take it back." : null;
   const options: RefundOption[] = [];
   const prints = sum("print"), guides = sum("guide");
-  if (prints && row.items.some((i) => i.kind !== "print")) options.push({ key: "print", label: "Print only (returned)", amountCents: Math.min(left, prints + row.shippingCents) });
-  if (guides && row.items.some((i) => i.kind !== "guide")) options.push({ key: "guide", label: "Guide only (revokes library access)", amountCents: Math.min(left, guides) });
-  options.push({ key: "full", label: "Full order", amountCents: left });
+  const shipping = anyPrintShipped(row) ? 0 : row.shippingCents;
+  if (prints && row.items.some((i) => i.kind !== "print")) options.push({ key: "print", label: "Print only (returned)", amountCents: Math.min(left, prints + shipping), ownerOnly: null });
+  if (guides && row.items.some((i) => i.kind !== "guide")) options.push({ key: "guide", label: "Guide only (revokes library access)", amountCents: Math.min(left, guides), ownerOnly: openedRule });
+  options.push({ key: "full", label: "Full order", amountCents: left, ownerOnly: guides ? openedRule : null });
   return clone(options.filter((o) => o.amountCents > 0));
 }
 

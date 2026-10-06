@@ -11,7 +11,7 @@ import { vatRateAt, vatRegime } from "@/lib/api/vat";
 import { LAUNCH_DATE } from "@/sim/config";
 import { parisInstant } from "@/sim/calendar";
 import {
-  ledgerFromAffiliate, ledgerFromAiJob, ledgerFromBreakage, ledgerFromCopy, ledgerFromGiftCardUse, ledgerFromOrder, ledgerFromRefund, ledgerFromShipment,
+  ledgerFromAffiliate, ledgerFromAiJob, ledgerFromBreakage, ledgerFromCopy, ledgerFromGiftCardRefund, ledgerFromGiftCardUse, ledgerFromOrder, ledgerFromRefund, ledgerFromShipment,
   ledgerFromSubscriptions,
 } from "./derive";
 import { TURNOVER_ACCOUNTS, type LedgerLine } from "./types";
@@ -152,18 +152,21 @@ export function books(): Books {
     if (Date.parse(o.paidAt) > now && o.origin !== "browser") continue;
     lines.push(...ledgerFromOrder(o, payments.get(o.id), country(o), regime, vatRateAt(country(o), o.paidAt, regime)));
   }
-  // Gift card uses in time order, each against the card's balance before it.
+  // Gift card uses (−) and refunds paid back onto cards (+) in time order, each against the card's balance before it.
   const uses = orders
     .filter((o) => o.status !== "pending" && o.status !== "cancelled" && (Date.parse(o.paidAt) <= now || o.origin === "browser"))
-    .flatMap((o) => (o.giftCardRedemptions ?? []).map((r) => ({ ...r, orderId: o.id, at: o.paidAt })))
-    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+    .flatMap((o) => (o.giftCardRedemptions ?? []).map((r) => ({ giftCardId: r.giftCardId, cents: -r.cents, ref: o.id, at: o.paidAt })));
+  const backs = allRefunds()
+    .filter((r) => Date.parse(r.createdAt) <= now)
+    .flatMap((r) => (r.giftCards ?? []).map((g) => ({ giftCardId: g.giftCardId, cents: g.cents, ref: r.id, at: r.createdAt })));
+  const events = [...uses, ...backs].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   const left = new Map<string, number>();
-  for (const u of uses) {
-    const card = cards.get(u.giftCardId);
+  for (const e of events) {
+    const card = cards.get(e.giftCardId);
     if (!card) continue;
     const before = left.get(card.id) ?? card.initialCents;
-    lines.push(...ledgerFromGiftCardUse(card, u.orderId, u.cents, u.at, before));
-    left.set(card.id, before - u.cents);
+    lines.push(...(e.cents < 0 ? ledgerFromGiftCardUse(card, e.ref, -e.cents, e.at, before) : ledgerFromGiftCardRefund(card, e.ref, e.cents, e.at, before)));
+    left.set(card.id, before + e.cents);
   }
   for (const r of allRefunds()) {
     const o = byId.get(r.orderId);

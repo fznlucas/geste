@@ -8,6 +8,7 @@ export const storeSettings = [
   { key: "store.languages", label: "Languages", value: "English · French (switch in footer)" },
   { key: "store.support_email", label: "Support email", value: "hello@geste.studio" },
   { key: "store.legal_entity", label: "Legal entity", value: "[Your name, micro-entreprise, SIRET]" },
+  { key: "store.pickup", label: "Carrier pickup", value: "Colissimo · 16:00" },
 ];
 
 export type SettingStatus = "on" | "todo" | "off";

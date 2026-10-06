@@ -157,8 +157,22 @@ export function ledgerFromRefund(refund: RefundRow, order: OrderRow, country: st
       if (vat) out.push(line({ ...base, account: "liability.vat", amountEurCents: -vat, category: "none", country, vatRatePct: Math.round(vatRate * 1000) / 10, memo: `VAT refunded ${country}` }, n++));
     }
   }
-  out.push(line({ ...base, account: "cash.stripe_balance", amountEurCents: -refundEur, amountUsdCents: refund.amountCents, category: "none", availableAt: refund.createdAt, memo: "Refund paid" }, n++));
+  // What goes back onto gift cards is owed again (./ledgerFromGiftCardRefund); the rest leaves the Stripe balance.
+  const toCardsUsd = (refund.giftCards ?? []).reduce((s, g) => s + g.cents, 0);
+  const cashUsd = refund.amountCents - toCardsUsd;
+  const cashEur = refundEur - toEur(toCardsUsd, rate);
+  if (cashUsd) out.push(line({ ...base, account: "cash.stripe_balance", amountEurCents: -cashEur, amountUsdCents: cashUsd, category: "none", availableAt: refund.createdAt, memo: "Refund paid" }, n++));
   return out;
+}
+
+/**
+ * A refund paid back onto a gift card: the card owes it again, at the card's own rate, as the difference
+ * of the balances after and before (rounded), like a use in reverse.
+ */
+export function ledgerFromGiftCardRefund(card: GiftCardRow, refundId: string, cents: number, at: string, balanceBeforeCents: number): LedgerLine[] {
+  const rate = fxRate(parisDay(card.createdAt));
+  const eur = toEur(balanceBeforeCents + cents, rate) - toEur(balanceBeforeCents, rate);
+  return [line({ at, account: "liability.giftcards", amountEurCents: eur, amountUsdCents: cents, fxRate: rate, category: "none", sourceTable: "gift_card_refunds", sourceId: `${card.id}:${refundId}`, memo: `Refund onto gift card ${card.code}` }, 0)];
 }
 
 /** A label bought for a shipment, and its packaging. */

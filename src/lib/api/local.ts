@@ -276,7 +276,12 @@ export const fixtureAiCandidates = (): AiCandidateRow[] => fixturesNow().candida
 /** Admin view of the works (status, copy). The store pages are built at deploy time and ignore it. */
 export const allWorks = () => merged("works", works);
 
-export const allGiftCards = memo((): GiftCardRow[] => merged("gift_cards", [...sim().giftCards, ...fixtureGiftCards]));
+/** Gift cards, with what refunds paid back onto them added to their balance. */
+export const allGiftCards = memo((): GiftCardRow[] => {
+  const back = new Map<string, number>();
+  for (const r of allRefunds()) for (const g of r.giftCards ?? []) back.set(g.giftCardId, (back.get(g.giftCardId) ?? 0) + g.cents);
+  return merged("gift_cards", [...sim().giftCards, ...fixtureGiftCards]).map((g) => (back.has(g.id) ? { ...g, balanceCents: g.balanceCents + back.get(g.id)! } : g));
+});
 export const allCampaigns = memo((): CampaignRow[] => merged("campaigns", [...sim().campaigns, ...fixtureCampaigns]));
 export const allPayments = (): PaymentRow[] => sim().payments;
 export const allTraffic = (): TrafficDayRow[] => sim().traffic;

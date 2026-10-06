@@ -71,6 +71,7 @@ describe.each(CLOCKS)("the books at %s", (iso) => {
       c.owed += l.amountEurCents;
       if (l.sourceTable === "orders") c.sold += l.amountEurCents;
       else if (l.sourceTable === "gift_card_redemptions") c.used -= l.amountEurCents;
+      else if (l.sourceTable === "gift_card_refunds") c.used -= l.amountEurCents; // paid back onto the card: used less
       else c.expired -= l.amountEurCents;
     }
     expect(per.size).toBeGreaterThan(0);

@@ -11,7 +11,7 @@ import { alerts, dashboard, eur, getOrders, nextOrderNumber, plural, re, storeTu
 const D = await dashboard();
 const COUNTS = await todoCounts();
 const ORDERS = await getOrders();
-const ALERTS = (await alerts()).filter((a) => a.roles.includes("owner"));
+const ALERTS = (await alerts()).filter((a) => a.desktop && a.roles.includes("owner"));
 const NEXT = nextOrderNumber();
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthOf = (day: string) => MONTHS[Number(day.slice(5, 7)) - 1]!;

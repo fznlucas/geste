@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStatusChip, PillButton, PillLink, useToast } from "@/components";
 import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
-import { inOrderTab, ordersThisMonth } from "@/lib/metrics";
+import { inOrderTab, orderTab, ordersThisMonth } from "@/lib/metrics";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
 import { markShipped } from "@/lib/client/admin/orders";
 import { simToday } from "@/lib/clock";
@@ -37,8 +37,13 @@ export function OrdersPage() {
   const params = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
   const [exported, setExported] = useState(false);
+  // `?tab=to_ship` (the phone's "To do" and the sidebar badge open the tab they count).
+  const [tab, setTab] = useState<OrdersTab>(() => (TABS.some((t) => t.value === params.get("tab")) ? (params.get("tab") as OrdersTab) : "all"));
+  const [kind, setKind] = useState<ItemKind | null>(null);
   const { staff } = useAdmin();
   const orders = useAdminQuery(() => getOrders({ search: q || undefined }), [q]);
+  // What is filtered (search, tab, type) is what "Export CSV" exports.
+  const rows = useMemo(() => (orders.data ?? []).filter((o) => inOrderTab(o, tab)).filter((o) => !kind || o.items.some((i) => i.kind === kind)), [orders.data, tab, kind]);
 
   const exportAll = (rows: Order[]) => {
     download(`geste-orders-${simToday()}.csv`, ordersCsv(rows));
@@ -51,30 +56,34 @@ export function OrdersPage() {
       title="Orders"
       breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]}
       roles={["support", "fulfilment"]}
-      actions={<PillButton onClick={() => orders.data && exportAll(orders.data)}>{exported ? "CSV downloaded" : "Export CSV"}</PillButton>}
+      actions={<PillButton onClick={() => orders.data && exportAll(rows)}>{exported ? "CSV downloaded" : "Export CSV"}</PillButton>}
       phone={<PhoneOrders orders={orders.data} />}
       phoneTab="orders"
       desktopHref="/admin/orders"
     >
-      <DesktopOrders orders={orders.data} q={q} onExport={exportAll} exported={exported} />
+      <DesktopOrders orders={orders.data} rows={rows} q={q} tab={tab} setTab={setTab} kind={kind} setKind={setKind} onExport={exportAll} exported={exported} />
     </AdminPage>
   );
 }
 
-function DesktopOrders({ orders, q, onExport, exported }: { orders: Order[] | undefined; q: string; onExport: (rows: Order[]) => void; exported: boolean }) {
+interface DesktopOrdersProps {
+  orders: Order[] | undefined;
+  rows: Order[];
+  q: string;
+  tab: OrdersTab;
+  setTab: (t: OrdersTab) => void;
+  kind: ItemKind | null;
+  setKind: (k: ItemKind | null) => void;
+  onExport: (rows: Order[]) => void;
+  exported: boolean;
+}
+
+function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, exported }: DesktopOrdersProps) {
   const { staff } = useAdmin();
   const toast = useToast();
-  const [tab, setTab] = useState<OrdersTab>("all");
-  const [kind, setKind] = useState<ItemKind | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [all, setAll] = useState(false);
   const canShip = hasRole(staff.role, "fulfilment");
-
-  const rows = useMemo(() => {
-    return (orders ?? [])
-      .filter((o) => inOrderTab(o, tab))
-      .filter((o) => !kind || o.items.some((i) => i.kind === kind));
-  }, [orders, tab, kind]);
   const shown = all ? rows : rows.slice(0, PAGE);
   const picked = rows.filter((o) => selected.has(o.number));
 
@@ -182,7 +191,8 @@ function PhoneOrders({ orders }: { orders: Order[] | undefined }) {
   const [done, setDone] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const canShip = hasRole(staff.role, "fulfilment");
-  const list = (orders ?? []).filter((o) => o.displayStatus === "To ship" || done.has(o.number));
+  // The badge's rule (`orderTab`): every order still in "To ship" (to print, printed, packed).
+  const list = (orders ?? []).filter((o) => orderTab(o) === "to_ship" || done.has(o.number));
   const left = list.filter((o) => !done.has(o.number)).length;
 
   const ship = async (o: Order) => {

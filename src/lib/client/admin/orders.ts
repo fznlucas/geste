@@ -8,7 +8,7 @@
  */
 import { formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
-import { getOrder, getPrintCopies, getRefundOptions, type OrderDetail, type RefundOption, type Shipment } from "@/lib/api";
+import { REFUNDABLE_STATUSES, getOrder, getPrintCopies, getRefundOptions, type OrderDetail, type RefundOption, type Shipment } from "@/lib/api";
 import { call } from "@/lib/integrations";
 import { ForbiddenError, adminNow, audit, insertRow, patchRow, requireStaff } from "../admin";
 import { sendEmail } from "./email";
@@ -129,28 +129,63 @@ export function refundLimitCents(role: string | undefined): number {
   return 0;
 }
 
+/** Why this role cannot make this refund, or null: the modal disables the confirm and says it. */
+export function refundBlocked(option: Pick<RefundOption, "amountCents" | "ownerOnly">, role: string | undefined): string | null {
+  if (option.ownerOnly && role !== "owner") return option.ownerOnly;
+  if (option.amountCents > refundLimitCents(role)) return `Support can refund up to ${formatPrice(SUPPORT_REFUND_MAX_CENTS)}. Ask the owner for this one.`;
+  return null;
+}
+
 /**
- * Refund (Stripe later). Guide lines lose their library access; "Put … back in stock" frees the
- * numbered copies. The order becomes Refunded, or Partly refunded while money is left.
+ * The share of a refund that goes back onto the gift cards the order was paid with, in proportion to
+ * what they paid, never more than they paid net of earlier refunds onto them.
+ */
+function giftCardShare(order: OrderDetail, amountCents: number, earlier: Array<{ giftCardId: string; cents: number }>): Array<{ giftCardId: string; cents: number }> {
+  const paid = order.giftCardRedemptions;
+  const total = paid.reduce((s, g) => s + g.cents, 0);
+  if (!total || !order.totalCents) return [];
+  let share = Math.min(Math.round((amountCents * total) / order.totalCents), amountCents);
+  const out: Array<{ giftCardId: string; cents: number }> = [];
+  for (const g of paid) {
+    const room = g.cents - earlier.filter((e) => e.giftCardId === g.giftCardId).reduce((s, e) => s + e.cents, 0);
+    const cents = Math.max(0, Math.min(room, share));
+    if (cents) out.push({ giftCardId: g.giftCardId, cents });
+    share -= cents;
+  }
+  return out;
+}
+
+/**
+ * Refund (docs/admin-v2/05 "Refunds"): paid orders only, within what is left, Support ≤ $50, an opened
+ * guide only by the owner. In one go: the refund row (books, Stripe balance and gift cards follow from
+ * it), guides revoked, unshipped copies back in stock (their numbers free again), the order's status,
+ * the email in the Outbox, the audit line.
  */
 export async function refundOrder(input: { number: string; option: RefundOption["key"]; reason: string; restock: boolean }) {
   const staff = requireStaff("support");
   const order = await load(input.number);
+  if (!REFUNDABLE_STATUSES.includes(order.status)) throw new Error("Only a paid order can be refunded.");
+  if (!input.reason.trim()) throw new Error("Give a reason: it is sent to the customer.");
   const option = (await getRefundOptions(order.number)).find((o) => o.key === input.option);
   if (!option) throw new Error("Nothing left to refund on this choice.");
-  if (option.amountCents > refundLimitCents(staff.role)) throw new ForbiddenError(`Support can refund up to ${formatPrice(SUPPORT_REFUND_MAX_CENTS)}. Ask the owner.`);
-  await call("stripe-payments", "refund", `order:${order.id}`, (a) => a.refund({ orderId: order.id, amountCents: option.amountCents, reason: input.reason }));
+  const blocked = refundBlocked(option, staff.role);
+  if (blocked) throw new ForbiddenError(blocked);
   const now = adminNow();
+  const giftCards = giftCardShare(order, option.amountCents, order.refunds.flatMap((r) => r.giftCards ?? []));
+  const toCard = option.amountCents - giftCards.reduce((s, g) => s + g.cents, 0);
+  if (toCard > 0) await call("stripe-payments", "refund", `order:${order.id}`, (a) => a.refund({ orderId: order.id, amountCents: toCard, reason: input.reason }));
   const guides = input.option !== "print" ? order.items.filter((i) => i.kind === "guide") : [];
   const prints = input.option !== "guide" ? order.items.filter((i) => i.kind === "print") : [];
-  insertRow("refunds", { orderId: order.id, amountCents: option.amountCents, reason: input.reason, restock: input.restock && prints.length > 0, revokeAccess: guides.length > 0, createdAt: now });
+  // Only copies still in the studio go back on sale; a shipped one comes back by post first.
+  const restocked = input.restock ? prints.filter((p) => p.fulfilment !== "shipped" && p.fulfilment !== "delivered").flatMap((p) => p.copyIds) : [];
+  insertRow("refunds", { orderId: order.id, amountCents: option.amountCents, reason: input.reason, restock: restocked.length > 0, revokeAccess: guides.length > 0, createdAt: now, ...(giftCards.length ? { giftCards } : {}) });
   for (const g of guides) if (g.entitlementId && !g.accessRevoked) patchRow("entitlements", g.entitlementId, { revokedAt: now });
-  if (input.restock) for (const p of prints) for (const id of p.copyIds) patchRow("print_copies", id, { status: "available", fulfilment: "returned" });
+  for (const id of restocked) patchRow("print_copies", id, { status: "available", fulfilment: "returned" });
   const refunded = order.refunds.reduce((s, r) => s + r.amountCents, 0) + option.amountCents;
   patchRow("orders", order.id, { status: refunded >= order.totalCents ? "refunded" : "partially_refunded" }, {
     action: "order.refund",
     target: `order:${order.number}`,
-    summary: `${staff.fullName} refunded #${order.number} · ${formatPrice(option.amountCents)}`,
+    summary: `${staff.fullName} refunded #${order.number} · ${formatPrice(option.amountCents)}${giftCards.length ? ` (${formatPrice(option.amountCents - toCard)} onto the gift card)` : ""}${restocked.length ? ` · ${restocked.length} ${restocked.length === 1 ? "copy" : "copies"} back in stock` : ""}`,
   });
   await sendEmail("refund", order.customer.email, `order:${order.id}`, { firstName: firstName(order), orderNumber: order.number, amountLabel: formatPrice(option.amountCents), reason: input.reason });
 }

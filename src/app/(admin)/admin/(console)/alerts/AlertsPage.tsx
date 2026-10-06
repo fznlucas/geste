@@ -30,7 +30,7 @@ function useAlerts(phone: boolean) {
   const mine = q.data.filter((a) => hasRole(staff.role, a.roles));
   return phone
     ? mine.filter((a) => a.phone).sort((a, b) => a.phone!.rank - b.phone!.rank).map((a) => ({ ...a, text: a.phone!.text, href: a.phone!.href }))
-    : mine;
+    : mine.filter((a) => a.desktop);
 }
 
 function AlertRow({ a, cols = "1fr auto", className, children }: { a: AdminAlert; cols?: string; className?: string; children?: React.ReactNode }) {

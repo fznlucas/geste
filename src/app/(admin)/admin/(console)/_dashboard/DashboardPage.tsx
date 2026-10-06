@@ -251,9 +251,10 @@ function PhoneToday() {
   const { staff, counts } = useAdmin();
   const data = useAdminQuery(dashboard, []);
   const orders = useAdminQuery(() => getOrders(), []);
+  const items = useAdminQuery(todoItems, []);
   const owner = staff.role === "owner";
   const seesOrders = hasRole(staff.role, ["support", "fulfilment"]);
-  if (data.status === "loading" || orders.status === "loading" || !counts) return <div aria-busy="true" aria-label="Loading" className="h-480 bg-surface-muted" />;
+  if (data.status === "loading" || orders.status === "loading" || items.status === "loading" || !counts) return <div aria-busy="true" aria-label="Loading" className="h-480 bg-surface-muted" />;
   const t = data.data.today;
   const tiles = [
     owner && { label: "Revenue", value: eur(t.revenueCents), context: t.revenueDelta },
@@ -261,11 +262,10 @@ function PhoneToday() {
     { label: "Visitors", value: String(t.visitors), context: `${t.phonePct}% phone` },
     { label: "Conversion", value: `${t.conversionPct}%`, context: t.conversionDelta },
   ].filter((x): x is { label: string; value: string; context: string } => !!x);
-  const todos = [
-    hasRole(staff.role, "fulfilment") && counts.fulfilment > 0 && { key: "ship", text: `${plural(counts.fulfilment, "print", "prints")} to ship before 16:00`, issue: true, href: "/admin/orders/" },
-    hasRole(staff.role, "support") && counts.support > 0 && { key: "support", text: plural(counts.support, "support message", "support messages"), issue: false, href: "/admin/alerts/" },
-    hasRole(staff.role, ["support", "content"]) && counts.reviews > 0 && { key: "reviews", text: `${plural(counts.reviews, "review", "reviews")} to moderate`, issue: false, href: "/admin/alerts/" },
-  ].filter((x): x is { key: string; text: string; issue: boolean; href: string } => !!x);
+  // The same lines as the desktop "To do today" (`todoItems`), in the phone's wording.
+  const todos = (items.data ?? [])
+    .filter((x) => x.phone && hasRole(staff.role, x.roles))
+    .map((x) => ({ key: x.key, text: x.phone!.text, issue: x.issue, href: x.phone!.href }));
   const initial = (name: string) => {
     const [first, last] = name.split(" ");
     return last ? `${first} ${last[0]}.` : name;

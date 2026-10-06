@@ -1,10 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { formatPrice, getOrders, orderNumber } from "./helpers";
+import { formatPrice, getOrders, orderNumber, orderTab } from "./helpers";
 
 /** Orders at the e2e clock: numbers in payment order, the phone's "To ship" list (docs/admin-v2/01 §2). */
 const INES = orderNumber("order-2038");
-const TO_SHIP_LIST = (await getOrders()).filter((o) => o.displayStatus === "To ship");
+const TO_SHIP_LIST = (await getOrders()).filter((o) => orderTab(o) === "to_ship");
 const TO_SHIP = TO_SHIP_LIST.length;
 /** The second print to ship (the first is shipped with one tap before). */
 const SECOND = TO_SHIP_LIST[1]!;

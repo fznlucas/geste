@@ -9,6 +9,7 @@ import { useState } from "react";
 import { KanbanBoard, UnderLink, useToast, type KanbanColumn } from "@/components";
 import { getPrintCopies, type FulfilmentStatus, type PrintCopy } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
+import { nextPickupLabel } from "@/lib/metrics";
 import { FULFILMENT_STEPS, moveCopy } from "@/lib/client/admin/fulfilment";
 import { AdminPage } from "../../_admin/AdminPage";
 
@@ -16,6 +17,7 @@ export function FulfilmentPage() {
   const copies = useAdminQuery(() => getPrintCopies({ fulfilment: FULFILMENT_STEPS.map((s) => s.key) }), []);
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const pickupLine = nextPickupLabel();
 
   const move = async (copyId: string, to: string) => {
     setBusy(copyId);
@@ -31,7 +33,7 @@ export function FulfilmentPage() {
   return (
     <AdminPage title="Fulfilment · prints" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment"]} desktopHref="/admin/fulfilment">
       <div className="flex flex-wrap justify-between gap-x-16">
-        <span className="text-fg-muted">Print lab: in-house printer · next pickup by Colissimo today 16:00</span>
+        <span className="text-fg-muted">Print lab: in-house printer{pickupLine ? ` · ${pickupLine}` : ""}</span>
         <UnderLink href="/admin/editions">Edition stock</UnderLink>
       </div>
       {copies.status === "loading" ? (
