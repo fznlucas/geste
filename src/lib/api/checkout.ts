@@ -78,7 +78,8 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     const id = `item-local-${n}-${index + 1}`;
     const stored = input.lines.find((l) => l.id === line.id)!;
     if (stored.kind === "gift_card") {
-      items.push({ id, kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: `Gift card $${line.unitPriceCents / 100}`, detail: "Sent by email", unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: 0, fulfilment: "not_required" });
+      const gift = { recipientName: stored.recipientName?.trim() || undefined, recipientEmail: stored.recipientEmail?.trim() || undefined, sendOn: stored.sendOn || undefined };
+      items.push({ id, kind: "gift_card", workId: null, guideId: null, editionId: null, config: JSON.parse(JSON.stringify(gift)) as typeof gift, title: `Gift card $${line.unitPriceCents / 100}`, detail: "Sent by email", unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: 0, fulfilment: "not_required" });
       return;
     }
     if (stored.kind === "print" && line.edition) {

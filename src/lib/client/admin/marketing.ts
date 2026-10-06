@@ -4,6 +4,7 @@
  * Marketing actions of the mock (future `src/actions/admin/marketing.ts`): createPromo, scheduleCampaign,
  * sendTest, saveCampaign. Owner only; each writes the admin overlay and the audit log.
  */
+import { addDays, parisDay, startOfDayParis } from "@/lib/clock";
 import { promoCodeExists, type PromoScope } from "@/lib/api";
 import { adminNow, audit, insertRow, patchRow, requireStaff } from "../admin";
 import { sendEmail } from "./email";
@@ -62,12 +63,13 @@ export function sendTest(id: string, subject: string, body = "") {
   void sendEmail("newsletter_test", staff.email, `campaign:${id}`, { subject, body });
 }
 
-/** "Schedule for Tuesday": next Tuesday 9:00 (Paris) after the mock's now. */
+/** "Schedule for Tuesday": next Tuesday 9:00 in Paris (summer or winter time) after the mock's now. */
 export function scheduleCampaign(id: string, subject: string, audienceLabel: string) {
   const staff = requireStaff("owner");
-  const now = new Date(adminNow());
-  const days = ((2 - now.getUTCDay() + 7) % 7) || 7;
-  const at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + days, 7, 0));
+  const today = parisDay(adminNow());
+  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
+  const days = ((2 - weekday + 7) % 7) || 7;
+  const at = new Date(startOfDayParis(addDays(today, days)).getTime() + 9 * 3_600_000);
   patchRow("campaigns", id, { scheduledAt: at.toISOString() }, { action: "campaign.schedule", target: `campaign:${id}`, summary: `${staff.fullName} scheduled “${subject}” for Tue 9:00 · ${audienceLabel}` });
   return at.toISOString();
 }

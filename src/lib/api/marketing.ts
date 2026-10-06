@@ -6,7 +6,7 @@
 import { AUDIENCES, affiliates, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
 import { simNowIso } from "@/lib/clock";
 import { clone } from "./clone";
-import { allCampaigns, allCustomers, allGiftCards, allOrders, merged, orderNumberOf } from "./local";
+import { allCampaigns, allCustomers, allGiftCards, allOrders, allSubscribers, merged, orderNumberOf } from "./local";
 
 export type { PromoKind, PromoScope } from "@/data/marketing";
 
@@ -88,9 +88,10 @@ export async function getGiftCards(): Promise<GiftCard[]> {
           balanceCents: i.unitPriceCents,
           purchaseOrderId: o.id,
           senderName: allCustomers().find((c) => c.id === o.userId)?.fullName ?? o.email,
-          recipientName: null,
-          sendAt: null,
-          sentAt: o.paidAt,
+          // The checkout's gift form: recipient and send date kept on the line.
+          recipientName: i.config.recipientName ?? null,
+          sendAt: i.config.sendOn ? `${i.config.sendOn}T08:00:00Z` : null,
+          sentAt: i.config.sendOn && `${i.config.sendOn}T08:00:00Z` > simNowIso() ? null : o.paidAt,
           createdAt: o.createdAt,
         })),
     )
@@ -122,6 +123,22 @@ export interface Campaign {
   clickRate: number | null;
 }
 
+/**
+ * Newsletter audiences from the subscriber rows (subscribed, not unsubscribed, now): who bought (a paid
+ * order by their account or email) and who never did. "1,240 subscribers · 412 are customers".
+ */
+export function audiences(now = simNowIso()): Array<{ key: CampaignRow["audience"]; label: string; count: number }> {
+  const buyers = new Set<string>();
+  for (const o of allOrders()) {
+    if (o.status === "pending" || o.status === "cancelled" || o.paidAt > now) continue;
+    buyers.add(o.userId);
+    if (o.email) buyers.add(o.email.toLowerCase());
+  }
+  const active = allSubscribers().filter((s) => s.subscribedAt <= now && (!s.unsubscribedAt || s.unsubscribedAt > now));
+  const bought = active.filter((s) => (s.customerId && buyers.has(s.customerId)) || buyers.has(s.email.toLowerCase())).length;
+  return AUDIENCES.map((a) => ({ key: a.key, label: a.label, count: a.key === "all" ? active.length : a.key === "buyers" ? bought : active.length - bought }));
+}
+
 export async function getCampaigns(): Promise<{ draft: Campaign | null; past: Campaign[]; audiences: typeof AUDIENCES }> {
   const rows = (allCampaigns() as Array<CampaignRow & { testSentAt?: string | null }>).map((c) => ({
     id: c.id,
@@ -136,7 +153,7 @@ export async function getCampaigns(): Promise<{ draft: Campaign | null; past: Ca
     clickRate: c.clickRate,
   }));
   // The draft: a letter neither sent nor scheduled first (the October one), else the next scheduled.
-  return clone({ draft: rows.find((c) => !c.sentAt && !c.scheduledAt) ?? rows.find((c) => !c.sentAt) ?? null, past: rows.filter((c) => c.sentAt).sort((a, b) => b.sentAt!.localeCompare(a.sentAt!)), audiences: AUDIENCES });
+  return clone({ draft: rows.find((c) => !c.sentAt && !c.scheduledAt) ?? rows.find((c) => !c.sentAt) ?? null, past: rows.filter((c) => c.sentAt).sort((a, b) => b.sentAt!.localeCompare(a.sentAt!)), audiences: audiences() });
 }
 
 export async function getAffiliates() {

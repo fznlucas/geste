@@ -164,7 +164,8 @@ export interface OrderItemRow {
   workId: string | null;
   guideId: string | null;
   editionId: string | null;
-  config: { format?: FormatKey; level?: LevelKey; palette?: PaletteKey };
+  /** Guides: the canvas, level and palette. Gift cards: who gets it and when (the checkout's gift form). */
+  config: { format?: FormatKey; level?: LevelKey; palette?: PaletteKey; recipientName?: string; recipientEmail?: string; sendOn?: string };
   title: string; // "Guide N°03"
   detail: string; // "60×80 · Intermediate · Original"
   unitPriceCents: number;

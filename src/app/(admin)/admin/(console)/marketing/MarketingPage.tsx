@@ -249,6 +249,10 @@ function Draft({ draft, audiences }: { draft: Campaign; audiences: Array<{ key: 
           {draft.scheduledAt ? "Scheduled · Tue 9:00" : "Schedule for Tuesday"}
         </Button>
       </div>
+      {/* Counted from the subscriber rows: not every subscriber has bought. */}
+      <span className="text-fg-muted">
+        {audiences.find((a) => a.key === "all")!.count.toLocaleString("en-US")} subscribers · {audiences.find((a) => a.key === "buyers")!.count.toLocaleString("en-US")} are customers
+      </span>
     </AdminBox>
   );
 }
