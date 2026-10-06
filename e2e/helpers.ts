@@ -55,3 +55,14 @@ export const re = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 export { getAiPipeline, getSupportThreads } from "@/lib/api";
 export { getReviews } from "@/lib/api";
+export { finance, financePeriodSlug } from "@/lib/metrics";
+
+/** EUR as the admin's books show it ("€3,438.58"). */
+export const eur = (cents: number) => formatPrice(cents, "en", "EUR");
+
+/** What an order adds to the store turnover in the books (EUR excl. VAT), e.g. one paid in this browser. */
+export async function storeTurnoverOf(order: import("@/data/types").OrderRow, country = "FR"): Promise<number> {
+  const { ledgerFromOrder } = await import("@/lib/ledger/derive");
+  const { STORE_ACCOUNTS } = await import("@/lib/ledger");
+  return ledgerFromOrder(order, undefined, country, "collect").filter((l) => STORE_ACCOUNTS.includes(l.account)).reduce((s, l) => s + l.amountEurCents, 0);
+}

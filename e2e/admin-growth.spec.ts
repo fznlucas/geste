@@ -1,10 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { analytics, orderNumber } from "./helpers";
+import { analytics, eur, finance, financePeriodSlug, orderNumber } from "./helpers";
 
 /** The analytics of the simulated history at the e2e clock (docs/admin-v2/01 §2). */
 const A = await analytics("30 days");
 const DROPS = A.completion.steps.filter((s) => s.drop);
+/** The books of the default period (last full month) at the e2e clock, EUR excl. VAT. */
+const F = await finance();
+const FIN_ROW = (key: string) => F.pnl.find((r) => r.key === key)!;
 
 /** M6 growth: /admin/analytics, /admin/finance, /admin/marketing, /admin/settings (owner only). */
 
@@ -51,13 +54,16 @@ test("finance: P&L adds up and the CSV downloads", async ({ page }) => {
   await asStaff(page);
   await page.goto("/admin/finance/");
   await expect(page.getByRole("rowheader", { name: "Gross margin" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Net result/ })).toContainText("$3,385");
+  await expect(page.getByRole("row", { name: /^Operating result/ })).toContainText(eur(F.netCents));
+  await expect(page.getByRole("row", { name: /^Turnover \(excl\. VAT\)/ })).toContainText(eur(F.revenueCents));
   await expectNoAxeViolations(page);
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export for accountant (CSV)" }).click()]);
-  expect(download.suggestedFilename()).toBe("geste-finance-2026-09.csv");
+  expect(download.suggestedFilename()).toBe(`geste-finance-${financePeriodSlug(F.period)}.csv`);
   const csv = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8"));
-  expect(csv).toContain("Net result,3385.00,64");
-  expect(csv).toContain("Belgium · OSS,21%,120.00");
+  const op = FIN_ROW("operating");
+  expect(csv).toContain(`Operating result,${(op.cents / 100).toFixed(2)},${op.sharePct}`);
+  const be = F.vat.find((v) => v.country.startsWith("Belgium"))!;
+  expect(csv).toContain(`${be.country},${be.rate},${(be.cents! / 100).toFixed(2)}`);
   await expect(page.getByRole("button", { name: "CSV downloaded" })).toBeVisible();
 });
 
@@ -67,7 +73,7 @@ test("marketing: tabs, create a promo code, gift cards bought here", async ({ pa
     id: "order-local-2042", number: "GS-2042", userId: "cus-camille-martin", email: "camille.martin@mail.com", status: "paid",
     subtotalCents: 3000, discountCents: 0, shippingCents: 0, shippingMethod: null, taxCents: 500, totalCents: 3000, shippingAddress: null,
     stripePaymentIntent: "pi_mock_local_2042", cardLast4: "4242", risk: "low", withdrawalWaived: false,
-    paidAt: "2026-10-02T12:05:00Z", createdAt: "2026-10-02T12:05:00Z",
+    paidAt: "2026-10-02T11:59:59.999Z", createdAt: "2026-10-02T11:59:59.999Z",
     items: [{ id: "item-local-2042-1", kind: "gift_card", workId: null, guideId: null, editionId: null, config: {}, title: "Gift card $30", detail: "Sent by email", unitPriceCents: 3000, quantity: 1, discountCents: 0, fulfilment: "not_required" }],
   };
   await asStaff(page, "owner", { "geste.purchases.v2": { orders: [order], entitlements: [], copies: [], receipts: [] } });

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { alerts, dashboard, formatPrice, getOrders, nextOrderNumber, plural, re, todoCounts } from "./helpers";
+import { alerts, dashboard, eur, getOrders, nextOrderNumber, plural, re, storeTurnoverOf, todoCounts } from "./helpers";
 
 /** M6 dashboard: admin login (password + code, passkey), guard, role switch, dashboard, phone Today, alerts. */
 
@@ -30,7 +30,7 @@ const PURCHASE = {
   orders: [{
     id: "order-local-2042", number: "GS-2042", userId: "cus-camille-martin", email: "camille.martin@mail.com", status: "paid",
     subtotalCents: 1900, discountCents: 0, shippingCents: 0, shippingMethod: null, taxCents: 317, totalCents: 1900, shippingAddress: null,
-    stripePaymentIntent: "pi_mock_local_2042", cardLast4: "4242", risk: "low", withdrawalWaived: true, paidAt: "2026-10-02T12:05:00Z", createdAt: "2026-10-02T12:05:00Z",
+    stripePaymentIntent: "pi_mock_local_2042", cardLast4: "4242", risk: "low", withdrawalWaived: true, paidAt: "2026-10-02T11:59:59.999Z", createdAt: "2026-10-02T11:59:59.999Z",
     items: [{ id: "item-local-2042-1", kind: "guide", workId: "00000000-0000-0000-0000-000000000003", guideId: "00000000-0000-0000-0000-0000000000a3", editionId: null, config: { format: "50x60", level: "intermediate", palette: "original" }, title: "Guide N°03", detail: "50×60 · Intermediate · Original", unitPriceCents: 1900, quantity: 1, discountCents: 0, fulfilment: "not_required" }],
   }],
   entitlements: [], copies: [], receipts: [],
@@ -80,7 +80,7 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   await fresh(page, { staff: true });
   await page.goto("/admin/");
   const k = D.last30d;
-  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(formatPrice(k.revenueCents))}\\s*${re(k.revenueDelta)}`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(eur(k.revenueCents))}\\s*${re(k.revenueDelta)}`) })).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${k.orders}\\b`) })).toHaveAttribute("href", /\/admin\/orders\/?$/);
   await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days.slice(-30))}` })).toBeVisible();
   await page.getByRole("button", { name: "7 d" }).click();
@@ -90,7 +90,7 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days)}` })).toBeVisible();
   await expect(page.getByRole("img", { name: /^[A-Z][a-z]{2} \d+ · / })).toHaveCount(90);
   await page.getByRole("img", { name: /^Sep 22 · / }).hover();
-  await expect(page.getByRole("tooltip")).toHaveText(/^Sep 22 · \$[\d,.]+ · \d+ orders?$/);
+  await expect(page.getByRole("tooltip")).toHaveText(/^Sep 22 · €[\d,.]+ · \d+ orders?$/);
   await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.fulfilment, "print", "prints")} to pack and ship`) })).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.reviews, "review", "reviews")} to moderate`) })).toHaveAttribute("href", /\/admin\/reviews\/?$/);
   const latest = ORDERS[0]!;
@@ -109,7 +109,7 @@ test("an order paid at checkout tops the dashboard and moves the numbers", async
     return;
   }
   await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${D.last30d.orders + 1}\\b`) })).toBeVisible();
-  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(formatPrice(D.last30d.revenueCents + 1900))}`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(eur(D.last30d.revenueCents + (await storeTurnoverOf(PURCHASE.orders[0] as never))))}`) })).toBeVisible();
   const latest = page.getByRole("list", { name: "Latest orders" }).getByRole("link");
   await expect(latest.first()).toContainText(`#${NEXT}`);
   const n03 = D.topWorks.find((w) => w.number === "N°03")!.guides;
