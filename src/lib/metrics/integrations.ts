@@ -10,7 +10,10 @@ import { parisDay, parisHour, simNow } from "@/lib/clock";
 import * as SIM from "@/sim/config";
 import { simSettings } from "@/sim";
 
-export { INTEGRATIONS, INTEGRATION_ROWS, PAYMENT_ROWS, integrationLogs, modeCounts, outbox, statusOf, type Integration, type IntegrationLog, type OutboxEmail } from "@/lib/integrations";
+// The read-only modules, not the index: the index carries the adapters, which write through the client.
+export { INTEGRATIONS, INTEGRATION_ROWS, PAYMENT_ROWS, type Integration } from "@/lib/integrations/registry";
+export { modeCounts, statusOf } from "@/lib/integrations/mode";
+export { integrationLogs, outbox, type IntegrationLog, type OutboxEmail } from "@/lib/integrations/log";
 
 export const vatRegimeNow = () => vatRegime();
 
