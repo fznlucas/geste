@@ -1,8 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Runs on the static export, as GitHub Pages serves it: `npm run build` first, then
- * `npm run test:e2e` (scripts/serve-out.mjs serves out/ on :4174 like GitHub Pages).
+ * Runs on the static export, as GitHub Pages serves it: `npm run build:e2e` first (the clock pinned to
+ * scripts/e2e-clock.mjs; e2e/global-setup.ts refuses a production build), then `npm run test:e2e`
+ * (scripts/serve-out.mjs serves out/ on :4174 like GitHub Pages).
  *
  * The "screens-*" projects only run on demand (`npm run screens`, `npm run screens:update`): admin
  * screenshots per route and role, kept in docs/admin-v2/screens/<SCREENS_SET>/ (e2e/screens.spec.ts).
@@ -17,6 +18,7 @@ const screens = {
 
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   workers: 2,
   reporter: "list",

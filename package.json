@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && serwist build serwist.config.mjs",
+    "build:e2e": "node scripts/build-e2e.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test --project=desktop --project=phone",
+    "test:unit": "vitest run",
     "db:test": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql",
     "screens": "playwright test --project=screens-1440 --project=screens-390",
     "screens:update": "playwright test --project=screens-1440 --project=screens-390 --update-snapshots"
@@ -57,6 +59,7 @@
     "eslint-config-next": "16.3.6",
     "serwist": "^9.2.0",
     "tailwindcss": "^4.1.13",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
   }
 }
