@@ -16,7 +16,6 @@
  * sources changes. Deleted with the stores when Supabase arrives (docs/mock-plan.md §5).
  */
 import { customers } from "@/data/customers";
-import { includedVatCents } from "@/data/tax";
 import { printCopies, printEditions } from "@/data/editions";
 import { entitlements } from "@/data/entitlements";
 import type { CampaignRow, GiftCardRow } from "@/data/marketing";
@@ -133,9 +132,7 @@ const ordersMemo = memo(() => {
     const status = s.orderStatus.get(o.id);
     return status ? { ...o, status } : o;
   });
-  // Orders kept in this browser carry the VAT part of the day they were paid: it is split again with
-  // today's rates (Switzerland 0 % since Admin v2; the total never changes).
-  const browser = local().orders.map((o) => ({ ...o, origin: o.origin ?? ("browser" as const), taxCents: includedVatCents(o.totalCents, o.country ?? o.shippingAddress?.country ?? "") }));
+  const browser = local().orders.map((o) => ({ ...o, origin: o.origin ?? ("browser" as const) }));
   const all = merged("orders", [...browser, ...simOrders, ...FIXTURE_ORDERS]);
   const numbered = [...all].sort(byPaid);
   const numbers = new Map(numbered.map((o, i) => [o.id, `GS-${ORDER_NUMBER_START + i}`]));

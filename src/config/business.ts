@@ -60,6 +60,8 @@ export const BUSINESS = {
     frequency: v<"monthly" | "quarterly">("quarterly", "declaration frequency (spec 02 §6)"),
   },
 
+  /** VAT returns (CA3): how often, and the due day of the month after the period. */
+  vatReturns: v<{ frequency: "monthly" | "quarterly"; dueDay: number }>({ frequency: "quarterly", dueDay: 24 }, "CA3 return, quarterly while VAT due is small; due date estimate (confirm with your tax office calendar)"),
   giftCardExpiryYears: v(2, "gift card validity, estimate (confirm)"),
   payouts: v({ availableAfterDays: 7, weekday: 4 /* Friday, 0 = Monday */, arrivalDays: 2 }, "Stripe payout schedule: weekly on Friday, funds available after 7 days"),
   bank: v({ openingCents: 0, monthlyFeeCents: 900, feeDay: 1 }, "business account, Qonto-like, estimate (confirm)"),

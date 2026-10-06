@@ -7,6 +7,7 @@ import { BUSINESS, type UrssafCategory, type VatRegime } from "@/config/business
 import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { allAffiliateCommissions, allCustomers, allGiftCards, allOrders, allPayments, allPrintCopies, allPrintEditions, allRefunds, allShipments, patched } from "@/lib/api/local";
 import { allAiJobs } from "@/lib/api/ai";
+import { vatRateAt, vatRegime } from "@/lib/api/vat";
 import { LAUNCH_DATE } from "@/sim/config";
 import { parisInstant } from "@/sim/calendar";
 import {
@@ -19,11 +20,7 @@ export * from "./types";
 export { fxRate, toEur } from "./fx";
 export { paymentFees, vatRateOf } from "./derive";
 
-/** The VAT regime in force: Settings › Payments & tax (admin overlay), else the config's. */
-export function vatRegime(): VatRegime {
-  const row = patched("business_settings", { id: "vat_regime", value: BUSINESS.vatRegime.value as string });
-  return row.value === "franchise" ? "franchise" : "collect";
-}
+export { vatRegime } from "@/lib/api/vat";
 
 export interface Payout {
   id: string;
@@ -34,6 +31,9 @@ export interface Payout {
   status: "scheduled" | "in_transit" | "paid";
   /** Source ids (orders, refunds) of the balance lines it carries. */
   sources: string[];
+  /** First and last payment (or refund) it carries, by their own date. */
+  fromAt: string | null;
+  toAt: string | null;
 }
 
 export interface UrssafDeclaration {
@@ -86,9 +86,9 @@ const lastDayOfMonthAfter = (to: string) => {
   return d.toISOString().slice(0, 10);
 };
 
-function periods(from: string, until: string): Array<{ key: string; label: string; from: string; to: string }> {
+function periods(from: string, until: string, frequency: "monthly" | "quarterly" = BUSINESS.urssaf.frequency.value): Array<{ key: string; label: string; from: string; to: string }> {
   const out = [];
-  const quarterly = BUSINESS.urssaf.frequency.value === "quarterly";
+  const quarterly = frequency === "quarterly";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   let y = Number(from.slice(0, 4)), m = Number(from.slice(5, 7));
   if (quarterly) m = Math.floor((m - 1) / 3) * 3 + 1;
@@ -108,10 +108,26 @@ function periods(from: string, until: string): Array<{ key: string; label: strin
   return out;
 }
 
+/** A VAT return (CA3): the VAT collected in the period, net of refunds, due on the config's day of the month after. */
+export interface VatReturn {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+  dueDate: string;
+  /** VAT collected minus VAT refunded in the period (EUR cents). */
+  amountCents: number;
+  status: UrssafDeclaration["status"];
+  declaredAt: string | null;
+  paidAt: string | null;
+  by: "you" | "simulated" | null;
+}
+
 interface Books {
   lines: LedgerLine[];
   payouts: Payout[];
   declarations: UrssafDeclaration[];
+  vatReturns: VatReturn[];
 }
 
 let memo: { orders: unknown; minute: number; regime: VatRegime; books: Books } | null = null;
@@ -134,15 +150,24 @@ export function books(): Books {
   for (const o of orders) {
     if (o.status === "pending" || o.status === "cancelled") continue;
     if (Date.parse(o.paidAt) > now && o.origin !== "browser") continue;
-    lines.push(...ledgerFromOrder(o, payments.get(o.id), country(o), regime));
-    for (const r of o.giftCardRedemptions ?? []) {
-      const card = cards.get(r.giftCardId);
-      if (card) lines.push(...ledgerFromGiftCardUse(card, o.id, r.cents, o.paidAt));
-    }
+    lines.push(...ledgerFromOrder(o, payments.get(o.id), country(o), regime, vatRateAt(country(o), o.paidAt, regime)));
+  }
+  // Gift card uses in time order, each against the card's balance before it.
+  const uses = orders
+    .filter((o) => o.status !== "pending" && o.status !== "cancelled" && (Date.parse(o.paidAt) <= now || o.origin === "browser"))
+    .flatMap((o) => (o.giftCardRedemptions ?? []).map((r) => ({ ...r, orderId: o.id, at: o.paidAt })))
+    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  const left = new Map<string, number>();
+  for (const u of uses) {
+    const card = cards.get(u.giftCardId);
+    if (!card) continue;
+    const before = left.get(card.id) ?? card.initialCents;
+    lines.push(...ledgerFromGiftCardUse(card, u.orderId, u.cents, u.at, before));
+    left.set(card.id, before - u.cents);
   }
   for (const r of allRefunds()) {
     const o = byId.get(r.orderId);
-    if (o && Date.parse(r.createdAt) <= now) lines.push(...ledgerFromRefund(r, o, country(o), regime));
+    if (o && Date.parse(r.createdAt) <= now) lines.push(...ledgerFromRefund(r, o, country(o), regime, vatRateAt(country(o), o.paidAt, regime)));
   }
   for (const s of allShipments()) {
     const o = byId.get(s.orderId);
@@ -173,8 +198,16 @@ export function books(): Books {
     lines.push({ ...base, id: `urssaf:${d.key}:bank`, account: "cash.bank", amountEurCents: -d.totalCents, memo: `URSSAF · ${d.label}` });
   }
 
+  const vatReturns = regime === "collect" ? vatReturnsOf(lines, now) : [];
+  for (const v of vatReturns) {
+    if (!v.paidAt || !v.amountCents) continue;
+    const base = { at: v.paidAt, sourceTable: "vat_returns", sourceId: v.key, category: "none" as const };
+    lines.push({ ...base, id: `vat:${v.key}:0`, account: "liability.vat", amountEurCents: -v.amountCents, memo: `VAT paid · ${v.label}` });
+    lines.push({ ...base, id: `vat:${v.key}:bank`, account: "cash.bank", amountEurCents: -v.amountCents, memo: `VAT return · ${v.label}` });
+  }
+
   lines.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : 1));
-  const result = { lines, payouts, declarations };
+  const result = { lines, payouts, declarations, vatReturns };
   memo = { orders, minute, regime, books: result };
   return result;
 }
@@ -187,25 +220,57 @@ function payoutsOf(lines: LedgerLine[], now: number): Payout[] {
   let friday = LAUNCH_DATE;
   while (((new Date(`${friday}T12:00:00Z`).getUTCDay() + 6) % 7) !== weekday) friday = addDays(friday, 1);
   let i = 0, carried = 0;
+  let carriedFrom: string | null = null;
   const today = parisDay(now);
   for (; ; friday = addDays(friday, 7)) {
     const at = parisInstant(friday, 10);
     let amount = carried;
     const sources: string[] = [];
+    let fromAt: string | null = carriedFrom, toAt: string | null = null;
     while (i < balance.length && balance[i]!.availableAt! <= at) {
-      amount += balance[i]!.amountEurCents;
-      sources.push(balance[i]!.sourceId);
+      const l = balance[i]!;
+      amount += l.amountEurCents;
+      sources.push(l.sourceId);
+      if (!fromAt || l.at < fromAt) fromAt = l.at;
+      if (!toAt || l.at > toAt) toAt = l.at;
       i++;
     }
     const arrivalAt = parisInstant(addDays(friday, arrivalDays + 1), 9); // Friday → Monday
     const status: Payout["status"] = Date.parse(at) > now ? "scheduled" : Date.parse(arrivalAt) > now ? "in_transit" : "paid";
     if (amount > 0) {
-      out.push({ id: `po_${friday.replaceAll("-", "")}`, at, arrivalAt, amountEurCents: amount, status, sources });
+      out.push({ id: `po_${friday.replaceAll("-", "")}`, at, arrivalAt, amountEurCents: amount, status, sources, fromAt, toAt });
       carried = 0;
-    } else carried = amount;
+      carriedFrom = null;
+    } else {
+      carried = amount;
+      carriedFrom = fromAt;
+    }
     if (friday > today) break;
   }
   return out.reverse();
+}
+
+/** VAT returns: the same life as URSSAF declarations ("Lucas · simulated" files and pays five days before the due date). */
+function vatReturnsOf(lines: LedgerLine[], now: number): VatReturn[] {
+  const today = simToday();
+  const handsOff = 48 * 3_600_000;
+  const { frequency, dueDay } = BUSINESS.vatReturns.value;
+  const vat = lines.filter((l) => l.account === "liability.vat" && l.sourceTable !== "vat_returns");
+  return periods(LAUNCH_DATE, today, frequency).map((p): VatReturn => {
+    const amountCents = vat.filter((l) => {
+      const d = parisDay(l.at);
+      return d >= p.from && d <= p.to;
+    }).reduce((s, l) => s + l.amountEurCents, 0);
+    const monthAfter = addDays(p.to, 1).slice(0, 7);
+    const dueDate = `${monthAfter}-${String(dueDay).padStart(2, "0")}`;
+    const mine = patched("vat_returns", { id: p.key, declaredAt: null as string | null, paidAt: null as string | null });
+    const planned = parisInstant(addDays(dueDate, -5), 10);
+    const simulated = Date.parse(planned) <= now && Date.parse(`${p.to}T22:00:00Z`) <= now - handsOff && !mine.declaredAt && !mine.paidAt;
+    const declaredAt = mine.declaredAt ?? (simulated ? planned : null);
+    const paidAt = mine.paidAt ?? (simulated ? planned : null);
+    const status: VatReturn["status"] = paidAt ? "paid" : declaredAt ? "declared" : p.to >= today ? "in_progress" : dueDate < today ? "late" : "to_declare";
+    return { ...p, dueDate, amountCents, status, declaredAt, paidAt, by: mine.declaredAt || mine.paidAt ? "you" : simulated ? "simulated" : null };
+  }).reverse();
 }
 
 /** URSSAF periods: in progress, to declare, declared, paid; "Lucas · simulated" pays the older ones. */

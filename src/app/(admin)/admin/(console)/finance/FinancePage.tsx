@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Input, KpiTile, PillButton, Select, StatusChip, useToast } from "@/components";
 import { finance, financeCsv, financeFec, financePeriodOptions, financePeriodSlug, ledgerLines, type Finance, type LedgerAccount, type UrssafDeclaration } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
-import { exportBooks, markUrssafDeclared, markUrssafPaid } from "@/lib/client/admin/finance";
+import { exportBooks, markUrssafDeclared, markUrssafPaid, markVatDeclared, markVatPaid } from "@/lib/client/admin/finance";
 import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
 
@@ -271,6 +271,35 @@ function TaxesTab({ f }: { f: Finance }) {
         <span className="text-fg-muted">Contributions 12.3 % on sales of goods, 21.2 % on BIC services, 25.6 % on BNC services, plus CFP; declared quarterly by the last day of the month after the quarter. Rates to confirm with your accountant.</span>
         <span className="text-fg-muted">Prints sold by the artist may fall under the artist-author scheme instead of micro BIC: ask your accountant.</span>
       </AdminBox>
+      {f.vatReturns.length > 0 && (
+        <AdminBox>
+          <AdminTitle>VAT returns (CA3) · {f.vatReturns[0]?.key.includes("Q") ? "quarterly" : "monthly"}</AdminTitle>
+          <div role="table" aria-label="VAT returns" className="flex flex-col gap-14">
+            <AdminHeadRow cols="110px 1fr 120px 120px 150px 1fr">
+              <span role="columnheader">Period</span>
+              <span role="columnheader">VAT collected, net of refunds</span>
+              <span role="columnheader" className="text-right">To pay</span>
+              <span role="columnheader">Due</span>
+              <span role="columnheader">Status</span>
+              <span role="columnheader">Actions</span>
+            </AdminHeadRow>
+            {f.vatReturns.map((v) => (
+              <AdminRow key={v.key} cols="110px 1fr 120px 120px 150px 1fr">
+                <span role="rowheader">{v.label}</span>
+                <span role="cell" className="text-fg-muted">{v.status === "in_progress" ? "So far" : "Whole period"}</span>
+                <span role="cell" className="text-right">{eur(v.amountCents)}</span>
+                <span role="cell">{day(v.dueDate)}</span>
+                <span role="cell"><StatusChip state={STATUS[v.status].state} label={STATUS[v.status].label + (v.by === "simulated" ? " · simulated" : "")} /></span>
+                <span role="cell" className="flex flex-wrap gap-6">
+                  {(v.status === "to_declare" || v.status === "late") && <PillButton onClick={() => act(() => markVatDeclared(v.key, v.label, v.status), `${v.label} VAT return marked as filed`)}>Mark as declared</PillButton>}
+                  {(v.status === "to_declare" || v.status === "late" || v.status === "declared") && <PillButton onClick={() => act(() => markVatPaid(v.key, v.label, v.status, v.amountCents), `${v.label} VAT marked as paid`)}>Mark as paid</PillButton>}
+                </span>
+              </AdminRow>
+            ))}
+          </div>
+          <span className="text-fg-muted">VAT collected is owed to the state: it comes out of the bank when the return is paid. Sales to other EU countries carry French VAT until the year&apos;s EU sales pass €10,000, then the buyer&apos;s rate (OSS). Due dates and rules to confirm with your accountant.</span>
+        </AdminBox>
+      )}
       <AdminBox>
         <AdminTitle>Thresholds · {f.period.to.slice(0, 4)}, year to date</AdminTitle>
         <div role="table" aria-label="Thresholds" className="flex flex-col gap-14">
@@ -304,10 +333,14 @@ function CashTab({ f }: { f: Finance }) {
         <div role="table" aria-label="Cash today" className="flex flex-col gap-14">
           {[
             ["Bank balance", eur(c.bankCents)],
+            ["· of which VAT to pay back", eur(c.vatDueCents)],
+            ["· of which URSSAF to pay", eur(c.urssafDueCents)],
+            ["Really available (bank − VAT − URSSAF)", eur(c.availableCents)],
             ["Stripe balance · waiting (7 days)", eur(c.stripePendingCents)],
             ["Stripe balance · available", eur(c.stripeAvailableCents)],
             ["Next payout", c.nextPayout ? `${eur(c.nextPayout.amountEurCents)} · ${day(c.nextPayout.at)}` : "—"],
             ["Next URSSAF payment", c.nextUrssaf ? `${eur(c.nextUrssaf.totalCents)} · ${c.nextUrssaf.label} · due ${day(c.nextUrssaf.dueDate)}` : "—"],
+            ["Next VAT payment", c.nextVat ? `${eur(c.nextVat.amountCents)} · ${c.nextVat.label} · due ${day(c.nextVat.dueDate)}` : "—"],
             ["Gift cards still owed", eur(c.giftCardLiabilityCents)],
           ].map(([k, v]) => (
             <AdminRow key={k} cols="1fr auto">

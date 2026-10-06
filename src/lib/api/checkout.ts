@@ -12,6 +12,7 @@ import { works } from "@/data/works";
 import { priceCart } from "./cart";
 import { ORDER_NUMBER_START } from "@/sim/config";
 import { allEntitlements, allOrders, type LocalRows } from "./local";
+import { vatRateAt } from "./vat";
 import type { Address, StoredCartLine } from "./types";
 
 export interface PlaceOrderInput {
@@ -118,7 +119,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     orders: [{
       id: orderId, number, userId: input.customerId, email: input.email, status: "paid",
       subtotalCents, discountCents, shippingCents, shippingMethod,
-      taxCents: includedVatCents(totalCents, input.country), totalCents, country: input.country || undefined,
+      taxCents: includedVatCents(totalCents, input.country, vatRateAt(input.country, input.now)), totalCents, country: input.country || undefined,
       shippingAddress: hasPrint ? input.shippingAddress : null,
       stripePaymentIntent: `pi_3Px${n}L9aQ`, cardLast4: input.cardLast4, risk: "low",
       withdrawalWaived: input.withdrawalWaived, paidAt: input.now, createdAt: input.now, items,

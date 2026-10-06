@@ -7,7 +7,7 @@
 import { BUSINESS, type UrssafCategory, type VatRegime } from "@/config/business";
 import { addDays, parisDay } from "@/lib/clock";
 import type { GiftCardRow } from "@/data/marketing";
-import { VAT_RATES } from "@/data/tax";
+import { FR_VAT_RATE, VAT_RATES } from "@/data/tax";
 import type { AffiliateCommissionRow, AiJobRow, OrderRow, PaymentRow, PrintCopyRow, RefundRow, ShipmentRow } from "@/data/types";
 import { fxRate, toEur } from "./fx";
 import type { LedgerAccount, LedgerLine } from "./types";
@@ -16,9 +16,12 @@ const B = BUSINESS;
 const EU = new Set(["FR", "BE", "DE", "NL", "ES", "IT", "AT", "PT", "IE", "LU"]);
 const zoneOf = (country: string): "FR" | "EU" | "INTL" => (country === "FR" ? "FR" : EU.has(country) ? "EU" : "INTL");
 
-/** VAT rate of a sale (Switzerland and outside the EU: 0, exports). Under the franchise: none. */
+/**
+ * VAT rate of a sale when the caller does not give one: France 20 %, the rest of the EU 20 % (under the
+ * €10,000 threshold), outside the EU 0; none under the franchise. The books pass `vatRateAt` (src/lib/api/vat.ts).
+ */
 export function vatRateOf(country: string, regime: VatRegime): number {
-  return regime === "franchise" ? 0 : (VAT_RATES[country] ?? 0);
+  return regime === "franchise" ? 0 : country in VAT_RATES ? FR_VAT_RATE : 0;
 }
 
 /** How an order was paid, for its fees (fixture and browser orders have no payment row: a standard card). */
@@ -55,8 +58,7 @@ const REVENUE: Record<"guide" | "print" | "shipping", { account: LedgerAccount; 
 };
 
 /** An order's sale lines in EUR excl. VAT: what it sold, the VAT collected, a gift card sold as a liability. */
-function saleParts(order: OrderRow, country: string, regime: VatRegime, rate: number) {
-  const vat = vatRateOf(country, regime);
+function saleParts(order: OrderRow, country: string, vat: number, rate: number) {
   const parts: Array<{ kind: "guide" | "print" | "shipping"; exVat: number; vat: number; usd: number }> = [];
   let giftCardSold = 0, giftCardSoldUsd = 0;
   const add = (kind: "guide" | "print" | "shipping", usd: number) => {
@@ -76,13 +78,13 @@ function saleParts(order: OrderRow, country: string, regime: VatRegime, rate: nu
   return { parts, giftCardSold, giftCardSoldUsd };
 }
 
-export function ledgerFromOrder(order: OrderRow, payment: PaymentRow | undefined, country: string, regime: VatRegime): LedgerLine[] {
+export function ledgerFromOrder(order: OrderRow, payment: PaymentRow | undefined, country: string, regime: VatRegime, vatRate: number = vatRateOf(country, regime)): LedgerLine[] {
   const day = parisDay(order.paidAt);
   const rate = fxRate(day);
   const out: LedgerLine[] = [];
   let n = 0;
   const base = { at: order.paidAt, sourceTable: "orders", sourceId: order.id, fxRate: rate };
-  const { parts, giftCardSold, giftCardSoldUsd } = saleParts(order, country, regime, rate);
+  const { parts, giftCardSold, giftCardSoldUsd } = saleParts(order, country, vatRate, rate);
   // The share paid with a gift card is turnover of the card's use, not of this sale (02 §3).
   const giftUsd = (order.giftCardRedemptions ?? []).reduce((s, r) => s + r.cents, 0);
   const giftShare = order.totalCents > 0 ? Math.min(1, giftUsd / order.totalCents) : 0;
@@ -91,7 +93,7 @@ export function ledgerFromOrder(order: OrderRow, payment: PaymentRow | undefined
     const fromGift = Math.round(p.exVat * giftShare);
     if (p.exVat - fromGift) out.push(line({ ...base, account: R.account, amountEurCents: p.exVat - fromGift, amountUsdCents: p.usd, category: R.category, memo: `${p.kind === "shipping" ? "Shipping charged" : p.kind === "guide" ? "Guide" : "Print"} excl. VAT` }, n++));
     if (fromGift) out.push(line({ ...base, account: "revenue.giftcards_redeemed", amountEurCents: fromGift, category: R.category, memo: `Gift card used · ${p.kind}` }, n++));
-    if (p.vat) out.push(line({ ...base, account: "liability.vat", amountEurCents: p.vat, category: "none", country, memo: `VAT ${country}` }, n++));
+    if (p.vat) out.push(line({ ...base, account: "liability.vat", amountEurCents: p.vat, category: "none", country, vatRatePct: Math.round(vatRate * 1000) / 10, memo: `VAT ${country} ${Math.round(vatRate * 1000) / 10}%` }, n++));
   }
   if (giftCardSold) out.push(line({ ...base, account: "liability.giftcards", amountEurCents: giftCardSold, amountUsdCents: giftCardSoldUsd, category: "none", memo: "Gift card sold (owed until used)" }, n++));
   const chargedUsd = order.totalCents - giftUsd;
@@ -111,10 +113,14 @@ export function ledgerFromOrder(order: OrderRow, payment: PaymentRow | undefined
 
 const addDaysIso = (iso: string, days: number) => new Date(Date.parse(iso) + days * 86_400_000).toISOString().slice(0, 19) + "Z";
 
-/** A gift card used to pay: what it still owed comes off the liability (at the card's own rate). */
-export function ledgerFromGiftCardUse(card: GiftCardRow, orderId: string, cents: number, at: string): LedgerLine[] {
+/**
+ * A gift card used to pay: what it still owed comes off the liability, at the card's own rate, as the
+ * difference of the balances before and after (rounded), so the uses never add up to more than the sale.
+ */
+export function ledgerFromGiftCardUse(card: GiftCardRow, orderId: string, cents: number, at: string, balanceBeforeCents: number): LedgerLine[] {
   const rate = fxRate(parisDay(card.createdAt));
-  return [line({ at, account: "liability.giftcards", amountEurCents: -toEur(cents, rate), amountUsdCents: cents, fxRate: rate, category: "none", sourceTable: "gift_card_redemptions", sourceId: `${card.id}:${orderId}`, memo: `Gift card ${card.code} used` }, 0)];
+  const eur = toEur(balanceBeforeCents, rate) - toEur(balanceBeforeCents - cents, rate);
+  return [line({ at, account: "liability.giftcards", amountEurCents: -eur, amountUsdCents: cents, fxRate: rate, category: "none", sourceTable: "gift_card_redemptions", sourceId: `${card.id}:${orderId}`, memo: `Gift card ${card.code} used` }, 0)];
 }
 
 /** A gift card past its validity with money left: breakage, turnover on its expiry day. */
@@ -133,9 +139,9 @@ export function ledgerFromBreakage(card: GiftCardRow, now: number): LedgerLine[]
 }
 
 /** A refund: negative turnover on its day, same categories as the order (shared in proportion), VAT back, out of the Stripe balance. */
-export function ledgerFromRefund(refund: RefundRow, order: OrderRow, country: string, regime: VatRegime): LedgerLine[] {
+export function ledgerFromRefund(refund: RefundRow, order: OrderRow, country: string, regime: VatRegime, vatRate: number = vatRateOf(country, regime)): LedgerLine[] {
   const rate = fxRate(parisDay(refund.createdAt));
-  const { parts } = saleParts(order, country, regime, rate);
+  const { parts } = saleParts(order, country, vatRate, rate);
   const total = parts.reduce((s, p) => s + p.exVat + p.vat, 0);
   const refundEur = toEur(refund.amountCents, rate);
   const out: LedgerLine[] = [];
@@ -144,11 +150,11 @@ export function ledgerFromRefund(refund: RefundRow, order: OrderRow, country: st
   if (total > 0) {
     for (const p of parts) {
       const share = (p.exVat + p.vat) / total;
-      const exVat = Math.round((refundEur * share) / (1 + vatRateOf(country, regime)));
+      const exVat = Math.round((refundEur * share) / (1 + vatRate));
       const vat = Math.round(refundEur * share) - exVat;
       const R = REVENUE[p.kind];
       if (exVat) out.push(line({ ...base, account: R.refund, amountEurCents: -exVat, category: R.category, memo: `Refund · ${refund.reason}` }, n++));
-      if (vat) out.push(line({ ...base, account: "liability.vat", amountEurCents: -vat, category: "none", country, memo: `VAT refunded ${country}` }, n++));
+      if (vat) out.push(line({ ...base, account: "liability.vat", amountEurCents: -vat, category: "none", country, vatRatePct: Math.round(vatRate * 1000) / 10, memo: `VAT refunded ${country}` }, n++));
     }
   }
   out.push(line({ ...base, account: "cash.stripe_balance", amountEurCents: -refundEur, amountUsdCents: refund.amountCents, category: "none", availableAt: refund.createdAt, memo: "Refund paid" }, n++));

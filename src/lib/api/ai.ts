@@ -9,7 +9,6 @@ import { AI_CENTS_PER_CANDIDATE, AI_MONTHLY_BUDGET_CENTS, aiCandidates, aiJobs }
 import { simNow } from "@/lib/clock";
 import { calendarMonth, inPeriod } from "@/lib/metrics/period";
 import type { AiCandidateRow, AiJobRow } from "@/data/types";
-import { setAiToReviewSource } from "./admin";
 import { clone } from "./clone";
 import { fixtureAiCandidates, merged, simAiCandidates, simAiJobs } from "./local";
 import type { PaletteKey } from "./types";
@@ -142,7 +141,6 @@ function mapCandidate(c: AiCandidateRow): AiCandidate {
 }
 
 const pendingCount = () => allAiCandidates().filter((c) => c.status === "pending").length;
-setAiToReviewSource(pendingCount);
 
 export async function getAiPipeline(): Promise<AiPipeline> {
   const jobs = allAiJobs();

@@ -6,7 +6,7 @@
 import { BUSINESS, type UrssafCategory } from "@/config/business";
 import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { clone } from "@/lib/api/clone";
-import { books, contributionsOf, turnoverByCategory, type LedgerAccount, type LedgerLine, type Payout, type UrssafDeclaration, STORE_ACCOUNTS, TURNOVER_ACCOUNTS } from "@/lib/ledger";
+import { books, contributionsOf, turnoverByCategory, type LedgerAccount, type LedgerLine, type Payout, type UrssafDeclaration, type VatReturn, STORE_ACCOUNTS, TURNOVER_ACCOUNTS } from "@/lib/ledger";
 import { metric } from "./define";
 import { calendarMonth, daysOf, periodLabel, rollingDays, type Period } from "./period";
 
@@ -77,6 +77,12 @@ export interface Threshold {
 
 export interface Cash {
   bankCents: number;
+  /** Of the bank: VAT collected not paid back yet, URSSAF contributions not paid yet (accrued on turnover). */
+  vatDueCents: number;
+  urssafDueCents: number;
+  /** Bank − VAT due − URSSAF due: what is really yours. */
+  availableCents: number;
+  nextVat: VatReturn | null;
   stripePendingCents: number;
   stripeAvailableCents: number;
   nextPayout: Payout | null;
@@ -113,6 +119,7 @@ export interface Finance {
   payouts: Array<{ id: string; date: string; cents: number; status: "scheduled" | "in_transit" | "paid" }>;
   cash: Cash;
   declarations: UrssafDeclaration[];
+  vatReturns: VatReturn[];
 }
 
 export const FINANCE_DEFINITIONS = {
@@ -169,8 +176,15 @@ export const cash = metric("Money at now: bank balance, Stripe balance waiting a
   const stripe = upTo.filter((l) => l.account === "cash.stripe_balance");
   const pending = stripe.filter((l) => l.availableAt && Date.parse(l.availableAt) > now).reduce((s, l) => s + l.amountEurCents, 0);
   const total = stripe.reduce((s, l) => s + l.amountEurCents, 0);
+  const bankCents = BUSINESS.bank.value.openingCents + sum(upTo, ["cash.bank"]);
+  const vatDueCents = sum(upTo, ["liability.vat"]);
+  const urssafDueCents = b.declarations.filter((d) => !d.paidAt).reduce((s, d) => s + d.totalCents, 0);
   return {
-    bankCents: BUSINESS.bank.value.openingCents + sum(upTo, ["cash.bank"]),
+    bankCents,
+    vatDueCents,
+    urssafDueCents,
+    availableCents: bankCents - vatDueCents - urssafDueCents,
+    nextVat: [...b.vatReturns].reverse().find((v) => v.status === "to_declare" || v.status === "late" || v.status === "declared" || v.status === "in_progress") ?? null,
     stripePendingCents: pending,
     stripeAvailableCents: total - pending,
     nextPayout: b.payouts.find((p) => p.status === "scheduled") ?? null,
@@ -252,14 +266,18 @@ export const finance = metric("Finance figures of a period in EUR excl. VAT: P&L
   ];
 
   // VAT collected by country; sales outside the EU are exports at 0 %.
+  // VAT collected by country and rate: other EU countries carry French VAT (20 %) under the €10,000
+  // threshold, their own rate (OSS) after it.
   const vatBy = new Map<string, number>();
-  for (const l of lines) if (l.account === "liability.vat" && l.country) vatBy.set(l.country, (vatBy.get(l.country) ?? 0) + l.amountEurCents);
+  for (const l of lines) if (l.account === "liability.vat" && l.country) vatBy.set(`${l.country}|${l.vatRatePct ?? ""}`, (vatBy.get(`${l.country}|${l.vatRatePct ?? ""}`) ?? 0) + l.amountEurCents);
   const withVat = new Set(lines.filter((l) => l.account === "liability.vat").map((l) => l.sourceId));
   const exportSales = lines.filter((l) => l.sourceTable === "orders" && STORE_ACCOUNTS.includes(l.account) && !withVat.has(l.sourceId)).length;
-  const RATES: Record<string, string> = { FR: "20%", BE: "21%", DE: "19%" };
-  const oss = BUSINESS.ossRegistered.value;
   const vat = [
-    ...[...vatBy].sort((a, b) => b[1] - a[1]).map(([c, cents]) => ({ country: `${COUNTRY[c] ?? c}${c !== "FR" && oss ? " · OSS" : ""}`, rate: RATES[c] ?? "", cents })),
+    ...[...vatBy].sort((a, b) => b[1] - a[1]).map(([key, cents]) => {
+      const [c, pct] = key.split("|") as [string, string];
+      const label = c === "FR" ? COUNTRY.FR! : `${COUNTRY[c] ?? c}${pct === "20" ? " · French VAT" : " · OSS"}`;
+      return { country: label, rate: pct ? `${pct}%` : "", cents };
+    }),
     ...(exportSales ? [{ country: "Outside the EU (export)", rate: "0%", cents: 0 }] : []),
   ];
 
@@ -293,6 +311,7 @@ export const finance = metric("Finance figures of a period in EUR excl. VAT: P&L
     payouts: b.payouts.slice(0, 8).map((p) => ({ id: p.id, date: p.at, cents: p.amountEurCents, status: p.status })),
     cash: cash(),
     declarations: b.declarations,
+    vatReturns: b.vatReturns,
   });
 });
 

@@ -156,6 +156,8 @@ export interface PriceCartOptions {
   shippingMethod?: ShippingMethod | null;
   /** Country of the address, for the VAT line. Omitted → no VAT line. */
   country?: string;
+  /** VAT rate of the sale (src/lib/api/vat.ts `vatRateAt`); omitted: France for France and the EU, 0 elsewhere. */
+  vatRate?: number;
 }
 
 /** Prices lines with a stock reader. Unavailable lines (unpublished work, sold-out edition) are returned but not counted. */
@@ -172,7 +174,7 @@ export function priceLines(lines: StoredCartLine[], opts: PriceCartOptions, stoc
     ...(discountCents ? { discountCents, discountLabel: `Guide + print −${BUNDLE_DISCOUNT_PCT}%` } : {}),
     shippingCents,
     totalCents,
-    taxIncludedCents: opts.country ? includedVatCents(totalCents, opts.country) : undefined,
+    taxIncludedCents: opts.country ? includedVatCents(totalCents, opts.country, opts.vatRate) : undefined,
   };
 
   // "Paint N°07 yourself instead? Guide from $15. See it": first print whose work has no guide in the cart.

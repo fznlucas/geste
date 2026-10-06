@@ -47,7 +47,7 @@ function item(orderNumber: number, index: number, line: Line): OrderItemRow {
   };
 }
 
-function order(number: number, at: string, customerSlug: string, lines: Line[], opts: { shipping?: ShippingMethod; status?: OrderStatus; last4?: string; risk?: OrderRow["risk"] } = {}): OrderRow {
+function order(number: number, at: string, customerSlug: string, lines: Line[], opts: { shipping?: ShippingMethod; status?: OrderStatus; last4?: string; risk?: OrderRow["risk"]; giftCard?: { id: string; cents: number } } = {}): OrderRow {
   const customer = customers.find((c) => c.id === `cus-${customerSlug}`)!;
   const built = lines.map((l, i) => item(number, i, l));
   // Guide + print of the same work: the bundle discount on both lines (pricing.ts).
@@ -79,6 +79,7 @@ function order(number: number, at: string, customerSlug: string, lines: Line[], 
     paidAt: at,
     createdAt: at,
     items,
+    ...(opts.giftCard ? { giftCardRedemptions: [{ giftCardId: opts.giftCard.id, cents: opts.giftCard.cents }] } : {}),
   };
 }
 
@@ -101,7 +102,8 @@ export const orders: OrderRow[] = [
   order(2028, "2026-09-25T08:30:00Z", "camille-martin", [{ kind: "print", edition: "ed-01-s" }]),
   order(2025, "2026-09-24T09:05:00Z", "adam-faure", [{ kind: "guide", work: 8 }], { status: "refunded", last4: "0341" }),
   order(2021, "2026-09-22T19:45:00Z", "tom-laurent", [{ kind: "guide", work: 15 }], { last4: "7310" }),
-  order(2019, "2026-09-21T10:30:00Z", "lea-dubois", [{ kind: "guide", work: 12, palette: "earth" }], { last4: "0005" }),
+  // Paid with the gift card Camille gave her (gc-8jq1: $30, $11 left on the Marketing board).
+  order(2019, "2026-09-21T10:30:00Z", "lea-dubois", [{ kind: "guide", work: 12, palette: "earth" }], { last4: "0005", giftCard: { id: "gc-8jq1", cents: 1900 } }),
   order(2017, "2026-09-20T15:00:00Z", "yanis-benali", [{ kind: "guide", work: 14 }], { last4: "5100" }),
   order(2016, "2026-09-20T07:50:00Z", "nina-keller", [{ kind: "guide", work: 11 }], { last4: "8431" }),
   order(2014, "2026-09-19T14:05:00Z", "chloe-garnier", [{ kind: "print", edition: "ed-05-s" }], { shipping: "international", last4: "2222" }),

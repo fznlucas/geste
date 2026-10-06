@@ -56,15 +56,32 @@ describe.each(CLOCKS)("the books at %s", (iso) => {
     }
   });
 
-  it("gift cards: owed = sold − used − expired, never below zero, per card and in total", async () => {
+  it("gift cards: owed ≤ sold − used − expired, never below zero, and equal to the card's balance, per card", async () => {
     const { ledger, local } = await at(iso);
-    const owed = new Map<string, number>();
     const now = Date.parse(iso);
-    const lines = ledger.books().lines.filter((l) => l.account === "liability.giftcards" && Date.parse(l.at) <= now);
-    const cardOf = (l: (typeof lines)[number]) => (l.sourceTable === "orders" ? local.allGiftCards().find((g) => g.purchaseOrderId === l.sourceId)?.id : l.sourceId.split(":")[0]) ?? l.sourceId;
-    for (const l of lines) owed.set(cardOf(l), (owed.get(cardOf(l)) ?? 0) + l.amountEurCents);
-    for (const [card, cents] of owed) expect(cents, card).toBeGreaterThanOrEqual(0);
-    expect(lines.reduce((s, l) => s + l.amountEurCents, 0)).toBeGreaterThanOrEqual(0);
+    const lines = ledger.books().lines.filter((l) => l.account.startsWith("liability.giftcards") && Date.parse(l.at) <= now);
+    const cards = local.allGiftCards();
+    const byOrder = new Map(cards.filter((g) => g.purchaseOrderId).map((g) => [g.purchaseOrderId!, g]));
+    const per = new Map<string, { sold: number; used: number; expired: number; owed: number }>();
+    const of = (id: string) => per.get(id) ?? per.set(id, { sold: 0, used: 0, expired: 0, owed: 0 }).get(id)!;
+    for (const l of lines) {
+      const card = l.sourceTable === "orders" ? byOrder.get(l.sourceId)?.id : l.sourceId.split(":")[0];
+      if (!card) continue; // a card bought in this browser (not in this test's rows)
+      const c = of(card);
+      c.owed += l.amountEurCents;
+      if (l.sourceTable === "orders") c.sold += l.amountEurCents;
+      else if (l.sourceTable === "gift_card_redemptions") c.used -= l.amountEurCents;
+      else c.expired -= l.amountEurCents;
+    }
+    expect(per.size).toBeGreaterThan(0);
+    for (const [id, c] of per) {
+      expect(c.owed, id).toBeLessThanOrEqual(c.sold - c.used - c.expired);
+      expect(c.owed, id).toBeGreaterThanOrEqual(0);
+      // Counted once: what the books owe is what is left on the card (at the card's rate, to the cent).
+      const card = cards.find((g) => g.id === id)!;
+      const { parisDay } = await import("@/lib/clock");
+      expect(c.owed, id).toBe(ledger.toEur(card.balanceCents, ledger.fxRate(parisDay(card.createdAt))));
+    }
   });
 
   it("Stripe balance + payouts = payments net of fees − refunds", async () => {
@@ -93,6 +110,18 @@ describe.each(CLOCKS)("the books at %s", (iso) => {
     expect(chart).toBe(fromLines);
   });
 
+  it("VAT collected − VAT paid = VAT due, and cash shows it", async () => {
+    const { ledger, fin } = await at(iso);
+    const now = Date.parse(iso);
+    const vat = ledger.books().lines.filter((l) => l.account === "liability.vat" && Date.parse(l.at) <= now);
+    const collected = vat.filter((l) => l.sourceTable !== "vat_returns").reduce((s, l) => s + l.amountEurCents, 0);
+    const paid = -vat.filter((l) => l.sourceTable === "vat_returns").reduce((s, l) => s + l.amountEurCents, 0);
+    const c = fin.cash();
+    expect(collected - paid).toBe(c.vatDueCents);
+    expect(c.availableCents).toBe(c.bankCents - c.vatDueCents - c.urssafDueCents);
+    for (const r of ledger.books().vatReturns) if (r.paidAt) expect(r.status).toBe("paid");
+  });
+
   it("URSSAF contributions follow the rates by category", async () => {
     const { ledger } = await at(iso);
     for (const decl of ledger.books().declarations) {
@@ -105,6 +134,28 @@ describe.each(CLOCKS)("the books at %s", (iso) => {
 });
 
 describe("VAT", () => {
+  it("EU consumers: French VAT under €10,000 a year, the buyer's rate (OSS) for the sales after", async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_SIM_NOW", "2026-10-02T12:00:00Z");
+    const vat = await import("@/lib/api/vat");
+    expect(vat.vatRateAt("FR", "2026-09-01T10:00:00Z")).toBe(0.2);
+    expect(vat.vatRateAt("BE", "2026-09-01T10:00:00Z")).toBe(0.2); // under the threshold: French VAT
+    expect(vat.vatRateAt("DE", "2026-09-01T10:00:00Z")).toBe(0.2);
+    expect(vat.vatRateAt("CH", "2026-09-01T10:00:00Z")).toBe(0);
+    expect(vat.vatRateAt("US", "2026-09-01T10:00:00Z")).toBe(0);
+    expect(vat.vatRateAt("BE", "2026-09-01T10:00:00Z", "franchise")).toBe(0);
+    // Later years pass the threshold: from the sale that crosses it, the buyer's country rate.
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_SIM_NOW", "2028-12-31T20:00:00Z");
+    const later = await import("@/lib/api/vat");
+    const crossed = later.euThresholdCrossings();
+    for (const [year, iso] of crossed) {
+      expect(later.vatRateAt("BE", iso)).toBe(0.2);
+      expect(later.vatRateAt("BE", new Date(Date.parse(iso) + 1000).toISOString())).toBe(0.21);
+      expect(later.vatRateAt("DE", `${Number(year) + 1}-01-01T12:00:00Z`)).toBe(0.2); // a new year starts under it
+    }
+  });
+
   it("Switzerland and outside the EU are exports: 0 % — and no order total depends on a rate", async () => {
     const { includedVatCents, VAT_RATES } = await import("@/data/tax");
     const { orders } = await import("@/data/orders");

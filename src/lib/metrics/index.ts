@@ -12,5 +12,5 @@ export {
   FINANCE_DEFINITIONS, cash, finance, financeCsv, financeFec, financePeriod, financePeriodLabel, financePeriodOptions, financePeriodSlug, ledgerLines, storeTurnoverEurCents, thresholds,
   type Cash, type Finance, type PnlRow, type Threshold,
 } from "./finance";
-export type { LedgerAccount, LedgerLine, Payout, UrssafDeclaration } from "@/lib/ledger";
+export type { LedgerAccount, LedgerLine, Payout, UrssafDeclaration, VatReturn } from "@/lib/ledger";
 export { durationLabel, firstReplyMinutes } from "./support";

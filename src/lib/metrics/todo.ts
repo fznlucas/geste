@@ -3,6 +3,7 @@
  * "To do today" and the alerts, from the same rows as their modules. Admin v2 Phase 1 keeps today's
  * rules and numbers; Phase 5 makes badge = tab = phone = to-do and gives alerts stable ids from their cause.
  */
+import { allAiCandidates } from "@/lib/api/ai";
 import { clone } from "@/lib/api/clone";
 import { getEditions, getPrintCopies } from "@/lib/api/editions";
 import { patched } from "@/lib/api/local";
@@ -10,14 +11,14 @@ import { getOrders } from "@/lib/api/orders";
 import { getReviews } from "@/lib/api/reviews";
 import { getSupportThreads } from "@/lib/api/support";
 import type { StaffRole } from "@/lib/api/types";
+import { parisDay, simToday } from "@/lib/clock";
+import { euThresholdCrossings } from "@/lib/api/vat";
+import { formatPrice } from "@/lib/format";
+import { books } from "@/lib/ledger";
 import { metric } from "./define";
 
-/** Mock: AI candidates waiting for a decision (AdminAIPipeline). Replaced by a count of `ai_candidates`. */
-let aiToReview: () => number = () => 5;
-/** Called by the AI module so the badge follows approvals and rejections. */
-export function setAiToReviewSource(get: () => number) {
-  aiToReview = get;
-}
+/** @deprecated The AI badge reads the candidates (`allAiCandidates`) directly; kept so existing imports work. */
+export function setAiToReviewSource(_get: () => number) {}
 
 export interface AdminCounts {
   /** Orders with a print still to ship ("Orders 3"). */
@@ -44,7 +45,7 @@ export const todoCounts = metric("Counts of what waits for a person, per module:
     orders: orders.filter((o) => o.displayStatus === "To ship").length,
     fulfilment: copies.length,
     editions: editions.filter((e) => e.left > 0 && e.left <= 5).length,
-    ai: aiToReview(),
+    ai: allAiCandidates().filter((c) => c.status === "pending").length,
     support: threads.length,
     reviews: reviews.length,
   };
@@ -74,6 +75,35 @@ export const lowEdition = metric("The open edition with the fewest copies left, 
  * Top bar "Alerts · 6" (AdminDashboard) and AdminMAlerts, newest first. Counts come from the modules;
  * the times are the mock's feed (notifications table later). Read state: `patchRow("alerts", id, { read })`.
  */
+/** The year's EU sales to consumers passed €10,000: the buyer's country VAT (OSS) applies since. */
+function euVatAlert(): Array<Omit<AdminAlert, "read">> {
+  const year = simToday().slice(0, 4);
+  const at = euThresholdCrossings().get(year);
+  if (!at) return [];
+  return [{
+    id: `eu-oss:${year}`, text: `EU sales passed €10,000: buyer's country VAT (OSS) since ${parisDay(at).slice(5).replace("-", "/")} · register for OSS`,
+    when: parisDay(at).slice(5).replace("-", "/"), href: "/admin/finance/?tab=taxes", roles: ["owner"], phone: null,
+  }];
+}
+
+/** The last payout sent (desktop) and the next one (phone), from the books: never a typed amount. */
+function payoutAlert(): Array<Omit<AdminAlert, "read">> {
+  const payouts = books().payouts;
+  const sent = payouts.find((p) => p.status !== "scheduled");
+  const next = payouts.find((p) => p.status === "scheduled");
+  if (!sent && !next) return [];
+  const euros = (c: number) => formatPrice(c, "en", "EUR");
+  const day = (iso: string) => `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(parisDay(iso).slice(5, 7)) - 1]} ${Number(parisDay(iso).slice(8, 10))}`;
+  return [{
+    id: `payout:${(sent ?? next)!.id}`,
+    text: sent ? `Payout of ${euros(sent.amountEurCents)} ${sent.status === "paid" ? "received" : "sent"}` : `Payout of ${euros(next!.amountEurCents)} scheduled`,
+    when: day((sent ?? next)!.at),
+    href: "/admin/finance/?tab=cash",
+    roles: ["owner"],
+    phone: next ? { rank: 5, text: `Payout of ${euros(next.amountEurCents)} scheduled · ${day(next.at)}`, href: "/admin/finance/?tab=cash" } : null,
+  }];
+}
+
 export const alerts = metric("Alerts derived from the state of the store, newest first; read state is kept per alert.", async function alerts(): Promise<AdminAlert[]> {
   const c = await todoCounts();
   const [newest] = await getOrders();
@@ -88,7 +118,8 @@ export const alerts = metric("Alerts derived from the state of the store, newest
     { id: "alert-support", text: plural(c.support, "new support message", "new support messages"), when: "08:02", href: "/admin/support", roles: ["owner", "support"], phone: { rank: 2, text: "Sarah C.: “When will my print ship?”", href: "/admin/support" } },
     { id: "alert-reviews", text: `${plural(c.reviews, "review", "reviews")} waiting`, when: "yesterday", href: "/admin/reviews", roles: ["owner", "support", "content"], phone: { rank: 4, text: `${plural(c.reviews, "review", "reviews")} waiting`, href: "/admin/reviews" } },
     { id: "alert-ai", text: `${plural(c.ai, "AI candidate", "AI candidates")} to validate`, when: "yesterday", href: "/admin/ai", roles: ["owner", "content"], phone: null },
-    { id: "alert-payout", text: "Payout of $1,668 sent", when: "Mon", href: "/admin/finance", roles: ["owner"], phone: { rank: 5, text: "Payout of $1,668 scheduled", href: "/admin/finance" } },
+    ...payoutAlert(),
+    ...euVatAlert(),
   ];
   return clone(raw.map((a) => ({ ...a, read: patched("alerts", { id: a.id, read: false }).read })));
 });

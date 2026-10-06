@@ -119,6 +119,8 @@ export class Simulator {
   private repeats = new Map<string, string[]>();
   private giftUses = new Map<string, string[]>();
   private giftBalance = new Map<string, number>();
+  /** Who received each gift card (set at its first use): they come back with it. */
+  private giftRecipient = new Map<string, string>();
   private taken = preLaunchCounts();
   private monthPlans = new Map<string, { orders: number[]; visits: number[]; decks: Decks }>();
   private activeSubscribers: number[] = [];
@@ -206,7 +208,7 @@ export class Simulator {
     this.repeats.delete(day);
     this.giftUses.delete(day);
     const slots: Array<{ customerId?: string; giftCardId?: string }> = [];
-    for (const g of gifts) slots.push({ giftCardId: g });
+    for (const g of gifts) slots.push({ giftCardId: g, customerId: this.giftRecipient.get(g) });
     for (const c of repeats) slots.push({ customerId: c });
     if (slots.length > simOrders) {
       // Not enough orders today: the rest buy tomorrow.
@@ -443,6 +445,12 @@ export class Simulator {
         redemptions = [{ giftCardId: slot.giftCardId, cents }];
         this.giftBalance.set(slot.giftCardId, balance - cents);
         this.rows.redemptions.push({ id: `red-s${this.next("redemption")}`, giftCardId: slot.giftCardId, orderId, cents, at: paidAt });
+        this.giftRecipient.set(slot.giftCardId, customer.row.id);
+        // Money left on the card: the recipient often comes back for another order.
+        if (balance - cents > 0 && r.chance(GIFT_CARD_USE.againRate)) {
+          const d = addDays(day, r.int(GIFT_CARD_USE.againMinDays, GIFT_CARD_USE.againMaxDays));
+          this.giftUses.set(d, [...(this.giftUses.get(d) ?? []), slot.giftCardId]);
+        }
       }
     }
     const payment = this.payment(orderId, customer.row.id, paidAt, country, totalCents - (redemptions?.[0]?.cents ?? 0), r);
@@ -514,8 +522,8 @@ export class Simulator {
         };
         this.rows.giftCards.push(card);
         this.giftBalance.set(card.id, card.initialCents);
-        if (r.chance(GIFT_CARD_USE.rate)) {
-          const d = addDays(day, r.int(GIFT_CARD_USE.minDays, GIFT_CARD_USE.maxDays));
+        if (r.chance(GIFT_CARD_USE.firstRate)) {
+          const d = addDays(day, r.int(GIFT_CARD_USE.firstMinDays, GIFT_CARD_USE.firstMaxDays));
           this.giftUses.set(d, [...(this.giftUses.get(d) ?? []), card.id]);
         }
       }

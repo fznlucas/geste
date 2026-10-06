@@ -8,7 +8,8 @@ import { printEditions } from "@/data/editions";
 import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
-import { VAT_RATES } from "@/data/tax";
+import { includedVatCents } from "@/data/tax";
+import { vatRateAt } from "./vat";
 import { allOrders, copiesOfItem, customerById, entitlementOfItem, orderByNumber, ordersOfCustomer, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
 import { inOrderTab } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
@@ -95,7 +96,7 @@ export function mapOrder(row: OrderRow): Order {
     discountCents: row.discountCents,
     shippingCents: row.shippingCents,
     shippingMethod: row.shippingMethod,
-    taxCents: row.taxCents,
+    taxCents: orderVatCents(row),
     totalCents: row.totalCents,
     shippingAddress: row.shippingAddress,
     cardLast4: row.cardLast4,
@@ -167,11 +168,18 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
   });
 }
 
-/** "VAT included (FR 20%)": the country of the shipping address, else the customer's. */
+/** The country the VAT of an order follows: billing country, else shipping address, else the customer's. */
+const orderCountry = (row: OrderRow) => row.country ?? row.shippingAddress?.country ?? customerById(row.userId)?.defaultAddress.country ?? "";
+
+/** The VAT part of an order's total, by the rule in force when it was paid (src/lib/api/vat.ts). */
+export const orderVatCents = (row: OrderRow) => includedVatCents(row.totalCents, orderCountry(row), vatRateAt(orderCountry(row), row.paidAt));
+
+/** "VAT included (FR 20%)"; a sale to another EU country under the €10,000 threshold carries French VAT. */
 function vatLabel(row: OrderRow): string | null {
-  const country = row.shippingAddress?.country ?? customerById(row.userId)?.defaultAddress.country ?? "";
-  const rate = VAT_RATES[country];
-  return rate && row.taxCents > 0 ? `VAT included (${country} ${Math.round(rate * 1000) / 10}%)` : null;
+  const country = orderCountry(row);
+  const rate = vatRateAt(country, row.paidAt);
+  const whose = country !== "FR" && rate === 0.2 ? "FR" : country;
+  return rate && orderVatCents(row) > 0 ? `VAT included (${whose} ${Math.round(rate * 1000) / 10}%)` : null;
 }
 
 /**

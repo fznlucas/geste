@@ -102,8 +102,11 @@ export const PRINT_WORK_WEIGHTS = [14, 6, 5, 3, 4, 3, 16, 10, 1, 2, 2, 2, 1, 3, 
 export const PRINT_SIZE_WEIGHTS = { S: 70, M: 22, L: 8 };
 /** Gift card amounts (presets of the GiftCard board). estimate — confirm */
 export const GIFT_CARD_WEIGHTS: Record<number, number> = { 1500: 15, 3000: 40, 5000: 30, 10000: 12, 15000: 3 };
-/** Gift cards used by their recipient, and when. estimate — confirm */
-export const GIFT_CARD_USE = { rate: 0.85, minDays: 2, maxDays: 90 } as const;
+/**
+ * Gift cards used by their recipient at checkout (a tender): 60 % are first used within 90 days; while
+ * money is left, 75 % come back within 60 days for another order. The rest expires (breakage). Lucas, 2026-10-06
+ */
+export const GIFT_CARD_USE = { firstRate: 0.6, firstMinDays: 2, firstMaxDays: 90, againRate: 0.75, againMinDays: 3, againMaxDays: 60 } as const;
 /** France: Mondial Relay / Colissimo home / Chronopost express. Abroad: Colissimo international. estimate — confirm */
 export const SHIPPING_FR_WEIGHTS = { mondial_relay: 55, colissimo: 35, chronopost_express: 10 };
 

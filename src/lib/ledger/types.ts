@@ -26,8 +26,9 @@ export interface LedgerLine {
   fxRate?: number;
   /** URSSAF category of revenue and refund lines. */
   category: UrssafCategory | "none";
-  /** VAT lines: the country whose rate applies. */
+  /** VAT lines: the buyer's country, and the rate that applied (French 20 % for EU sales under €10,000). */
   country?: string;
+  vatRatePct?: number;
   /** Stripe balance lines: when the money becomes available for a payout. */
   availableAt?: string;
   sourceTable: string;
