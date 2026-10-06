@@ -245,12 +245,13 @@ function ReplyBox({ draft, setDraft, error, busy, onSend, replies }: {
 }
 
 function Aside({ name, customerId, orderNumber }: { name: string; customerId: string | null; orderNumber: string | null }) {
+  const firstReply = firstReplyMinutes();
   return (
     <div className="flex flex-col gap-10 border-l border-border p-20">
       <span className="font-medium">{name}</span>
-      {customerId && <UnderLink href={`/admin/customers/${customerId}`} className="self-start">Customer profile</UnderLink>}
+      {customerId && <UnderLink href={`/admin/customers/detail/?id=${customerId}`} className="self-start">Customer profile</UnderLink>}
       {orderNumber && <UnderLink href={`/admin/orders/detail?number=${orderNumber}`} className="self-start">Order #{orderNumber}</UnderLink>}
-      <span className="text-fg-muted">Replies go out from hello@geste.studio. Average first reply this week: {durationLabel(firstReplyMinutes())}.</span>
+      <span className="text-fg-muted">Replies go out from hello@geste.studio. {firstReply === null ? "No reply this week yet." : `Average first reply this week: ${durationLabel(firstReply)}.`}</span>
     </div>
   );
 }

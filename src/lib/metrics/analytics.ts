@@ -1,13 +1,23 @@
 /**
- * Analytics metrics (AdminAnalytics, owner only). Admin v2 Phase 1: the temporary source is still the
- * board's figures of `src/data/insights.ts`; Phase 2 computes them from the simulated traffic, orders
- * and reader progress. Later: the PostHog query API.
+ * Analytics metrics (AdminAnalytics, owner only), computed from the rows for each range: funnel and
+ * sources from the traffic and the paid orders, completion from the library, devices, level mix and
+ * repeat purchases. Later: the PostHog query API.
  */
-import { analyticsByRange, completionDrops, completionN03, devices, levelMix, repeatRate, type AnalyticsRange } from "@/data/insights";
+import { addDays, simToday } from "@/lib/clock";
 import { clone } from "@/lib/api/clone";
+import { allEntitlements, allWorks } from "@/lib/api/local";
+import { guides } from "@/data/guides";
 import { metric } from "./define";
+import { rollingDays, type Period } from "./period";
+import { devicesPct, funnel, levelMixPct, ordersBySource, repeatRatePct } from "./sales";
 
-export type { AnalyticsRange };
+export type AnalyticsRange = "7 days" | "30 days" | "90 days" | "Year";
+
+const RANGE_DAYS: Record<AnalyticsRange, number> = { "7 days": 7, "30 days": 30, "90 days": 90, Year: 365 };
+
+/** The period of an analytics range, ending today. */
+export const analyticsPeriod = (range: AnalyticsRange): Period => rollingDays(RANGE_DAYS[range]);
+
 export const ANALYTICS_RANGES: AnalyticsRange[] = ["7 days", "30 days", "90 days", "Year"];
 
 export interface Analytics {
@@ -22,39 +32,53 @@ export interface Analytics {
   repeat: { pct: number; context: string };
 }
 
-const STEP_IDS = [1, 2, 3].flatMap((l) => ["a", "b", "c", "d", "e"].map((s) => `${l}${s}`));
 const LEAK_NAMES: Record<string, string> = { Visits: "visit", "Viewed a work": "work", "Added to cart": "cart", "Started checkout": "checkout", Paid: "paid" };
 
 /** Definitions shown next to each analytics block (docs/admin-v2/06 §2). */
 export const ANALYTICS_DEFINITIONS = {
-  funnel: "Visits, then visitors who viewed a work, added to cart, started checkout and paid, same period.",
+  funnel: funnel.definition,
   leak: "The funnel step with the lowest rate from the step before.",
-  sources: "Paid orders by the source of the visit that led to them.",
-  completion: "Share of buyers of the guide who reached each step.",
-  devices: "Share of visits by device.",
-  levelMix: "Share of guides sold by level.",
-  repeat: "First-time buyers who bought a second guide within 60 days.",
+  sources: ordersBySource.definition,
+  completion: "Buyers of the work's guide who opened it at least 14 days ago: share who reached each step.",
+  devices: devicesPct.definition,
+  levelMix: levelMixPct.definition,
+  repeat: repeatRatePct.definition,
 } as const;
+
+/** Why a step loses painters, where the board explains it. */
+const DROP_REASONS: Record<string, string> = { "2a": "2a is the first big gesture", "2e": "2e is the long drying wait" };
+const STEP_IDS = [1, 2, 3].flatMap((l) => ["a", "b", "c", "d", "e"].map((x) => `${l}${x}`));
+
+/** Share of a work's buyers (15-step guides, opened ≥ 14 days ago) who reached each step. */
+export const completion = metric("Buyers of the work's guide who opened it at least 14 days ago: share who reached each step.", function completion(workNumber = "N°03") {
+  const work = allWorks().find((w) => w.number === workNumber);
+  const guideIds = new Set(guides.filter((g) => g.workId === work?.id && g.level !== "beginner").map((g) => g.id));
+  const cutoff = addDays(simToday(), -14);
+  const painters = allEntitlements().filter((e) => guideIds.has(e.guideId) && e.openedAt && e.openedAt.slice(0, 10) <= cutoff && !e.revokedAt);
+  const reached = STEP_IDS.map((_, i) => painters.filter((e) => e.progress.completedAt || STEP_IDS.indexOf(e.progress.step) >= i).length);
+  const pct = reached.map((n) => (painters.length ? Math.round((n / painters.length) * 100) : 0));
+  const drops = pct.map((p, i) => (i ? pct[i - 1]! - p : 0));
+  const biggest = new Set([...drops.keys()].sort((a, b) => drops[b]! - drops[a]!).slice(0, 2).filter((i) => drops[i]! > 0));
+  return {
+    workNumber,
+    steps: STEP_IDS.map((step, i) => ({ step, pct: pct[i]!, drop: biggest.has(i) ? { points: drops[i]!, reason: DROP_REASONS[step] ?? `${step} loses painters` } : null })),
+  };
+});
 
 /** Every analytics block for a range. */
 export const analytics = metric("Analytics figures for a range: funnel, biggest leak, sources, completion, devices, level mix, repeat rate.", async function analytics(range: AnalyticsRange = "30 days"): Promise<Analytics> {
-  const row = analyticsByRange.find((r) => r.range === range)!;
-  const conv = row.funnel.slice(1).map((f, i) => ({ from: row.funnel[i]!.label, to: f.label, pct: (f.value / row.funnel[i]!.value) * 100 }));
+  const period = analyticsPeriod(range);
+  const steps = funnel(period);
+  const conv = steps.slice(1).map((f, i) => ({ from: steps[i]!.label, to: f.label, pct: steps[i]!.value ? (f.value / steps[i]!.value) * 100 : 0 }));
   const worst = conv.reduce((a, b) => (b.pct < a.pct ? b : a));
   return clone({
     range,
-    funnel: row.funnel,
+    funnel: steps,
     leak: { from: LEAK_NAMES[worst.from] ?? worst.from, to: LEAK_NAMES[worst.to] ?? worst.to, pct: Math.round(worst.pct * 10) / 10 },
-    sources: row.sources,
-    completion: {
-      workNumber: "N°03",
-      steps: completionN03.map((pct, i) => {
-        const d = completionDrops.find((x) => x.step === STEP_IDS[i]);
-        return { step: STEP_IDS[i]!, pct, drop: d ? { points: d.points, reason: d.reason } : null };
-      }),
-    },
-    devices,
-    levelMix,
-    repeat: repeatRate,
+    sources: ordersBySource(period),
+    completion: completion("N°03"),
+    devices: devicesPct(period),
+    levelMix: levelMixPct(period),
+    repeat: { pct: repeatRatePct(), context: "of first-time buyers bought a 2nd guide within 60 days" },
   });
 });

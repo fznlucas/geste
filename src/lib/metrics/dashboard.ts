@@ -1,26 +1,30 @@
 /**
- * Dashboard metrics (AdminDashboard, AdminMToday). Admin v2 Phase 1: the temporary source is still the
- * store aggregates of `src/data/dashboard.ts` (the mock orders are already in them) plus the orders
- * placed in this browser today; Phase 2 computes the same functions from the simulated rows.
+ * Dashboard metrics (AdminDashboard, AdminMToday), computed from the rows (fixtures + simulated + this
+ * browser) by the sales functions: rolling windows ending today (today partial), compared with the
+ * previous window of the same length, and today against the same weekday last week.
  * Later: `v_daily_revenue`, PostHog and the affiliate stats, cached 5 min.
  */
 import { asset } from "@/lib/asset";
 import type { Orientation } from "@/lib/pricing";
-import { simToday, startOfDayParis } from "@/lib/clock";
-import { chartNotes, dailyRevenue, guidesSold30d, last30d, today } from "@/data/dashboard";
+import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { clone } from "@/lib/api/clone";
-import { allOrders, allWorks } from "@/lib/api/local";
+import { allCampaigns, allSocialPosts, allTraffic, allWorks } from "@/lib/api/local";
 import { metric } from "./define";
+import { dayLabel, periodLabel, previousPeriod, rollingDays, type Period } from "./period";
+import {
+  affiliateEarnedEurCents, averageOrderCents, conversionPct, dailySales, eurToUsdCents, guidesFinishedPct, guidesSoldByWork, paidOrders, storeReceiptsCents,
+} from "./sales";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** "Sep 22": the admin boards' short date (three-letter month). */
 export const adminDay = (iso: string) => `${MONTHS[new Date(iso).getUTCMonth()]} ${new Date(iso).getUTCDate()}`;
 
 /** "+38%", "−2%" (true minus), "+0.6 pt" */
 const signed = (v: number, unit = "%") => `${v < 0 ? "−" : "+"}${Math.abs(v)}${unit === "%" ? "%" : ` ${unit}`}`;
-const pctChange = (now: number, before: number) => Math.round(((now - before) / before) * 100);
+const pctChange = (now: number, before: number) => (before ? Math.round(((now - before) / before) * 100) : 0);
 
 export interface DashboardDay {
   day: string;
@@ -78,72 +82,86 @@ export interface Dashboard {
 
 /** Definitions shown next to each dashboard figure (docs/admin-v2/06 §2). */
 export const DASHBOARD_DEFINITIONS = {
-  revenue: "What customers paid for store orders in the period (guides, prints, gift cards, shipping).",
-  orders: "Paid orders in the period.",
-  avgOrder: "Revenue ÷ paid orders, same period.",
-  conversion: "Paid orders ÷ visits, same period.",
-  guidesFinished: "Guides finished ÷ guides started.",
-  affiliate: "Commission earned on shopping-list links.",
+  revenue: storeReceiptsCents.definition,
+  orders: paidOrders.definition,
+  avgOrder: averageOrderCents.definition,
+  conversion: conversionPct.definition,
+  guidesFinished: guidesFinishedPct.definition,
+  affiliate: affiliateEarnedEurCents.definition,
 } as const;
 
-/** Dashboard and phone Today, in one read. */
-export const dashboard = metric("Dashboard figures: revenue, orders, average order, conversion, guides finished, affiliate, revenue per day, today and top works.", async function dashboard(): Promise<Dashboard> {
-  // Orders placed in this browser: dated from the mock's today, after every aggregate.
-  const since = startOfDayParis(simToday()).toISOString();
-  const fresh = allOrders().filter((o) => o.createdAt >= since && o.status !== "cancelled" && o.status !== "pending");
-  const freshCents = fresh.reduce((s, o) => s + o.totalCents, 0);
-  const items = fresh.flatMap((o) => o.items);
+/** Chart notes: the social posts that drive traffic, and the newsletters. */
+function notesIn(p: Period): Array<{ day: string; text: string }> {
+  const posts = allSocialPosts().filter((x) => x.spike).map((x) => ({ day: parisDay(x.at), text: `TikTok “${x.title.replace(/^First canvas/, "first canvas")}” posted` }));
+  const letters = allCampaigns().filter((c) => c.sentAt).map((c) => ({ day: parisDay(c.sentAt!), text: `Newsletter “${c.subject}” sent` }));
+  // Newest first: the chart shows the latest note of its window.
+  return [...posts, ...letters].filter((n) => n.day >= p.from && n.day <= p.to).sort((a, b) => b.day.localeCompare(a.day));
+}
 
-  const september = dailyRevenue.filter((d) => d.day.startsWith("2026-09"));
-  const august = dailyRevenue.filter((d) => d.day.startsWith("2026-08"));
-  const sum = (rows: typeof dailyRevenue, k: "revenueCents" | "orders") => rows.reduce((s, d) => s + d[k], 0);
-  const revenueCents = sum(september, "revenueCents") + freshCents;
-  const orders = sum(september, "orders") + fresh.length;
-  const augAvg = sum(august, "revenueCents") / sum(august, "orders");
-  const avgOrderCents = Math.round(revenueCents / orders);
+/** Today until now, and the same weekday last week until the same time. */
+function todayFigures() {
+  const now = simNow().getTime();
+  const today = simToday();
+  const lastWeek = addDays(today, -7);
+  const todayP = { from: today, to: today };
+  const lastP = { from: lastWeek, to: lastWeek };
+  const orders = paidOrders(todayP);
+  const before = paidOrders(lastP).filter((o) => Date.parse(o.paidAt) <= now - 7 * 86_400_000);
+  const revenueCents = orders.reduce((s, o) => s + o.totalCents, 0);
+  const beforeCents = before.reduce((s, o) => s + o.totalCents, 0);
+  const traffic = allTraffic().find((d) => d.day === today);
+  const visitors = traffic?.visits ?? 0;
+  const lastTraffic = allTraffic().find((d) => d.day === lastWeek);
+  const conversion = visitors ? Math.round((orders.length / visitors) * 1000) / 10 : 0;
+  const lastConversion = lastTraffic?.visits ? Math.round((paidOrders(lastP).length / lastTraffic.visits) * 1000) / 10 : 0;
+  const delta = Math.round((conversion - lastConversion) * 10) / 10;
+  const weekday = WEEKDAYS[new Date(`${lastWeek}T12:00:00Z`).getUTCDay()]!;
+  return {
+    label: dayLabel(today),
+    revenueCents,
+    revenueDelta: `${signed(pctChange(revenueCents, beforeCents))} vs ${weekday} ${dayLabel(lastWeek)}`,
+    orders: orders.length,
+    guides: orders.flatMap((o) => o.items).filter((i) => i.kind === "guide").length,
+    prints: orders.flatMap((o) => o.items).filter((i) => i.kind === "print").reduce((s, i) => s + i.quantity, 0),
+    visitors,
+    phonePct: visitors ? Math.round(((traffic?.visitsByDevice.phone ?? 0) / visitors) * 100) : 0,
+    conversionPct: conversion,
+    conversionDelta: delta === 0 ? "stable" : signed(delta, "pt"),
+  };
+}
 
-  const guides = new Map(Object.entries(guidesSold30d));
-  for (const i of items) {
-    if (i.kind !== "guide" || !i.workId) continue;
-    const w = allWorks().find((x) => x.id === i.workId);
-    if (w) guides.set(w.slug, (guides.get(w.slug) ?? 0) + 1);
-  }
-
-  const todayRevenue = today.revenueCents + freshCents;
-  const days = dailyRevenue.slice(-90);
+/** Dashboard and phone Today, in one read: `range` days ending today (today partial). */
+export const dashboard = metric("Dashboard figures: revenue, orders, average order, conversion, guides finished, affiliate, revenue per day, today and top works.", async function dashboard(range = 30): Promise<Dashboard> {
+  const period = rollingDays(range);
+  const previous = previousPeriod(period);
+  const vs = `vs ${periodLabel(previous)}`;
+  const revenueCents = storeReceiptsCents(period);
+  const orders = paidOrders(period).length;
+  const avgOrderCents = averageOrderCents(period);
+  const conversion = conversionPct(period);
+  const conversionBefore = conversionPct(previous);
+  const chart = rollingDays(90);
+  const days = dailySales(chart);
+  const sold = guidesSoldByWork(period);
   return clone({
     last30d: {
       revenueCents,
-      revenueDelta: `${signed(pctChange(revenueCents, sum(august, "revenueCents")))} vs Aug`,
+      revenueDelta: `${signed(pctChange(revenueCents, storeReceiptsCents(previous)))} ${vs}`,
       orders,
-      ordersDelta: signed(pctChange(orders, sum(august, "orders"))),
+      ordersDelta: signed(pctChange(orders, paidOrders(previous).length)),
       avgOrderCents,
-      avgOrderDelta: signed(pctChange(avgOrderCents, augAvg)),
-      conversionPct: last30d.conversionPct,
-      conversionDelta: signed(last30d.conversionDeltaPt, "pt"),
-      guidesFinishedPct: last30d.guidesFinishedPct,
-      affiliateCents: last30d.affiliateCents,
+      avgOrderDelta: signed(pctChange(avgOrderCents, averageOrderCents(previous))),
+      conversionPct: conversion,
+      conversionDelta: signed(Math.round((conversion - conversionBefore) * 10) / 10, "pt"),
+      guidesFinishedPct: guidesFinishedPct(),
+      affiliateCents: eurToUsdCents(affiliateEarnedEurCents(period)),
     },
     days: days.map((d) => ({ ...d, label: adminDay(`${d.day}T12:00:00Z`) })),
-    monthName: MONTH_NAMES[new Date(`${september[0]!.day}T12:00:00Z`).getUTCMonth()]!,
-    notes: chartNotes.map((n) => ({ ...n, label: adminDay(`${n.day}T12:00:00Z`) })),
-    today: {
-      label: adminDay(`${today.day}T12:00:00Z`),
-      revenueCents: todayRevenue,
-      revenueDelta: `${signed(pctChange(todayRevenue, today.compareRevenueCents))} vs ${today.compareLabel}`,
-      orders: today.orders + fresh.length,
-      guides: today.guides + items.filter((i) => i.kind === "guide").length,
-      prints: today.prints + items.filter((i) => i.kind === "print").reduce((s, i) => s + i.quantity, 0),
-      visitors: today.visitors,
-      phonePct: today.phonePct,
-      conversionPct: today.conversionPct,
-      conversionDelta: today.conversionDeltaPt === 0 ? "stable" : signed(today.conversionDeltaPt, "pt"),
-    },
-    topWorks: [...guides.entries()]
-      .map(([slug, n]) => {
-        const w = allWorks().find((x) => x.slug === slug)!;
-        return { slug, number: w.number, imageUrl: asset(w.previewPath), orientation: w.orientation ?? "portrait", guides: n };
-      })
+    monthName: MONTH_NAMES[Number(period.to.slice(5, 7)) - 1]!,
+    notes: notesIn(chart).map((n) => ({ ...n, label: adminDay(`${n.day}T12:00:00Z`) })),
+    today: todayFigures(),
+    topWorks: allWorks()
+      .map((w) => ({ slug: w.slug, number: w.number, imageUrl: asset(w.previewPath), orientation: (w.orientation ?? "portrait") as Orientation, guides: sold.get(w.id) ?? 0 }))
       .sort((a, b) => b.guides - a.guides || a.number.localeCompare(b.number)),
   });
 });

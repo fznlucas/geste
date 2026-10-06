@@ -120,7 +120,7 @@ function RevenueChart({ d }: { d: Dashboard }) {
   const [range, setRange] = useState<Range>(30);
   const days = d.days.slice(-range);
   const note = d.notes.find((n) => days.some((x) => x.day === n.day));
-  const title = range === 90 ? `Revenue per day, ${monthSpan(days[0]!.day, days.at(-1)!.day)}` : `Revenue per day, ${d.monthName}`;
+  const title = `Revenue per day, ${monthSpan(days[0]!.day, days.at(-1)!.day)}`;
   return (
     <AdminBox className="col-span-8">
       <div className="flex items-center justify-between">
@@ -144,7 +144,8 @@ function RevenueChart({ d }: { d: Dashboard }) {
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const monthSpan = (a: string, b: string) => `${MONTHS[Number(a.slice(5, 7)) - 1]}–${MONTHS[Number(b.slice(5, 7)) - 1]}`;
+/** "September", or "July–September" when the days span months. */
+const monthSpan = (a: string, b: string) => (a.slice(0, 7) === b.slice(0, 7) ? MONTHS[Number(a.slice(5, 7)) - 1]! : `${MONTHS[Number(a.slice(5, 7)) - 1]}–${MONTHS[Number(b.slice(5, 7)) - 1]}`);
 
 const LATEST_COLS = "90px 1fr 1.4fr 70px 140px";
 

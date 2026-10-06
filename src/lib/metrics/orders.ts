@@ -3,7 +3,6 @@
  * order belongs to: the Orders tabs, `getOrders({ tab })` and (from Phase 5) the badges read it.
  */
 import type { Order, OrderDisplayStatus, OrdersTab } from "@/lib/api/types";
-import { metric } from "./define";
 
 export const ORDER_TABS: Record<Exclude<OrdersTab, "all">, OrderDisplayStatus[]> = {
   to_ship: ["To ship", "Printed", "Packed"],
@@ -24,10 +23,4 @@ export function inOrderTab(order: Pick<Order, "displayStatus">, tab: OrdersTab):
   return tab === "all" || orderTab(order) === tab;
 }
 
-/**
- * "187 this month" under AdminOrders. Phase 1: the board's September figure (the mock holds only the
- * latest orders); Phase 2 counts the paid orders of the current Paris month.
- */
-export const ordersThisMonth = metric("Paid orders in the current calendar month (Europe/Paris).", function ordersThisMonth(): number {
-  return 187;
-});
+export { ordersThisMonth } from "./sales";
