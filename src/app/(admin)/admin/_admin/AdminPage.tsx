@@ -8,7 +8,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
-  AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, ButtonLink, DemoRoleMenu, ROLE_LABEL,
+  AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, canOpenAdmin, ButtonLink, DemoRoleMenu, ROLE_LABEL,
   useToast, type AdminPhoneTab, type Crumb,
 } from "@/components";
 import { getCustomers, getOrders, getWorks } from "@/lib/api";
@@ -63,7 +63,7 @@ export function AdminPage({ title, breadcrumbs, actions, roles, children, phone,
   return (
     <>
       <AdminTopBar
-        breadcrumbs={breadcrumbs}
+        breadcrumbs={breadcrumbs.map((b) => (b.href && !canOpenAdmin(staff.role, b.href) ? { label: b.label } : b))}
         title={title}
         search={<TopSearch />}
         demo={<DemoMenu />}

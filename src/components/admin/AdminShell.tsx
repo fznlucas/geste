@@ -26,7 +26,8 @@ export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
     items: [
       { label: "Orders", href: "/admin/orders", count: "orders", roles: ["owner", "support", "fulfilment"], match: /^\/admin\/orders/ },
       { label: "Fulfilment", href: "/admin/fulfilment", count: "fulfilment", roles: ["owner", "fulfilment"] },
-      { label: "Print editions", href: "/admin/editions", count: "editions", roles: ["owner", "fulfilment"] },
+      // Content reads the stock (the work editor links here); closing and reopening stay with Fulfilment.
+      { label: "Print editions", href: "/admin/editions", count: "editions", roles: ["owner", "fulfilment", "content"] },
     ],
   },
   {
@@ -58,6 +59,14 @@ export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
 ];
 
 export const ROLE_LABEL: Record<StaffRole, string> = { owner: "Owner", support: "Support", fulfilment: "Fulfilment", content: "Content" };
+
+/** Can this role open that admin page? Read from the navigation's roles (owner opens everything). */
+export function canOpenAdmin(role: StaffRole, href: string): boolean {
+  if (role === "owner") return true;
+  const p = href.replace(/[?#].*$/, "").replace(/\/$/, "") || "/admin";
+  for (const g of ADMIN_NAV) for (const i of g.items) if (i.href === p || i.match?.test(p)) return i.roles.includes(role);
+  return true;
+}
 
 /** The nav item a path belongs to (for `aria-current`). */
 export function activeNavHref(path: string): string | null {
@@ -131,7 +140,8 @@ export function AdminSidebar({ role, userName, activeHref, counts, onLogOut }: A
 
 export interface Crumb {
   label: string;
-  href: string;
+  /** Absent: shown as text (a page the signed-in role cannot open). */
+  href?: string;
 }
 
 export interface AdminTopBarProps {
@@ -151,8 +161,8 @@ export function AdminTopBar({ breadcrumbs, title, search, demo, alerts, actions 
       <div className="flex min-w-0 flex-col gap-2">
         <nav aria-label="Breadcrumb" className="flex gap-8 text-fg-muted">
           {breadcrumbs.map((b) => (
-            <span key={b.href + b.label} className="flex gap-8">
-              <Link href={b.href} className="-my-2 inline-flex min-h-24 items-center hover:text-fg">{b.label}</Link>
+            <span key={(b.href ?? "") + b.label} className="flex gap-8">
+              {b.href ? <Link href={b.href} className="-my-2 inline-flex min-h-24 items-center hover:text-fg">{b.label}</Link> : <span className="-my-2 inline-flex min-h-24 items-center">{b.label}</span>}
               <span aria-hidden="true">/</span>
             </span>
           ))}

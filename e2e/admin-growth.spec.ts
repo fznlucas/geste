@@ -138,6 +138,39 @@ test("settings: invite, audit log, remove", async ({ page }) => {
   await expect(log.getByRole("row").first()).toContainText("Lucas removed nora@example.com from the team");
 });
 
+test("an invited member signs in with the invite's role and 2FA", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 1440) < 768, "desktop flow");
+  await asStaff(page);
+  await page.goto("/admin/settings/");
+  await tab(page, "Team & roles").click();
+  await page.getByLabel("Email").fill("nora@example.com");
+  await page.getByRole("combobox", { name: "Role" }).selectOption("content");
+  await page.getByRole("button", { name: /^Invite/ }).click();
+  await expect(page.getByRole("row", { name: /nora@example\.com/ })).toContainText("Invite sent");
+
+  // Nora signs in on this browser: email, password, the code of her authenticator app.
+  await page.evaluate(() => localStorage.removeItem("geste.session.v1"));
+  await page.goto("/admin/login/");
+  await page.getByLabel("Email").fill("nora@example.com");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel("Password").fill("anything");
+  await page.getByRole("button", { name: /^Continue/ }).click();
+  await page.getByLabel("Code").fill("123456");
+  await page.getByRole("button", { name: /^Log in/ }).click();
+  await expect(page.getByText("Nora · Content")).toBeVisible();
+  await page.goto("/admin/finance/");
+  await expect(page.getByText("The Content role cannot open this page.")).toBeVisible();
+
+  // The owner now sees her as a member with 2FA on (same browser: the invite is kept).
+  await page.evaluate(() =>
+    localStorage.setItem("geste.session.v1", JSON.stringify({ customer: null, staff: { staffId: "staff-lucas", email: "lucas@geste.studio", fullName: "Lucas", role: "owner", aal2: true, signedInAt: "2026-10-02T08:00:00Z" } })),
+  );
+  await page.goto("/admin/settings/");
+  await tab(page, "Team & roles").click();
+  await expect(page.getByRole("row", { name: /nora@example\.com/ })).toContainText("On");
+  await expect(page.getByRole("row", { name: /nora@example\.com/ })).not.toContainText("Invite sent");
+});
+
 test("a Support role cannot open the growth pages", async ({ page }) => {
   await asStaff(page, "support");
   for (const path of ["/admin/analytics/", "/admin/finance/", "/admin/marketing/", "/admin/settings/"]) {

@@ -2,7 +2,8 @@
 import { integrations, pastAudit, paymentProviders, securitySettings, shippingZones, storeSettings } from "@/data/settings";
 import { staff } from "@/data/staff";
 import { clone } from "./clone";
-import { inserted, orderNumberOf, patched } from "./local";
+import { staffInvites } from "./staff";
+import { orderNumberOf, patched } from "./local";
 import type { StaffRole } from "./types";
 
 export type { SettingStatus } from "@/data/settings";
@@ -52,10 +53,11 @@ export const TEAM_ROLE_LABEL: Record<StaffRole, string> = { owner: "Owner", supp
 
 /** Staff with a role, then pending invites (newest last, as on the board). */
 export async function getTeam(): Promise<TeamMember[]> {
-  const invites = inserted<{ id: string; email: string; role: StaffRole; at: string }>("staff_invites").slice().reverse();
+  const invites = staffInvites().slice().reverse();
   return clone([
     ...staff.map((s) => ({ id: s.id, who: `${s.fullName} · ${s.email}`, email: s.email, role: s.role, roleLabel: TEAM_ROLE_LABEL[s.role], invited: false, totpEnabled: s.totpEnabled })),
-    ...invites.map((i) => ({ id: i.id, who: i.email, email: i.email, role: i.role, roleLabel: TEAM_ROLE_LABEL[i.role], invited: true, totpEnabled: false })),
+    // An invite becomes a member at their first sign-in, with 2FA set up.
+    ...invites.map((i) => ({ id: i.id, who: i.acceptedAt ? `${i.email.split("@")[0]} · ${i.email}` : i.email, email: i.email, role: i.role, roleLabel: TEAM_ROLE_LABEL[i.role], invited: !i.acceptedAt, totpEnabled: !!i.acceptedAt })),
   ]);
 }
 

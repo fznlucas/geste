@@ -8,13 +8,14 @@
 import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, useToast } from "@/components";
 import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
-import { useAdminQuery } from "@/lib/client";
+import { hasRole, useAdminQuery } from "@/lib/client";
 import { isLowStock } from "@/lib/metrics";
 import { setEditionOpen } from "@/lib/client/admin/fulfilment";
 import { cn } from "@/lib/cn";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
+import { useAdmin } from "../../_admin/AdminFrame";
 
 const COLS = "56px 80px 120px 1fr 90px 90px 90px 200px";
 const LOG_COLS = "120px 1fr 90px";
@@ -28,6 +29,8 @@ function byWork(list: PrintEdition[]): PrintEdition[] {
 export function EditionsPage() {
   const data = useAdminQuery(async () => ({ editions: byWork(await getEditions({ includeClosed: true })), log: await getCertificateLog() }), []);
   const toast = useToast();
+  const { staff } = useAdmin();
+  const canClose = hasRole(staff.role, "fulfilment");
   const [busy, setBusy] = useState<string | null>(null);
 
   const toggle = async (e: PrintEdition) => {
@@ -43,7 +46,7 @@ export function EditionsPage() {
   };
 
   return (
-    <AdminPage title="Print editions" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment"]} desktopHref="/admin/editions">
+    <AdminPage title="Print editions" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment", "content"]} desktopHref="/admin/editions">
       <div className="relative overflow-x-auto">
         <div role="table" aria-label="Print editions" aria-busy={data.status === "loading"} className="relative flex min-w-920 flex-col gap-14 border border-border bg-surface px-20">
           <AdminHeadRow cols={COLS}>
@@ -58,7 +61,7 @@ export function EditionsPage() {
           </AdminHeadRow>
           {data.status === "loading"
             ? Array.from({ length: 7 }, (_, i) => <div key={i} aria-hidden="true" className="box-content min-h-60 border-b border-border" />)
-            : data.data.editions.map((e) => <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={() => toggle(e)} />)}
+            : data.data.editions.map((e) => <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} />)}
         </div>
       </div>
       <span className="text-fg-muted">Editions are numbered in order of payment. A refund with “back in stock” frees the number for the next buyer. Closing an edition hides the size from the store.</span>
@@ -75,7 +78,8 @@ export function EditionsPage() {
   );
 }
 
-function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onToggle: () => void }) {
+/** `onToggle` absent: the role reads the stock (Content), closing and reopening stay with Fulfilment. */
+function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onToggle?: () => void }) {
   const low = isLowStock(e);
   return (
     <AdminRow cols={COLS} className="min-h-60">
@@ -97,9 +101,11 @@ function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onT
       </span>
       <span role="cell">{formatPrice(e.priceCents)}</span>
       <span role="cell" className="flex gap-6">
-        <PillButton onClick={onToggle} disabled={busy} aria-label={`${e.open ? "Close edition" : "Reopen"} ${e.workNumber} ${e.size}`}>
-          {e.open ? "Close edition" : "Reopen"}
-        </PillButton>
+        {onToggle && (
+          <PillButton onClick={onToggle} disabled={busy} aria-label={`${e.open ? "Close edition" : "Reopen"} ${e.workNumber} ${e.size}`}>
+            {e.open ? "Close edition" : "Reopen"}
+          </PillButton>
+        )}
         <PillLink href={`/admin/works/${e.workSlug}`}>
           Edit<span className="sr-only"> {e.workNumber} {e.size}</span>
         </PillLink>

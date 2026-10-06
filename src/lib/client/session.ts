@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DEMO_CUSTOMER_ID, DEMO_STAFF_ID, findCustomerByEmail, getCustomer, getStaffMember } from "@/lib/api";
+import { DEMO_CUSTOMER_ID, DEMO_STAFF_ID, findCustomerByEmail, getCustomer, getStaffMember, sessionExpired } from "@/lib/api";
+import { clockSource } from "@/lib/clock";
 import type { StaffRole } from "@/lib/types";
 import { createPersistentStore, isRecord, useHydrated, useStore } from "./store";
 
@@ -99,11 +100,19 @@ export function signOut() {
   sessionStore.set((s) => ({ ...s, customer: null }));
 }
 
-/** /admin/login: email + password, then the TOTP code (any 6 digits in the mock). */
+/**
+ * /admin/login: email + password, then the TOTP code (any 6 digits in the mock). Someone invited in
+ * Settings › Team signs in with the invite's role; the first sign-in accepts the invite with 2FA set up.
+ */
 export async function signInStaff(input: { email: string; totp: string }): Promise<StaffSession> {
   if (!isSixDigitCode(input.totp)) throw new Error("Enter the 6-digit code from your app.");
   const member = (await getStaffMember({ email: input.email })) ?? (await getStaffMember({ id: DEMO_STAFF_ID }))!;
   const session: StaffSession = { staffId: member.id, email: member.email, fullName: member.fullName, role: member.role, aal2: true, signedInAt: new Date().toISOString() };
+  if (member.inviteId && !member.totpEnabled) {
+    // Loaded here, not at the top: the admin store reads this session.
+    const { patchRow, adminNow } = await import("./admin");
+    patchRow("staff_invites", member.inviteId, { acceptedAt: adminNow() });
+  }
   sessionStore.set((s) => ({ ...s, staff: session }));
   return session;
 }
@@ -122,10 +131,22 @@ export function useSession(): SessionStatus<CustomerSession> {
   return customer ? { status: "signed_in", session: customer } : { status: "signed_out", session: null };
 }
 
+/**
+ * Settings › Security "Session timeout": a staff session older than that signs out. Measured on the
+ * wall clock, and only while the clock is real: a pinned or overridden clock (tests, Settings ›
+ * Simulation) does not end sessions when it jumps.
+ */
+const staffSessionOver = (s: StaffSession) => clockSource() === "real" && sessionExpired(s.signedInAt, Date.now());
+
 export function useStaffSession(): SessionStatus<StaffSession> {
   const hydrated = useHydrated();
   const { staff } = useStore(sessionStore);
+  const over = !!staff && hydrated && staffSessionOver(staff);
+  useEffect(() => {
+    if (over) signOutStaff();
+  }, [over]);
   if (!hydrated) return { status: "loading", session: null };
+  if (over) return { status: "signed_out", session: null };
   return staff ? { status: "signed_in", session: staff } : { status: "signed_out", session: null };
 }
 

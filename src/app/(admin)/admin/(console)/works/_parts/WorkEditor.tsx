@@ -13,6 +13,7 @@ import { useRef, useState, type ReactNode } from "react";
 import {
   AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Artwork, Button, ButtonLink, Checkbox, Field, Input, PillButton, Popover, Select,
   StatusChip, Textarea, UnderLink, fieldClass, useToast,
+  canOpenAdmin,
 } from "@/components";
 import { getAdminWork, type AdminWorkDetail, type LevelKey, type WorkStatus } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
@@ -498,10 +499,11 @@ function PrintRows({ work, form, edit }: TabProps) {
 }
 
 function Prints(props: TabProps) {
+  const { staff } = useAdmin();
   return (
     <div className="flex flex-col gap-14 overflow-x-auto">
       <PrintRows {...props} />
-      <Link href="/admin/editions" className="self-start underline underline-offset-3 hover:text-fg-muted">Edition stock</Link>
+      {canOpenAdmin(staff.role, "/admin/editions") && <Link href="/admin/editions" className="self-start underline underline-offset-3 hover:text-fg-muted">Edition stock</Link>}
     </div>
   );
 }

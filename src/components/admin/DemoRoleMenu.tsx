@@ -8,7 +8,7 @@ const ROLES: Array<[StaffRole, string]> = [
   ["owner", "Everything, revenue included"],
   ["support", "Orders, refunds ≤ $50, customers, support, reviews"],
   ["fulfilment", "Orders, fulfilment, print editions"],
-  ["content", "Works, guides, AI, reviews, content"],
+  ["content", "Works, guides, AI, reviews, content; reads editions"],
 ];
 
 export interface DemoRoleMenuProps {
