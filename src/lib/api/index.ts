@@ -8,7 +8,7 @@ export { getAdminWorks, getAdminWork, getWorkSlugs, formatRowId, paletteRowId, l
 export { getArticles, getArticle, articleDate } from "./articles";
 export { getGuide, findGuide, flattenSteps } from "./guides";
 export { getGuideEditor, getGuideEditorParams, getWorkGuides, guideDraftContent, nextGuideVersion, type GuideContent, type GuideContentLayer, type GuideEditorData, type GuideVersionInfo } from "./guides";
-export { getAiPipeline, aiBudget, aiJobCostCents, aiJobLabel, aiStage, aiJobRow, aiCandidateRow, allAiJobs, AI_STYLES, AI_MEDIUMS, AI_PALETTES, AI_FORMATS, AI_LIMITS, type AiPipeline, type AiJob, type AiCandidate, type AiBudget, type AiJobParams, type AiStyle, type AiMedium } from "./ai";
+export { getAiPipeline, aiBudget, aiJobCostCents, aiJobLabel, aiStage, aiJobRow, aiCandidateRow, allAiCandidates, allAiJobs, AI_STYLES, AI_MEDIUMS, AI_PALETTES, AI_FORMATS, AI_LIMITS, type AiPipeline, type AiJob, type AiCandidate, type AiBudget, type AiJobParams, type AiStyle, type AiMedium } from "./ai";
 export { getEditions, getEdition, getPrintCopies, getCertificateLog } from "./editions";
 export { getOrders, getOrder, getRefundOptions, REFUNDABLE_STATUSES, ORDERS_THIS_MONTH, getOrderTracking, customerOrderStatus, orderLineTitle, copyNumbersLabel, trackingCarrierLine } from "./orders";
 export { getCustomers, getCustomer, findCustomerByEmail, getAccountSecurity } from "./customers";

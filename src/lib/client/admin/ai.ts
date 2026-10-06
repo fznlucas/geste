@@ -5,9 +5,9 @@
  * Mock: the GPU worker is simulated in the browser: `advanceJobs` (called by the page every 2 s while
  * it is open) moves progress and, at 100 %, writes the job's candidates, as the worker's webhook will.
  */
-import { AI_LIMITS, aiBudget, aiCandidateRow, aiJobCostCents, aiJobLabel, allAiJobs, getAdminWorks, type AiJobParams } from "@/lib/api";
+import { AI_LIMITS, aiBudget, aiCandidateRow, type GuideContent, aiJobCostCents, aiJobLabel, allAiJobs, getAdminWorks, type AiJobParams } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
-import { CANVASES, mediumFormat } from "@/lib/pricing";
+import { CANVASES, LEVELS, type LevelKey } from "@/lib/pricing";
 import { call, logInbound } from "@/lib/integrations";
 
 export class AiBudgetError extends Error {}
@@ -86,7 +86,33 @@ export function advanceJobs() {
   }
 }
 
-/** Approve: the candidate becomes a draft work (next number) whose guide is drafted from its stroke plan. */
+/** The level of a stroke plan by its layers (pricing.ts LEVELS: 2 beginner, 3 intermediate, 5 advanced). */
+const levelOfLayers = (layers: number): LevelKey => (layers <= 2 ? "beginner" : layers <= 3 ? "intermediate" : "advanced");
+
+/** The guide drafted from a candidate's stroke plan: one layer per planned layer, its strokes split into steps. */
+function strokePlanGuide(layers: number, strokes: number): GuideContent {
+  const perLayer = Math.max(1, Math.round(strokes / layers));
+  return {
+    layers: Array.from({ length: layers }, (_, k) => ({
+      position: k + 1,
+      name: `Layer ${k + 1}`,
+      brush: k === 0 ? "50 mm flat" : k === layers - 1 ? "Round n°6" : "25 mm flat",
+      plate: [],
+      tip: "",
+      minutes: 30,
+      drySeconds: k === layers - 1 ? 0 : 2700,
+      diagram: [],
+      steps: Array.from({ length: 5 }, (_, s) => ({ position: s + 1, text: `About ${Math.max(1, Math.round(perLayer / 5))} strokes, from the AI plan · write this step` })),
+    })),
+  };
+}
+
+/**
+ * Approve: the candidate becomes a draft work (next number) on the job's canvas, at the level of its
+ * layers, and its guide is drafted from the stroke plan (`ai_guide_drafts`, written in the editor before
+ * it is published). (Duplicate images are checked by the GPU worker on real images: the mock's candidates
+ * reuse the catalog's fifteen pictures.)
+ */
 export async function approveCandidate(id: string): Promise<string> {
   const staff = requireStaff("content");
   const c = aiCandidateRow(id);
@@ -96,19 +122,26 @@ export async function approveCandidate(id: string): Promise<string> {
   const n = Math.max(...all.map((w) => Number.parseInt(w.number.slice(2), 10) || 0)) + 1;
   const num = String(n).padStart(2, "0");
   const slug = `n${num}`;
-  const proportion = CANVASES[job?.params.format ?? "40x50"].proportion;
+  const format = job?.params.format ?? "40x50";
+  const canvas = CANVASES[format];
+  const proportion = canvas.proportion;
+  const layers = c.layers || job?.params.layers || 3;
+  const level = levelOfLayers(layers);
+  // Canvases are listed portrait; a landscape work is the same canvas turned, set in the editor.
+  const orientation = "portrait";
+  const workId = `work-new-${slug}`;
   insertRow("works", {
-    id: `work-new-${slug}`,
+    id: workId,
     number: `N°${num}`,
     slug,
     status: "draft",
     publishAt: null,
-    // The proportion of the canvas it was generated on; its medium canvas is the default.
     proportion,
-    defaultFormat: mediumFormat(proportion),
-    originalSize: mediumFormat(proportion),
-    baseLevel: "intermediate",
-    orientation: "portrait",
+    // The canvas the job was generated on is the work's default and reference canvas.
+    defaultFormat: format,
+    originalSize: format,
+    baseLevel: level,
+    orientation,
     signature: false,
     // Read from the image at upload (works.preview_width / preview_height); 0 = not known yet.
     previewWidth: 0,
@@ -122,7 +155,8 @@ export async function approveCandidate(id: string): Promise<string> {
     sortOrder: 1000 + n,
     createdAt: adminNow(),
   });
-  patchRow("ai_candidates", id, { status: "approved", workSlug: slug }, { action: "ai.approve", target: `ai_candidate:${id}`, summary: `${staff.fullName} approved ${id} → N°${num} (draft)` });
+  insertRow("ai_guide_drafts", { id: `guide-${slug}-${format}-${level}`, workId, format, level, fromCandidate: c.id, content: strokePlanGuide(layers, c.strokes), savedAt: adminNow() });
+  patchRow("ai_candidates", id, { status: "approved", workSlug: slug }, { action: "ai.approve", target: `ai_candidate:${id}`, summary: `${staff.fullName} approved ${id} → N°${num} (draft, guide drafted · ${LEVELS[level].label}, ${layers} layers)` });
   return slug;
 }
 

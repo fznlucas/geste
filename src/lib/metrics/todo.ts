@@ -7,6 +7,7 @@ import { allAiCandidates } from "@/lib/api/ai";
 import { clone } from "@/lib/api/clone";
 import { getEditions, getPrintCopies } from "@/lib/api/editions";
 import { allCampaigns, patched } from "@/lib/api/local";
+import { overdueSchedules } from "@/lib/api/works";
 import { storeSetting } from "@/lib/api/settings";
 import { getOrders } from "@/lib/api/orders";
 import { getReviews } from "@/lib/api/reviews";
@@ -172,6 +173,10 @@ export const alerts = metric("Alerts derived from the state of the store; ids fr
       id: `ai:${lastCandidate.id}`, text: `${plural(candidates.length, "AI candidate", "AI candidates")} to validate`, when: alertWhen(lastCandidate.createdAt), href: "/admin/ai",
       roles: ["owner", "content"] as StaffRole[], phone: null, desktop: true,
     }] : []),
+    ...overdueSchedules().map((w) => ({
+      id: `schedule:${w.id}:${w.publishAt}`, text: `${w.number} could not go live: ${w.missing.join(", ").toLowerCase()}`, when: alertWhen(w.publishAt),
+      href: w.href, roles: ["owner", "content"] as StaffRole[], phone: null, desktop: true,
+    })),
     ...payoutAlert(),
     ...euVatAlert(),
   ];

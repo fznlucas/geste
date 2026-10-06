@@ -5,9 +5,9 @@
  */
 import { articles } from "@/data/articles";
 import { ARTICLE_VIEWS, articleDrafts, homeSettings, legalDocs, legalDocuments, translationAreas, type ArticleDraftRow, type HomeSettingsRow } from "@/data/content";
-import { works } from "@/data/works";
 import { clone } from "./clone";
-import { merged, patched } from "./local";
+import { allWorks, merged, patched } from "./local";
+import { workChecklist } from "./works";
 import type { ArticleCategory } from "./types";
 
 export interface AdminArticle {
@@ -37,8 +37,11 @@ export interface HomeSettings {
   heroWork: string;
   headline: string;
   publishedAt: string;
-  /** Works that can lead the home page: every live work. */
-  options: Array<{ slug: string; number: string }>;
+  /**
+   * Works that can lead the home page: live, and passing the checklist (`workChecklist`) except the real
+   * result photo, which the home does not show. The current hero stays listed with what it misses.
+   */
+  options: Array<{ slug: string; number: string; ready: boolean; missing: string[] }>;
 }
 
 export async function getHomeSettings(): Promise<HomeSettings> {
@@ -47,7 +50,13 @@ export async function getHomeSettings(): Promise<HomeSettings> {
     heroWork: s.heroWork,
     headline: s.headline,
     publishedAt: s.publishedAt,
-    options: works.filter((w) => w.status === "live").map((w) => ({ slug: w.slug, number: w.number })),
+    options: allWorks()
+      .filter((w) => w.status === "live")
+      .map((w) => {
+        const missing = workChecklist(w.id).filter((c) => !c.done && c.key !== "result").map((c) => c.label);
+        return { slug: w.slug, number: w.number, ready: missing.length === 0, missing };
+      })
+      .filter((o) => o.ready || o.slug === s.heroWork),
   });
 }
 

@@ -71,16 +71,17 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
 }
 
 /**
- * Publishing status. Going live needs the checklist complete ("Before going live"); a work already
- * live stays live when saved. Scheduled needs a date.
+ * Publishing status. Going live, or being scheduled to, needs the checklist complete ("Before going
+ * live", `workChecklist`); a work already live stays live when saved. Scheduled needs a date.
  */
 export async function setWorkStatus(slug: string, status: WorkStatus, publishAt: string | null = null) {
   const staff = requireStaff("content");
   const work = await getAdminWork(slug);
   if (!work) throw new Error("This work no longer exists.");
   if (work.status === status && (status !== "scheduled" || work.publishAt === publishAt)) return;
-  if (status === "live" && work.status !== "live" && work.checklist.some((c) => !c.done)) throw new Error("Complete the checklist before going live.");
   if (status === "scheduled" && !publishAt) throw new Error("Choose a publishing date.");
+  // The same checklist guards Live and Scheduled (a scheduled work goes live by itself).
+  if (((status === "live" && work.status !== "live") || status === "scheduled") && work.checklist.some((c) => !c.done)) throw new Error("Complete the checklist before going live.");
   patchRow("works", work.id, { status, publishAt: status === "scheduled" ? publishAt : null }, {
     action: "work.status",
     target: `work:${slug}`,

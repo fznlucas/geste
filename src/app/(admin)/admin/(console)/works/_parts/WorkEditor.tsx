@@ -105,7 +105,8 @@ function Editor({ work }: { work: AdminWorkDetail }) {
   };
 
   const incomplete = work.checklist.filter((c) => !c.done);
-  const blocked = form.status === "live" && work.status !== "live" && incomplete.length > 0;
+  // Live and Scheduled need the whole checklist (`workChecklist`): a scheduled work goes live by itself.
+  const blocked = ((form.status === "live" && work.status !== "live") || (form.status === "scheduled" && (work.status !== "scheduled" || form.publishAt !== work.publishAt?.slice(0, 10)))) && incomplete.length > 0;
 
   const save = async () => {
     setBusy(true);
@@ -187,7 +188,9 @@ function Editor({ work }: { work: AdminWorkDetail }) {
 
         <AdminBox>
           <AdminTitle>Guide</AdminTitle>
-          {work.guide ? (
+          {work.guide?.version === 0 ? (
+            <p className="text-fg-muted">Drafted from the AI stroke plan: {work.guide.layers} layers · {work.guide.steps} steps, not published. Write the steps, then publish.</p>
+          ) : work.guide ? (
             <>
               <p className="text-fg-muted">{work.guide.layers} layers · {work.guide.steps} steps · v{work.guide.version}, edited {shortDate(work.guide.editedAt)}</p>
               <ButtonLink href={`/admin/works/${work.slug}/guide/${work.guide.id}`} variant="ghost" fullWidth>Open guide editor</ButtonLink>
@@ -348,6 +351,11 @@ function Formats({ work, form, edit }: TabProps) {
           </Select>
         </Field>
       </div>
+      {form.proportion !== work.proportion && (
+        <p role="status" className="text-danger">
+          {work.proportion} → {form.proportion}: the guides were written for the {work.proportion} canvases. The checklist will ask for the {formatsOf(form.proportion).map((f) => formatLabel(f, form.orientation)).join(", ")} guides before the work can be live again.
+        </p>
+      )}
       <div role="table" aria-label="Formats and prices" className="min-w-640 flex flex-col gap-14">
         <AdminHeadRow cols={FORMAT_COLS}>
           <span role="columnheader">Format</span>

@@ -136,7 +136,7 @@ function HomeForm({ settings }: { settings: HomeSettings }) {
           {/* mb-7: the board's native select sits 1 px below the text field (as in docs/decisions.md "Checkout (M3)"). */}
           <label htmlFor={heroId} className="mb-7 block text-fg-muted">Hero work</label>
           <Select id={heroId} value={hero} onChange={(e) => { setHero(e.target.value); setPublished(false); }}>
-            {settings.options.map((o) => <option key={o.slug} value={o.slug}>{o.number}</option>)}
+            {settings.options.map((o) => <option key={o.slug} value={o.slug}>{o.ready ? o.number : `${o.number} · ${o.missing.join(", ").toLowerCase()}`}</option>)}
           </Select>
         </div>
         <div>

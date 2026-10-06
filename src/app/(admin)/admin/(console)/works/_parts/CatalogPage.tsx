@@ -27,8 +27,10 @@ export function workStatusLabel(w: Pick<AdminWork, "status" | "publishAt">): str
   return { live: "Live", draft: "Draft", archived: "Archived" }[w.status];
 }
 
-export function WorkStatus({ work }: { work: Pick<AdminWork, "status" | "publishAt"> }) {
-  return <StatusChip state={work.status === "live" ? "done" : work.status === "archived" ? "off" : "todo"} label={workStatusLabel(work)} />;
+/** Live or scheduled with the checklist incomplete (`workChecklist`): the chip says it needs a hand. */
+export function WorkStatus({ work }: { work: Pick<AdminWork, "status" | "publishAt"> & { missing?: string[] } }) {
+  const short = (work.status === "live" || work.status === "scheduled") && !!work.missing?.length;
+  return <StatusChip state={short ? "issue" : work.status === "live" ? "done" : work.status === "archived" ? "off" : "todo"} label={workStatusLabel(work)} />;
 }
 
 const testLabel = (w: AdminWork) => (w.studioTested ? "Tested ✓" : "Not painted");
@@ -37,6 +39,7 @@ const SHORT_LEVEL: Record<string, string> = { Beginner: "Beg.", Intermediate: "I
 function filter(works: AdminWork[], tab: Tab) {
   if (tab === "Live") return works.filter((w) => w.status === "live");
   if (tab === "Drafts") return works.filter((w) => w.status !== "live");
+  // "Needs test": the checklist's studio item (`workChecklist`), the same as the editor's.
   if (tab === "Needs test") return works.filter((w) => !w.studioTested);
   return works;
 }
@@ -108,7 +111,7 @@ export function CatalogPage() {
             node: (
               <Link
                 href={w.editorHref}
-                aria-label={`${w.number}${w.signature ? ", Signature" : ""}, ${workStatusLabel(w)}, ${w.formatLabel}, ${w.levelLabel}, ${w.soldCount} sold, ${testLabel(w)}`}
+                aria-label={`${w.number}${w.signature ? ", Signature" : ""}, ${workStatusLabel(w)}${w.missing.length ? ` (${w.missing.join(", ").toLowerCase()})` : ""}, ${w.formatLabel}, ${w.levelLabel}, ${w.soldCount} sold, ${testLabel(w)}`}
                 className="group flex w-full flex-col gap-6 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-fg"
               >
                 {w.imageUrl ? (

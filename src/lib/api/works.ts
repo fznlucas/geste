@@ -3,13 +3,14 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { CANVASES, LEVELS, canvasArea, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind } from "@/lib/pricing";
+import { CANVASES, LEVELS, LEVEL_ORDER, canvasArea, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
 import { guides } from "@/data/guides";
-import type { WorkRow } from "@/data/types";
+import type { GuideVersionContent, WorkRow } from "@/data/types";
 import { HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/data/works";
+import { simNow } from "@/lib/clock";
 import { clone } from "./clone";
-import { getGuideEditor } from "./guides";
+import { getGuideEditor, mapGuide } from "./guides";
 import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, editionSoldCount, inserted, patched } from "./local";
 import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorkStatus, WorksQuery } from "./types";
 
@@ -286,6 +287,8 @@ export interface AdminWork {
   isDraftCreated: boolean;
   /** Where its editor lives: /admin/works/n03 or /admin/works/draft?slug=n16 */
   editorHref: string;
+  /** What the checklist still misses (empty: it can go live). */
+  missing: string[];
 }
 
 export interface AdminWorkDetail extends AdminWork {
@@ -298,6 +301,64 @@ export interface AdminWorkDetail extends AdminWork {
   /** Published review photos of this work: "Pick from submitted results". */
   resultCandidates: Array<{ reviewId: string; photoPath: string; photoUrl: string; customerName: string }>;
 }
+
+/**
+ * "Before going live" (docs/admin-v2/05 "Catalog and guides"): one checklist for the status chips, the
+ * tabs, the Live and Scheduled guards and the hero picker. Every guide of the work's three canvases ×
+ * three levels published with all its layers, the preview, the studio's own painting, a real result
+ * photo, shopping-list links.
+ */
+export function workChecklist(workId: string): AdminChecklistItem[] {
+  const row = allWorks().find((w) => w.id === workId);
+  if (!row) return [];
+  const proportion = row.proportion ?? DRAFT_PROPORTION;
+  const expected = formatsOf(proportion).flatMap((format) => LEVEL_ORDER.map((level) => ({ format, level })));
+  const published = expected.filter(({ format, level }) => {
+    const g = guides.find((x) => x.workId === workId && x.format === format && x.level === level);
+    if (!g) return false;
+    const m = mapGuide(g);
+    // Published, every layer written (the mock's stand-in guides reuse N°03's layers: docs/decisions.md).
+    return m.version > 0 && m.layers.length > 0 && m.layers.every((l) => l.steps.length > 0);
+  });
+  const list = shoppingItems.filter((i) => i.workId === workId).map((i) => patched("shopping_items", { id: listRowId(workId, i.position), url: i.standardUrl }));
+  const steps = published.length ? mapGuide(guides.find((x) => x.workId === workId && x.format === published[0]!.format && x.level === published[0]!.level)!).stepCount : 0;
+  const allGuides = published.length === expected.length;
+  return [
+    { key: "preview", label: row.previewPath ? "Preview image" : "Preview image missing", done: !!row.previewPath },
+    { key: "guide", label: allGuides ? `Guides: ${expected.length} published${steps ? ` · ${steps} steps` : ""}` : published.length ? `Guides: ${expected.length - published.length} of ${expected.length} missing` : aiGuideDraft(workId) ? "Guide drafted from the AI plan, not published" : "Guide missing", done: allGuides },
+    { key: "studio", label: row.studioTested ? "Painted by the studio" : "Not painted by the studio", done: !!row.studioTested },
+    { key: "result", label: row.resultPhotoPath ? "Real result photo" : "Real result photo missing", done: !!row.resultPhotoPath },
+    { key: "list", label: list.length && list.every((i) => i.url) ? "Shopping list links" : "Shopping list links missing", done: list.length > 0 && list.every((i) => i.url) },
+  ];
+}
+
+/**
+ * A scheduled work goes live at its time (the clock), if the checklist still passes; otherwise it stays
+ * scheduled, past its date, and an alert says why (`overdueSchedules`). The store pages are built ahead
+ * of time and follow at the next build.
+ */
+export function workStatusNow(row: Pick<WorkRow, "id" | "status" | "publishAt">): WorkStatus {
+  if (row.status !== "scheduled" || !row.publishAt || Date.parse(row.publishAt) > simNow().getTime()) return row.status;
+  const checklist = workChecklist(row.id);
+  return checklist.length > 0 && checklist.every((c) => c.done) ? "live" : "scheduled";
+}
+
+/** Scheduled works past their time that could not go live, with what they miss. */
+export function overdueSchedules(): Array<{ id: string; number: string; href: string; publishAt: string; missing: string[] }> {
+  const now = simNow().getTime();
+  const created = createdWorkIds();
+  return allWorks()
+    .filter((w) => w.status === "scheduled" && w.publishAt && Date.parse(w.publishAt) <= now && workStatusNow(w) === "scheduled")
+    .map((w) => ({ id: w.id, number: w.number, href: created.has(w.id) ? `/admin/works/draft?slug=${w.slug}` : `/admin/works/${w.slug}`, publishAt: w.publishAt!, missing: workMissing(w.id) }));
+}
+
+/** The guide drafted from an approved AI candidate's stroke plan (version 0: not published). */
+export function aiGuideDraft(workId: string): { id: string; content: GuideVersionContent; savedAt: string } | null {
+  return inserted<{ id: string; workId: string; content: GuideVersionContent; savedAt: string }>("ai_guide_drafts").find((d) => d.workId === workId) ?? null;
+}
+
+/** The checklist's missing items ("Real result photo missing"), empty when the work can go live. */
+export const workMissing = (workId: string) => workChecklist(workId).filter((c) => !c.done).map((c) => c.label);
 
 /** A draft created in the admin before its proportion or level is set. */
 const DRAFT_PROPORTION: Proportion = "4:5";
@@ -340,7 +401,7 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     id: row.id,
     number: row.number,
     slug: row.slug,
-    status: row.status,
+    status: workStatusNow(row),
     publishAt: row.publishAt,
     description: row.description ?? "",
     imageUrl: row.previewPath ? asset(row.previewPath) : null,
@@ -362,6 +423,7 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     soldCount: sold,
     isDraftCreated,
     editorHref: isDraftCreated ? `/admin/works/draft?slug=${row.slug}` : `/admin/works/${row.slug}`,
+    missing: workMissing(row.id),
   };
 }
 
@@ -407,6 +469,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
 
   const guideRow = guides.find((g) => g.workId === row.id && g.format === work.defaultFormat && g.level === def.defaultLevel);
   const editor = guideRow ? await getGuideEditor(guideRow.id) : null;
+  const aiDraft = aiGuideDraft(row.id);
   const guide = guideRow && editor && editor.published.version > 0
     ? {
         id: guideRow.id,
@@ -415,15 +478,11 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
         version: editor.published.version,
         editedAt: editor.savedAt ?? editor.versions[0]!.publishedAt,
       }
-    : null;
+    : aiDraft
+      ? { id: aiDraft.id, layers: aiDraft.content.layers.length, steps: aiDraft.content.layers.reduce((n, l) => n + l.steps.length, 0), version: 0, editedAt: aiDraft.savedAt }
+      : null;
 
-  const checklist: AdminChecklistItem[] = [
-    { key: "preview", label: work.imageUrl ? "Preview image" : "Preview image missing", done: !!work.imageUrl },
-    { key: "guide", label: guide ? `Guide: ${guide.steps} steps` : "Guide missing", done: !!guide },
-    { key: "studio", label: work.studioTested ? "Painted by the studio" : "Not painted by the studio", done: work.studioTested },
-    { key: "result", label: work.resultPhotoUrl ? "Real result photo" : "Real result photo missing", done: !!work.resultPhotoUrl },
-    { key: "list", label: shoppingList.length && shoppingList.every((i) => i.url) ? "Shopping list links" : "Shopping list links missing", done: shoppingList.length > 0 && shoppingList.every((i) => i.url) },
-  ];
+  const checklist = workChecklist(row.id);
 
   const resultCandidates = allReviews()
     .filter((r) => r.workId === row.id && r.photoPath && (r.status === "published" || r.status === "featured"))

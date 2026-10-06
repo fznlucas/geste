@@ -1,4 +1,5 @@
 /** Settings & team (AdminSettings): store settings, shipping zones, payment and integration status, security, past audit lines. */
+import { N03_GUIDE_ID, guideVersions } from "./guides";
 
 /** `site_settings` keys of the Store tab, with their values. */
 export const storeSettings = [
@@ -47,8 +48,11 @@ export const integrations = [
  * describe (order-2033 shipped Sept 29, order-2025 refunded Sept 24: docs/decisions.md). Orders are
  * referred to by id, `{order:<id>}`: their number is given at read time (docs/admin-v2/01 §2).
  */
+/** N°03's guide is at version 1 (./guides.ts): the step edit is the draft of the next one. */
+const GUIDE_N03_NEXT = Math.max(...guideVersions.filter((v) => v.guideId === N03_GUIDE_ID).map((v) => v.version), 0) + 1;
+
 export const pastAudit = [
-  { id: "audit-mock-4", at: "2026-10-02T09:02:00Z", summary: "Lucas edited guide N°03 step 2c (v4)" },
+  { id: "audit-mock-4", at: "2026-10-02T09:02:00Z", summary: `Lucas edited guide N°03 step 2c (draft of v${GUIDE_N03_NEXT})` },
   { id: "audit-mock-3", at: "2026-10-01T08:15:00Z", summary: "Login from Lyon · Mac · passkey" },
   { id: "audit-mock-2", at: "2026-09-29T16:00:00Z", summary: "Lucas marked {order:order-2033} as shipped" },
   { id: "audit-mock-1", at: "2026-09-24T17:00:00Z", summary: "Lucas refunded {order:order-2025} · $25" },

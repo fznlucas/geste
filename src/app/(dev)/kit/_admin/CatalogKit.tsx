@@ -12,6 +12,7 @@ export function CatalogKit() {
         <WorkStatus work={{ status: "draft", publishAt: null }} />
         <WorkStatus work={{ status: "scheduled", publishAt: "2026-10-06T08:00:00Z" }} />
         <WorkStatus work={{ status: "archived", publishAt: null }} />
+        <WorkStatus work={{ status: "live", publishAt: null, missing: ["Real result photo missing"] }} />
       </div>
       <div className="flex flex-wrap gap-24">
         <span className="text-fg-muted">Tested ✓</span>
