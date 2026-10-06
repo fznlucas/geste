@@ -133,6 +133,13 @@ export interface PrintCopyRow {
   fulfilment: FulfilmentStatus;
   certificateNo: string | null; // "C-07-012"
   printedAt: string | null;
+  /** Admin v2: payment time of the copy (numbers follow it). */
+  paidAt?: string;
+  /** Sold before the store opened (pre-sale, first exhibition): no store order (docs/admin-v2/PLAN.md Q1). */
+  soldBeforeLaunch?: boolean;
+  /** Admin v2 (sim): when it was packed. */
+  packedAt?: string | null;
+  origin?: RowOrigin;
 }
 
 export interface ProfileRow {
@@ -146,6 +153,9 @@ export interface ProfileRow {
   createdAt: string;
   /** Mock-only (admin overlay): set by the GDPR deletion, `profiles.deletion_scheduled_at` later. */
   deletionScheduledAt?: string | null;
+  /** Admin v2 (sim): first visit's source. */
+  source?: Source;
+  origin?: RowOrigin;
 }
 
 export interface OrderItemRow {
@@ -184,6 +194,15 @@ export interface OrderRow {
   paidAt: string;
   createdAt: string;
   items: OrderItemRow[];
+  /** Admin v2 (sim): where the visit came from, its device, the billing country (`orders` later, PostHog). */
+  source?: Source;
+  device?: Device;
+  country?: string;
+  /** `payments` row of the successful payment. */
+  paymentId?: string;
+  /** Gift cards used to pay (a tender, not a discount: the total is unchanged). */
+  giftCardRedemptions?: Array<{ giftCardId: string; cents: number }>;
+  origin?: RowOrigin;
 }
 
 export interface RefundRow {
@@ -304,4 +323,110 @@ export interface AiCandidateRow {
   /** Draft work created on approval. */
   workSlug: string | null;
   createdAt: string;
+}
+
+// ── Admin v2: simulated business (docs/admin-v2/01) ─────────────────────────
+// Same shapes for fixture, simulated and browser rows; `origin` says which. New tables are listed as
+// comments in supabase/migrations/0006_admin_v2.sql until the backend exists.
+
+export type Source = "tiktok" | "instagram" | "direct" | "google" | "newsletter" | "pinterest" | "referral";
+export type Device = "phone" | "desktop" | "tablet";
+export type RowOrigin = "fixture" | "sim" | "browser";
+
+/** `payments`: one payment attempt (Stripe PaymentIntent / charge). Failed attempts have no order. */
+export interface PaymentRow {
+  id: string;
+  orderId: string | null;
+  customerId: string | null;
+  at: string;
+  method: "card" | "wallet" | "paypal";
+  wallet: "apple_pay" | "google_pay" | null;
+  /** Card issuer region: the Stripe fee depends on it. */
+  cardRegion: "eea" | "uk" | "intl";
+  premiumCard: boolean;
+  threeDS: "passed" | "not_required" | "failed";
+  risk: "low" | "medium" | "high";
+  /** Charged to the card, USD cents (gift-card part excluded). */
+  amountCents: number;
+  status: "succeeded" | "failed";
+  declineCode: string | null;
+  origin: RowOrigin;
+}
+
+/** Visits and funnel of one Paris day (Plausible + PostHog aggregates). */
+export interface TrafficDayRow {
+  day: string;
+  visits: number;
+  viewed: number;
+  cart: number;
+  checkout: number;
+  /** Paid orders of the day (fixtures included). */
+  paid: number;
+  visitsBySource: Record<Source, number>;
+  visitsByDevice: Record<Device, number>;
+}
+
+/** `newsletter_subscribers`. */
+export interface SubscriberRow {
+  id: string;
+  email: string;
+  customerId: string | null;
+  subscribedAt: string;
+  unsubscribedAt: string | null;
+  source: "checkout" | "footer" | "guide";
+  origin: RowOrigin;
+}
+
+/** `gift_card_redemptions`: a gift card used to pay an order. */
+export interface GiftCardRedemptionRow {
+  id: string;
+  giftCardId: string;
+  orderId: string;
+  cents: number;
+  at: string;
+}
+
+/** Partners of the shopping lists (`affiliate_partners`). */
+export interface AffiliatePartnerRow {
+  id: string;
+  name: string;
+  ratePct: number;
+  /** Day of the month the partner pays the commissions confirmed the month before. */
+  payoutDay: number;
+}
+
+/** One sale at a partner after a shopping-list click (`affiliate_commissions`, from the partner's report). */
+export interface AffiliateCommissionRow {
+  id: string;
+  partnerId: string;
+  /** The guide order whose shopping list was opened. */
+  orderId: string;
+  at: string;
+  /** EUR cents: partners report and pay in euros. */
+  basketCents: number;
+  commissionCents: number;
+  /** Pending until the return window closes (30 days), then paid on the partner's payout day. */
+  confirmedAt: string;
+  paidAt: string;
+}
+
+/** Shopping-list opens and partner clicks of one day (`affiliate_clicks` aggregated). */
+export interface AffiliateClickDayRow {
+  day: string;
+  listOpens: number;
+  /** Partner id → clicks. */
+  clicks: Record<string, number>;
+}
+
+/** Social calendar (`social_posts`), with the network's stats. A "spike" post drives traffic. */
+export interface SocialPostRow {
+  id: string;
+  network: "tiktok" | "instagram" | "pinterest" | "youtube";
+  at: string;
+  title: string;
+  spike: boolean;
+  views: number;
+  likes: number;
+  linkClicks: number;
+  origin: RowOrigin;
 }
