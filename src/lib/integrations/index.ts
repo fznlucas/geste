@@ -12,6 +12,9 @@ import { claudeMock } from "./claude/mock";
 import type { ClaudeAdapter } from "./claude/types";
 import { IntegrationNotConfigured } from "./errors";
 import { getMode } from "./mode";
+import { modalLive } from "./modal/live";
+import { modalMock } from "./modal/mock";
+import type { ModalAdapter } from "./modal/types";
 import { integration } from "./registry";
 import { resendLive } from "./resend/live";
 import { resendMock } from "./resend/mock";
@@ -30,10 +33,11 @@ interface Adapters {
   boxtal: BoxtalAdapter;
   resend: ResendAdapter;
   claude: ClaudeAdapter;
+  modal: ModalAdapter;
 }
 
-const MOCK: Adapters = { "stripe-payments": stripeMock, boxtal: boxtalMock, resend: resendMock, claude: claudeMock };
-const LIVE: Adapters = { "stripe-payments": stripeLive, boxtal: boxtalLive, resend: resendLive, claude: claudeLive };
+const MOCK: Adapters = { "stripe-payments": stripeMock, boxtal: boxtalMock, resend: resendMock, claude: claudeMock, modal: modalMock };
+const LIVE: Adapters = { "stripe-payments": stripeLive, boxtal: boxtalLive, resend: resendLive, claude: claudeLive, modal: modalLive };
 
 export function adapter<K extends keyof Adapters>(id: K): Adapters[K] {
   const mode = getMode(id);
@@ -52,4 +56,9 @@ export async function call<K extends keyof Adapters, T>(id: K, operation: string
     insertRow("integration_logs", { at: adminNow(), integration: id, direction: "out", operation, mode, ok: false, related, detail: e instanceof Error ? e.message : String(e) });
     throw e;
   }
+}
+
+/** A vendor calling us (webhook) in the mock: logged as inbound so the drawer shows both directions. */
+export function logInbound(id: keyof Adapters, operation: string, related: string | null) {
+  insertRow("integration_logs", { at: adminNow(), integration: id, direction: "in", operation, mode: getMode(id) === "live" ? "live" : "mock", ok: true, related, detail: null });
 }

@@ -52,3 +52,15 @@ describe("modes", () => {
     expect((await boxtalMock.createLabel({ orderId: "o", orderNumber: "GS-1438", carrier: "colissimo", parcel: "Tube", country: "CH" })).costCents).toBe(2450);
   });
 });
+
+describe("GPU provider", () => {
+  it("mock accepts a job with a stable call id; live without a server refuses", async () => {
+    const { modalMock } = await import("@/lib/integrations/modal/mock");
+    const a = await modalMock.submitJob({ number: 125, candidates: 8, format: "40x50", maxStrokes: 40, layers: 3 });
+    expect(a.callId).toMatch(/^fc-[0-9a-z]{7}$/);
+    expect((await modalMock.submitJob({ number: 125, candidates: 8, format: "40x50", maxStrokes: 40, layers: 3 })).callId).toBe(a.callId);
+    vi.stubEnv("NEXT_PUBLIC_INTEGRATION_MODAL", "live");
+    const { adapter } = await import("@/lib/integrations");
+    await expect(adapter("modal").submitJob({ number: 125, candidates: 8, format: "40x50", maxStrokes: 40, layers: 3 })).rejects.toThrow("Needs a server");
+  });
+});

@@ -8,6 +8,7 @@
 import { AI_LIMITS, aiBudget, aiCandidateRow, aiJobCostCents, aiJobLabel, allAiJobs, getAdminWorks, type AiJobParams } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
 import { CANVASES, mediumFormat } from "@/lib/pricing";
+import { call, logInbound } from "@/lib/integrations";
 
 export class AiBudgetError extends Error {}
 
@@ -29,9 +30,12 @@ export async function createJob(params: AiJobParams): Promise<number> {
   const cost = aiJobCostCents(params.candidates);
   if (cost > aiBudget().leftCents) throw new AiBudgetError("GPU budget reached for this month");
   const number = Math.max(...allAiJobs().map((j) => j.number)) + 1;
+  const { callId } = await call("modal", "submit job", `ai_job:${number}`, (m) =>
+    m.submitJob({ number, candidates: params.candidates, format: params.format, maxStrokes: params.maxStrokes, layers: params.layers }),
+  );
   insertRow(
     "ai_jobs",
-    { id: `job-${number}`, number, params, label: aiJobLabel(params), status: "queued", progress: 3, costCents: cost, createdAt: adminNow() },
+    { id: `job-${number}`, number, params, label: aiJobLabel(params), status: "queued", progress: 3, costCents: cost, createdAt: adminNow(), callId },
     { action: "ai.job_create", target: `ai_job:${number}`, summary: `${staff.fullName} started AI job ${number} · ${params.candidates} candidates` },
   );
   return number;
@@ -56,6 +60,7 @@ export function advanceJobs() {
       continue;
     }
     patchRow("ai_jobs", job.id, { progress: 100, status: "done" });
+    logInbound("modal", "webhook · job done", `ai_job:${job.number}`);
     const n = Math.min(job.params.candidates, 10);
     const made = Array.from({ length: n }, (_, i) => {
       const id = `C-${job.number}-${"abcdefghij"[i]}`;

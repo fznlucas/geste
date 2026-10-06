@@ -30,7 +30,7 @@ export function ShellKit() {
             breadcrumbs={[{ label: "Sales", href: "#" }]}
             title="Orders"
             search={<AdminSearch onSearch={() => {}} />}
-            demo={<DemoRoleMenu role={role} onRoleChange={setRole} onReset={() => {}} />}
+            demo={<DemoRoleMenu role={role} onRoleChange={setRole} onReset={() => {}} simulatedUpTo="14:32" simulationHref="#simulation" />}
             alerts={<AlertsPopover alerts={ALERTS} />}
             actions={<Button size="sm" variant="ghost" className="min-h-36">Export CSV</Button>}
           />
