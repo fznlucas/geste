@@ -35,7 +35,7 @@ export async function copiesLeft(editionId: string): Promise<number> {
   return (await getEdition(editionId))!.left;
 }
 
-/** The copy numbers of an order's print line and its certificate ("C-07-013"). */
+/** The copy numbers of an order's print line and its certificate ("C-07-S-013"). */
 export async function orderCopy(orderId: string, itemIndex = 0): Promise<{ numbers: number[]; certificateNo: string | null; editionSize: number }> {
   const o = await getOrder(orderNumber(orderId));
   const prints = o!.items.filter((i) => i.kind === "print");

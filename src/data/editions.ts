@@ -65,7 +65,7 @@ function copy(editionId: string, number: number, orderItemId: string, fulfilment
     status: "sold",
     orderItemId,
     fulfilment,
-    certificateNo: `C-${work}-${String(number).padStart(3, "0")}`,
+    certificateNo: `C-${work}-${editionId.split("-")[2]!.toUpperCase()}-${String(number).padStart(3, "0")}`,
     printedAt,
   };
 }

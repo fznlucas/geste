@@ -9,11 +9,12 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
 import {
   AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, Tooltip, UnderLink,
   fulfilmentLabel, useToast,
 } from "@/components";
-import { copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
+import { REFUNDABLE_STATUSES, copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import {
   CARRIER_OPTIONS, PARCELS, REFUND_REASONS, addOrderNote, refundBlocked, createLabel, generateCertificate, markShipped, refundLimitCents, refundOrder, resendAccess, resendReceipt,
@@ -211,7 +212,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
           </div>
         </AdminBox>
 
-        {prints.length > 0 && <ShipBox order={o} canShip={hasRole(staff.role, "fulfilment")} onCert={(c) => setSent((s) => ({ ...s, cert: c }))} cert={sent.cert} run={run} />}
+        {prints.length > 0 && <ShipBox order={o} canShip={hasRole(staff.role, "fulfilment") && (REFUNDABLE_STATUSES.includes(o.status) || isShipped(o))} onCert={(c) => setSent((s) => ({ ...s, cert: c }))} cert={sent.cert} run={run} />}
 
         <AdminBox>
           <AdminTitle>Timeline</AdminTitle>
@@ -322,8 +323,13 @@ function ShipBox({ order: o, canShip, cert, onCert, run }: { order: OrderDetail;
   const [carrier, setCarrier] = useState<Carrier>(o.shipment?.carrier ?? carrierOf(o.shippingMethod));
   const [parcel, setParcel] = useState<string>(o.shipment?.parcel ?? defaultParcel(o));
   const [tracking, setTracking] = useState(o.shipment ? formatTrackingNo(o.shipment.trackingNo) : "");
+  const fulfilment = hasRole(useAdmin().staff.role, "fulfilment");
   const shipped = isShipped(o);
   const labelReady = !!o.shipment;
+  // One step at a time (docs/admin-v2/05): print and sign → pack → label → ship.
+  const step = nextPrintStep(o);
+  const packed = step === "shipped" || shipped;
+  const signed = step !== "printed";
 
   return (
     <AdminBox>
@@ -348,21 +354,28 @@ function ShipBox({ order: o, canShip, cert, onCert, run }: { order: OrderDetail;
         </Field>
       </div>
       {canShip ? (
-        <div className="flex gap-10">
-          <Button variant="ghost" onClick={() => !labelReady && run(async () => setTracking(await createLabel({ number: o.number, carrier, parcel })), "Shipping label created")}>
+        <div className="flex flex-wrap gap-10">
+          {(step === "printed" || step === "packed") && (
+            <Button variant="ghost" onClick={() => run(() => advancePrints(o.number), step === "printed" ? "Printed & signed" : "Packed")}>
+              {NEXT_STEP_LABEL[step]}
+            </Button>
+          )}
+          <Button variant="ghost" aria-disabled={(!labelReady && !packed) || undefined} onClick={() => !labelReady && packed && run(async () => setTracking(await createLabel({ number: o.number, carrier, parcel })), "Shipping label created")}>
             {labelReady ? "Label ready · PDF" : "Create shipping label"}
           </Button>
-          <Button variant="ghost" onClick={() => run(async () => onCert(await generateCertificate(o.number)), "Certificate ready")}>
+          <Button variant="ghost" aria-disabled={!signed || undefined} onClick={() => signed && run(async () => onCert(await generateCertificate(o.number)), "Certificate ready")}>
             {cert ? `Certificate ${cert} ready` : "Generate certificate"}
           </Button>
-          <Button className="min-w-260" trailing="→" aria-disabled={shipped || undefined} onClick={() => !shipped && run(() => markShipped({ number: o.number, trackingNo: tracking, carrier, parcel }), "Marked as shipped · email sent")}>
+          <Button className="min-w-260" trailing="→" aria-disabled={shipped || !packed || undefined} onClick={() => !shipped && packed && run(() => markShipped({ number: o.number, trackingNo: tracking, carrier, parcel }), "Marked as shipped · email sent")}>
             {shipped ? "Shipped · customer notified" : "Mark as shipped and notify"}
           </Button>
         </div>
       ) : (
-        <p className="text-fg-muted">Fulfilment ships the prints.</p>
+        <p className="text-fg-muted">{fulfilment ? `${o.status === "refunded" ? "Refunded" : "Not paid"}: this order does not ship.` : "Fulfilment ships the prints."}</p>
       )}
-      <span className="text-fg-muted">Marking as shipped emails the customer with the tracking link.</span>
+      <span className="text-fg-muted">
+        {!canShip || packed ? "Marking as shipped emails the customer with the tracking link." : step === "printed" ? "First print and sign it: the certificate is signed with the print. Then pack it; the label goes on the tube." : "Signed. Pack it next; the label goes on the tube."}
+      </span>
     </AdminBox>
   );
 }
@@ -382,13 +395,15 @@ function PhoneOrder({ order: o }: { order: OrderDetail }) {
   const closeScanner = useCallback(() => setScanning(false), []);
   const field = useRef<HTMLInputElement>(null);
   const shipped = isShipped(o);
-  const canShip = hasRole(staff.role, "fulfilment") && o.items.some((i) => i.kind === "print");
+  const canShip = hasRole(staff.role, "fulfilment") && o.items.some((i) => i.kind === "print") && (REFUNDABLE_STATUSES.includes(o.status) || isShipped(o));
   const firstName = o.customer.fullName.split(" ")[0];
   const a = o.shippingAddress;
 
+  const step = nextPrintStep(o);
   const ship = async () => {
     try {
-      await markShipped({ number: o.number, trackingNo: tracking });
+      if (step === "printed" || step === "packed") await advancePrints(o.number);
+      else await markShipped({ number: o.number, trackingNo: tracking });
     } catch (e) {
       toast.show(e instanceof Error ? e.message : "Could not mark as shipped", { tone: "danger" });
     }
@@ -431,7 +446,7 @@ function PhoneOrder({ order: o }: { order: OrderDetail }) {
           </Field>
           <Button variant="ghost" onClick={scan} disabled={shipped}>Scan the label barcode</Button>
           <Button trailing="→" onClick={() => !shipped && ship()} aria-disabled={shipped || undefined}>
-            {shipped ? `Shipped · ${firstName} notified` : "Mark as shipped"}
+            {shipped ? `Shipped · ${firstName} notified` : NEXT_STEP_LABEL[step ?? "shipped"]}
           </Button>
         </>
       )}

@@ -95,7 +95,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
       });
       const workPart = line.edition.id.split("-")[1];
       for (const num of numbers) {
-        copies.push({ id: `copy-local-${n}-${line.edition.id}-${num}`, editionId: line.edition.id, number: num, status: "sold", orderItemId: id, fulfilment: "to_print", certificateNo: `C-${workPart}-${String(num).padStart(3, "0")}`, printedAt: null });
+        copies.push({ id: `copy-local-${n}-${line.edition.id}-${num}`, editionId: line.edition.id, number: num, status: "sold", orderItemId: id, fulfilment: "to_print", certificateNo: `C-${workPart}-${line.edition.id.split("-")[2]!.toUpperCase()}-${String(num).padStart(3, "0")}`, printedAt: null });
       }
       return;
     }

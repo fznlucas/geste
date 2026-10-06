@@ -19,6 +19,8 @@ import { customers } from "@/data/customers";
 import { printCopies, printEditions } from "@/data/editions";
 import { entitlements } from "@/data/entitlements";
 import type { CampaignRow, GiftCardRow } from "@/data/marketing";
+import { simNow } from "@/lib/clock";
+import { mockCarrierScans } from "@/lib/integrations/boxtal/mock";
 import { campaigns as fixtureCampaigns, giftCards as fixtureGiftCards } from "@/data/marketing";
 import { orders, refunds, shipments } from "@/data/orders";
 import type {
@@ -176,6 +178,12 @@ const PRE_LAUNCH_COPIES: PrintCopyRow[] = [...preLaunchCounts()].flatMap(([editi
 
 const ACTIVE: ReadonlyArray<PrintCopyRow["status"]> = ["sold", "reserved"];
 
+/** "C-07-S-012": work, size and copy number, so the S and M copies of a work never share a certificate. */
+export const certificateNumber = (editionId: string, number: number) => {
+  const [, work, size] = editionId.split("-");
+  return `C-${work}-${(size ?? "").toUpperCase()}-${String(number).padStart(3, "0")}`;
+};
+
 const copiesMemo = memo(() => {
   const paidOfItem = new Map<string, string>();
   for (const o of allOrders()) for (const i of o.items) paidOfItem.set(i.id, o.paidAt);
@@ -204,10 +212,15 @@ const copiesMemo = memo(() => {
       numbered.set(c.id, n);
     }
   }
+  // A delivered parcel closes its copies (the carrier's last scan).
+  const delivered = (c: PrintCopyRow) => {
+    if (c.fulfilment !== "shipped" || !c.orderItemId) return false;
+    const orderId = orderOfItem(c.orderItemId)?.id;
+    return !!(orderId && shipmentOfOrder(orderId)?.deliveredAt);
+  };
   const rows = all.map((c) => {
     const number = numbered.get(c.id)!;
-    const work = c.editionId.split("-")[1];
-    return { ...c, number, certificateNo: `C-${work}-${String(number).padStart(3, "0")}` };
+    return { ...c, number, certificateNo: certificateNumber(c.editionId, number), ...(delivered(c) ? { fulfilment: "delivered" as const } : {}) };
   });
   const byItem = new Map<string, PrintCopyRow[]>();
   const sold = new Map<string, number>();
@@ -256,7 +269,18 @@ export const refundsOfOrder = (orderId: string): RefundRow[] => refundsMemo().by
 const shipmentsMemo = memo(() => {
   const fx = fixturesNow();
   const replaced = new Set(fixturePlans(simSettings().seed).shipments.map((s) => s.id));
-  const rows = merged("shipments", [...frozenSim().shipments, ...fx.shipments, ...shipments.filter((s) => !replaced.has(s.id))]);
+  // Parcels the admin shipped get the carrier's scans as the clock passes them (mock tracking webhook).
+  const o = overlay();
+  const byAdmin = new Set([
+    ...(o.inserts.shipments ?? []).map((s) => s.id),
+    ...Object.entries(o.patches.shipments ?? {}).filter(([, p]) => (p as Partial<ShipmentRow>).shippedAt).map(([id]) => id),
+  ]);
+  const now = simNow().getTime();
+  const rows = merged("shipments", [...frozenSim().shipments, ...fx.shipments, ...shipments.filter((s) => !replaced.has(s.id))]).map((s) => {
+    if (!byAdmin.has(s.id) || !s.shippedAt || s.deliveredAt) return s;
+    const scans = mockCarrierScans(s, now);
+    return { ...s, ...scans, status: scans.deliveredAt ? ("delivered" as const) : ("in_transit" as const) };
+  });
   return { rows, byOrder: byOrder(rows) };
 });
 export const allShipments = (): ShipmentRow[] => shipmentsMemo().rows;
@@ -275,6 +299,11 @@ export const allReviews = memo(() => merged("reviews", [...sim().reviews, ...fix
 export const fixtureAiCandidates = (): AiCandidateRow[] => fixturesNow().candidates;
 /** Admin view of the works (status, copy). The store pages are built at deploy time and ignore it. */
 export const allWorks = () => merged("works", works);
+const worksById = memo(() => new Map(allWorks().map((w) => [w.id, w])));
+const editionsById = memo(() => new Map(allPrintEditions().map((e) => [e.id, e])));
+/** A work or an edition as the admin left it (overlay applied), by id. */
+export const workById = (id: string | null | undefined) => (id ? worksById().get(id) : undefined);
+export const editionById = (id: string | null | undefined) => (id ? editionsById().get(id) : undefined);
 
 /** Gift cards, with what refunds paid back onto them added to their balance. */
 export const allGiftCards = memo((): GiftCardRow[] => {

@@ -131,7 +131,7 @@ export interface PrintCopyRow {
   status: CopyStatus;
   orderItemId: string | null;
   fulfilment: FulfilmentStatus;
-  certificateNo: string | null; // "C-07-012"
+  certificateNo: string | null; // "C-07-S-012"
   printedAt: string | null;
   /** Admin v2: payment time of the copy (numbers follow it). */
   paidAt?: string;

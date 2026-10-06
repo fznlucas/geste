@@ -2,13 +2,12 @@
 import { asset } from "@/lib/asset";
 import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
-import { works } from "@/data/works";
 import { clone } from "./clone";
-import { allPrintCopies, allPrintEditions, customerById, editionSoldCount, orderOfItem } from "./local";
+import { allPrintCopies, allPrintEditions, customerById, workById, editionSoldCount, orderOfItem } from "./local";
 import type { FulfilmentStatus, PrintCopy, PrintEdition } from "./types";
 
 function mapEdition(row: PrintEditionRow): PrintEdition {
-  const work = works.find((w) => w.id === row.workId)!;
+  const work = workById(row.workId)!;
   // Counted from the copies of every source: pre-launch, fixtures, simulated, this browser (print_copies).
   const sold = editionSoldCount(row.id);
   const left = Math.max(0, row.editionSize - sold - row.reservedCount);
@@ -57,7 +56,7 @@ export async function getPrintCopies(query: { fulfilment?: FulfilmentStatus | Fu
       .filter((c) => !wanted || wanted.includes(c.fulfilment))
       .map((c) => {
         const edition = editions.get(c.editionId)!;
-        const work = works.find((w) => w.id === edition.workId)!;
+        const work = workById(edition.workId)!;
         const order = c.orderItemId ? orderOfItem(c.orderItemId) : undefined;
         const customer = order ? customerById(order.userId) : undefined;
         return {

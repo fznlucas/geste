@@ -4,14 +4,12 @@ import { shortDate } from "@/lib/dates";
 import { CARRIERS, carrierOf, deliveryName, deliveryRange, deliveryWindow, formatTrackingNo } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING, formatLabel } from "@/lib/pricing";
-import { printEditions } from "@/data/editions";
 import type { OrderRow } from "@/data/types";
-import { works } from "@/data/works";
 import { clone } from "./clone";
 import { customerTotals } from "./customer-totals";
 import { includedVatCents } from "@/data/tax";
 import { vatRateAt } from "./vat";
-import { allOrders, copiesOfItem, customerById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
+import { allOrders, copiesOfItem, customerById, editionById, workById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
 import { inOrderTab } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
 import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrderTracking, RefundOption, TrackingStep } from "./types";
@@ -50,7 +48,7 @@ export function mapOrder(row: OrderRow): Order {
   const shipment = shipmentOfOrder(row.id);
   const items = row.items.map((i) => {
     const ent = i.kind === "guide" ? entitlementOfItem(i.id) : undefined;
-    const work = works.find((w) => w.id === i.workId);
+    const work = workById(i.workId);
     const itemCopies = [...copiesOfItem(i.id)].sort((a, b) => a.number - b.number);
     return {
       id: i.id,
@@ -72,7 +70,7 @@ export function mapOrder(row: OrderRow): Order {
       certificateNo: itemCopies[0]?.certificateNo ?? null,
       copyNumbers: itemCopies.map((c) => c.number),
       edition: (() => {
-        const e = printEditions.find((x) => x.id === i.editionId);
+        const e = editionById(i.editionId);
         return e ? { size: e.size, editionSize: e.editionSize } : null;
       })(),
       printedAt: itemCopies.length && itemCopies.every((c) => c.printedAt) ? itemCopies.map((c) => c.printedAt!).sort().at(-1)! : null,
@@ -83,7 +81,7 @@ export function mapOrder(row: OrderRow): Order {
     };
   });
   const summary = items
-    .map((i) => (i.kind === "print" ? `${i.title} ${printEditions.find((e) => e.id === i.editionId)?.size ?? ""}` : i.title))
+    .map((i) => (i.kind === "print" ? `${i.title} ${editionById(i.editionId)?.size ?? ""}` : i.title))
     .join(" · ");
   return {
     id: row.id,
@@ -122,7 +120,7 @@ function timeline(order: Order): OrderEvent[] {
   for (const item of order.items.filter((i) => i.kind === "gift_card")) events.push({ at: order.paidAt, label: `${item.title} emailed` });
   for (const item of order.items.filter((i) => i.kind === "print")) {
     const copy = copiesOfItem(item.id)[0];
-    const edition = printEditions.find((e) => e.id === item.editionId);
+    const edition = editionById(item.editionId);
     if (copy?.printedAt && edition) events.push({ at: copy.printedAt, label: `${item.title} ${copy.number}/${edition.editionSize} printed and signed` });
   }
   if (order.shipment?.labelCreatedAt) events.push({ at: order.shipment.labelCreatedAt, label: `Shipping label created · ${formatTrackingNo(order.shipment.trackingNo)}` });

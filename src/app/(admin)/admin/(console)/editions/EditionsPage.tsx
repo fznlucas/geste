@@ -9,6 +9,7 @@ import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, useToast } from "@/components";
 import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
+import { isLowStock } from "@/lib/metrics";
 import { setEditionOpen } from "@/lib/client/admin/fulfilment";
 import { cn } from "@/lib/cn";
 import { adminDate } from "@/lib/dates";
@@ -75,7 +76,7 @@ export function EditionsPage() {
 }
 
 function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onToggle: () => void }) {
-  const low = e.open && e.left <= 5;
+  const low = isLowStock(e);
   return (
     <AdminRow cols={COLS} className="min-h-60">
       <span role="cell">

@@ -88,6 +88,12 @@ test("a checkout order reaches the admin, ships, then is refunded", async ({ pag
   await expect(page.getByRole("heading", { name: `Order #${number}` })).toBeVisible();
   await expect(page.getByText(/Print to ship · paid/)).toBeVisible();
 
+  // One step at a time (docs/admin-v2/05): no label before the print is signed and packed.
+  await expect(page.getByRole("button", { name: "Create shipping label" })).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("button", { name: /Mark as shipped and notify/ })).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("button", { name: "Mark printed & signed" }).click();
+  await page.getByRole("button", { name: "Mark packed" }).click();
+  await expect(page.getByRole("button", { name: "Mark packed" })).toHaveCount(0);
   await page.getByRole("button", { name: "Create shipping label" }).click();
   await expect(page.getByRole("button", { name: "Label ready · PDF" })).toBeVisible();
   await expect(page.getByLabel("Tracking number")).toHaveValue(/^6A /);
@@ -162,6 +168,9 @@ test("phone: one-tap mark as shipped", async ({ page }) => {
 
   await page.getByRole("link", { name: `#${SECOND.number}` }).click();
   await expect(page.getByRole("heading", { name: `#${SECOND.number} · ${formatPrice(SECOND.totalCents)}` })).toBeVisible();
+  // A print still to print: sign it, pack it, then it ships with the typed tracking number.
+  await page.getByRole("button", { name: "Mark printed & signed" }).click();
+  await page.getByRole("button", { name: "Mark packed" }).click();
   await page.getByLabel("Tracking number").fill("6A 123 456 789 01");
   await page.getByRole("button", { name: "Mark as shipped" }).click();
   await expect(page.getByRole("button", { name: `Shipped · ${SECOND.customer.fullName.split(" ")[0]} notified` })).toBeVisible();

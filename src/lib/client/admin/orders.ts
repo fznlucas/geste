@@ -43,10 +43,21 @@ async function buyLabel(order: OrderDetail, carrier: Carrier, parcel: string): P
   return label.trackingNo;
 }
 
-/** "Create shipping label": buys the label (Boxtal later) and fills the tracking number. Returns it. */
+/** Only a paid order ships: not pending, cancelled or refunded in full. */
+export async function requireShippable(number: string): Promise<OrderDetail> {
+  const order = await load(number);
+  if (!REFUNDABLE_STATUSES.includes(order.status)) throw new Error(`#${order.number} is ${order.status === "refunded" ? "refunded" : "not paid"}: it does not ship.`);
+  return order;
+}
+
+/** The prints of an order that still travel (a refunded print put back in stock does not). */
+const travelling = (order: OrderDetail) => order.items.filter((i) => i.kind === "print" && i.fulfilment !== "returned");
+
+/** "Create shipping label": buys the label (Boxtal) once every print is packed, and fills the tracking number. Returns it. */
 export async function createLabel(input: { number: string; carrier: Carrier; parcel: string }): Promise<string> {
   requireStaff("fulfilment");
-  const order = await load(input.number);
+  const order = await requireShippable(input.number);
+  if (!travelling(order).every((i) => ["packed", "shipped", "delivered"].includes(i.fulfilment))) throw new Error("Pack the print first: the label goes on the tube.");
   const trackingNo = order.shipment?.trackingNo ?? (await buyLabel(order, input.carrier, input.parcel));
   const now = adminNow();
   if (order.shipment) patchRow("shipments", order.shipment.id, { carrier: input.carrier, parcel: input.parcel, labelCreatedAt: order.shipment.labelCreatedAt ?? now });
@@ -59,37 +70,78 @@ export async function createLabel(input: { number: string; carrier: Carrier; par
   return formatTrackingNo(trackingNo);
 }
 
-/** "Mark as shipped and notify": the shipment leaves, every copy of the order moves to Shipped, the customer gets the tracking link. */
-export async function markShipped(input: { number: string; trackingNo?: string; carrier?: Carrier; parcel?: string }) {
+/**
+ * Ships copies: the one action behind the order detail, the phone, the board and the bulk bar
+ * (docs/admin-v2/05). Per order: paid, every travelling print packed, then a label (the one typed or
+ * scanned, the one created, or one bought now through Boxtal), the shipped stamp, every copy to
+ * Shipped, the customer's email in the Outbox, the audit line. Returns the order numbers shipped.
+ */
+export async function shipCopies(copyIds: string[], opts: { trackingNo?: string; carrier?: Carrier; parcel?: string } = {}): Promise<string[]> {
   requireStaff("fulfilment");
-  const order = await load(input.number);
-  const prints = order.items.filter((i) => i.kind === "print");
-  if (!prints.length) throw new Error("This order has no print to ship.");
-  const now = adminNow();
-  const carrier = input.carrier ?? order.shipment?.carrier ?? (order.shippingMethod === "mondial_relay" ? "mondial_relay" : order.shippingMethod === "chronopost_express" ? "chronopost" : "colissimo");
-  const parcel = input.parcel ?? order.shipment?.parcel ?? PARCELS[0];
-  const trackingNo = (input.trackingNo ?? "").replace(/\s+/g, "").toUpperCase() || order.shipment?.trackingNo || (await buyLabel(order, carrier, parcel));
-  if (order.shipment) patchRow("shipments", order.shipment.id, { trackingNo, carrier, parcel, shippedAt: order.shipment.shippedAt ?? now });
-  else
-    insertRow("shipments", {
-      id: `ship-${order.number}`, orderId: order.id, carrier, trackingNo, parcel, status: "label_created",
-      labelCreatedAt: null, shippedAt: now, inTransitAt: null, outForDeliveryAt: null, deliveredAt: null,
-    });
-  // A copy shipped straight from "To print" is printed now; one already printed keeps its date (certificate).
-  const printed = new Map((await getPrintCopies()).map((c) => [c.id, c.printedAt]));
-  for (const item of prints) {
-    for (const id of item.copyIds) patchRow("print_copies", id, { fulfilment: "shipped", printedAt: printed.get(id) ?? now });
-    patchRow("order_items", item.id, { fulfilment: "shipped" });
+  const copies = (await getPrintCopies()).filter((c) => copyIds.includes(c.id));
+  const numbers = [...new Set(copies.map((c) => c.orderNumber).filter((n): n is string => !!n))];
+  const shipped: string[] = [];
+  for (const number of numbers) {
+    const order = await requireShippable(number);
+    if (order.shipment?.shippedAt) continue;
+    const prints = travelling(order);
+    if (!prints.length) throw new Error(`#${number} has no print to ship.`);
+    if (!prints.every((i) => i.fulfilment === "packed")) throw new Error(`#${number}: pack every print before it ships.`);
+    const now = adminNow();
+    const carrier = opts.carrier ?? order.shipment?.carrier ?? (order.shippingMethod === "mondial_relay" ? "mondial_relay" : order.shippingMethod === "chronopost_express" ? "chronopost" : "colissimo");
+    const parcel = opts.parcel ?? order.shipment?.parcel ?? PARCELS[0];
+    const typed = (opts.trackingNo ?? "").replace(/\s+/g, "").toUpperCase();
+    const trackingNo = typed || order.shipment?.trackingNo || (await buyLabel(order, carrier, parcel));
+    if (order.shipment) patchRow("shipments", order.shipment.id, { trackingNo, carrier, parcel, labelCreatedAt: order.shipment.labelCreatedAt ?? now, shippedAt: now });
+    else
+      insertRow("shipments", {
+        id: `ship-${order.number}`, orderId: order.id, carrier, trackingNo, parcel, status: "label_created",
+        labelCreatedAt: now, shippedAt: now, inTransitAt: null, outForDeliveryAt: null, deliveredAt: null,
+      });
+    for (const item of prints) {
+      for (const id of item.copyIds) patchRow("print_copies", id, { fulfilment: "shipped" });
+      patchRow("order_items", item.id, { fulfilment: "shipped" });
+    }
+    audit({ action: "order.ship", target: `order:${order.number}`, summary: `${staffName()} marked #${order.number} as shipped` });
+    await sendEmail("shipping", order.customer.email, `order:${order.id}`, { firstName: firstName(order), orderNumber: order.number, trackingNo: formatTrackingNo(trackingNo), carrier: CARRIER_OPTIONS.find(([c]) => c === carrier)?.[1] ?? carrier });
+    shipped.push(number);
   }
-  audit({ action: "order.ship", target: `order:${order.number}`, summary: `${staffName()} marked #${order.number} as shipped` });
-  await sendEmail("shipping", order.customer.email, `order:${order.id}`, { firstName: firstName(order), orderNumber: order.number, trackingNo: formatTrackingNo(trackingNo), carrier: CARRIER_OPTIONS.find(([c]) => c === carrier)?.[1] ?? carrier });
+  return shipped;
 }
 
-/** "Generate certificate": the certificate of each numbered copy (PDF later). Returns "#C-07-012". */
+/** "Mark as shipped and notify": `shipCopies` for every print of the order. */
+export async function markShipped(input: { number: string; trackingNo?: string; carrier?: Carrier; parcel?: string }) {
+  const order = await load(input.number);
+  const ids = travelling(order).flatMap((i) => i.copyIds);
+  if (!ids.length) throw new Error("This order has no print to ship.");
+  await shipCopies(ids, input);
+}
+
+/**
+ * Back from Shipped (a mistake, the parcel is still here): only before the carrier's first scan. Every
+ * print returns to Packed and the shipment keeps its label but loses its shipped stamp.
+ */
+export async function unship(number: string): Promise<void> {
+  requireStaff("fulfilment");
+  const order = await load(number);
+  const s = order.shipment;
+  if (!s?.shippedAt) return;
+  if (s.inTransitAt || s.outForDeliveryAt || s.deliveredAt) throw new Error("The carrier has scanned the parcel: it cannot come back.");
+  patchRow("shipments", s.id, { shippedAt: null, status: "label_created" });
+  for (const item of travelling(order)) {
+    for (const id of item.copyIds) patchRow("print_copies", id, { fulfilment: "packed" });
+    patchRow("order_items", item.id, { fulfilment: "packed" });
+  }
+  audit({ action: "order.unship", target: `order:${order.number}`, summary: `${staffName()} moved #${order.number} back to Packed (not scanned by the carrier)` });
+}
+
+/** "Generate certificate": the certificate of each numbered copy (PDF later), once the print is signed. Returns "#C-07-S-012". */
 export async function generateCertificate(number: string): Promise<string> {
   requireStaff("fulfilment");
   const order = await load(number);
-  const certs = order.items.filter((i) => i.certificateNo).map((i) => `#${i.certificateNo}`);
+  const prints = travelling(order);
+  if (!prints.length || prints.some((i) => i.fulfilment === "to_print")) throw new Error("Print and sign it first: the certificate is signed with the print.");
+  const certs = prints.filter((i) => i.certificateNo).map((i) => `#${i.certificateNo}`);
   audit({ action: "print.certificate", target: `order:${order.number}`, summary: `${staffName()} generated certificate ${certs.join(", ")} for #${order.number}` });
   return certs.join(", ");
 }

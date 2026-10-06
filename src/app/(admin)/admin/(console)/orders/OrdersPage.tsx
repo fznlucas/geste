@@ -13,7 +13,8 @@ import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStat
 import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
 import { inOrderTab, orderTab, ordersThisMonth } from "@/lib/metrics";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
-import { markShipped } from "@/lib/client/admin/orders";
+import { markShipped, shipCopies } from "@/lib/client/admin/orders";
+import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
 import { simToday } from "@/lib/clock";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
@@ -95,11 +96,16 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, 
       return next;
     });
 
+  // The same action as the board and the detail (`shipCopies`): only packed orders leave; the others are named.
   const shipSelected = async () => {
-    const shippable = picked.filter((o) => o.items.some((i) => i.kind === "print" && i.fulfilment !== "shipped" && i.fulfilment !== "delivered"));
+    const ready = picked.filter((o) => nextPrintStep(o) === "shipped");
+    const waiting = picked.filter((o) => { const s = nextPrintStep(o); return s === "printed" || s === "packed"; }).length;
     try {
-      for (const o of shippable) await markShipped({ number: o.number });
-      toast.show(shippable.length ? `${shippable.length} ${shippable.length === 1 ? "order" : "orders"} marked as shipped` : "Nothing to ship in the selection");
+      const shipped = ready.length ? await shipCopies(ready.flatMap((o) => o.items.filter((i) => i.kind === "print" && i.fulfilment !== "returned").flatMap((i) => i.copyIds))) : [];
+      const plural = (n: number) => `${n} ${n === 1 ? "order" : "orders"}`;
+      toast.show(
+        [shipped.length ? `${plural(shipped.length)} marked as shipped` : "", waiting ? `${plural(waiting)} not packed yet` : ""].filter(Boolean).join(" · ") || "Nothing to ship in the selection",
+      );
       setSelected(new Set());
     } catch (e) {
       toast.show(e instanceof Error ? e.message : "Could not mark as shipped", { tone: "danger" });
@@ -195,11 +201,14 @@ function PhoneOrders({ orders }: { orders: Order[] | undefined }) {
   const list = (orders ?? []).filter((o) => orderTab(o) === "to_ship" || done.has(o.number));
   const left = list.filter((o) => !done.has(o.number)).length;
 
+  // One button per order, the next step of its prints: printed & signed → packed → shipped.
   const ship = async (o: Order) => {
     setBusy(o.number);
     try {
-      await markShipped({ number: o.number });
-      setDone((d) => new Set(d).add(o.number));
+      if (nextPrintStep(o) === "shipped") {
+        await markShipped({ number: o.number });
+        setDone((d) => new Set(d).add(o.number));
+      } else await advancePrints(o.number);
     } catch (e) {
       toast.show(e instanceof Error ? e.message : "Could not mark as shipped", { tone: "danger" });
     }
@@ -224,7 +233,7 @@ function PhoneOrders({ orders }: { orders: Order[] | undefined }) {
             </div>
             {canShip && (
               <Button trailing="→" fullWidth loading={busy === o.number} aria-disabled={done.has(o.number) || undefined} onClick={() => !done.has(o.number) && ship(o)}>
-                {done.has(o.number) ? "Shipped · customer notified" : "Mark as shipped"}
+                {done.has(o.number) ? "Shipped · customer notified" : NEXT_STEP_LABEL[nextPrintStep(o) ?? "shipped"]}
               </Button>
             )}
           </div>

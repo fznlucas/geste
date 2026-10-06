@@ -54,6 +54,11 @@ test("shipping from the board ships the order", async ({ page }) => {
   await expect(column(page, "Packed").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
   await page.getByRole("button", { name: `Move #${INES} to Shipped` }).click();
   await expect(column(page, "Shipped").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
+  // Not scanned by the carrier yet: it can come back to Packed, then leave again.
+  await page.getByRole("button", { name: `Move #${INES} back to Packed` }).click();
+  await expect(column(page, "Packed").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
+  await page.getByRole("button", { name: `Move #${INES} to Shipped` }).click();
+  await expect(column(page, "Shipped").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
   await page.goto("/admin/customers/detail/?id=cus-ines-moreau");
   await expect(page.getByRole("link", { name: new RegExp(`#${INES}`) })).toContainText("Shipped");
 });
