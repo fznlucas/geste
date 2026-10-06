@@ -21,7 +21,7 @@ const zoneOf = (country: string): "FR" | "EU" | "INTL" => (country === "FR" ? "F
  * €10,000 threshold), outside the EU 0; none under the franchise. The books pass `vatRateAt` (src/lib/api/vat.ts).
  */
 export function vatRateOf(country: string, regime: VatRegime): number {
-  return regime === "franchise" ? 0 : country in VAT_RATES ? FR_VAT_RATE : 0;
+  return regime === "franchise" ? 0 : Object.hasOwn(VAT_RATES, country) ? FR_VAT_RATE : 0;
 }
 
 /** How an order was paid, for its fees (fixture and browser orders have no payment row: a standard card). */

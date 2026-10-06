@@ -14,6 +14,6 @@ export const VAT_RATES: Record<string, number> = {
 };
 
 /** VAT included in a VAT-inclusive total at a rate (default: France for France and the EU, 0 elsewhere). */
-export function includedVatCents(totalCents: number, country: string, rate: number = country in VAT_RATES ? FR_VAT_RATE : 0): number {
+export function includedVatCents(totalCents: number, country: string, rate: number = Object.hasOwn(VAT_RATES, country) ? FR_VAT_RATE : 0): number {
   return Math.round(totalCents - totalCents / (1 + rate));
 }
