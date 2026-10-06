@@ -13,6 +13,7 @@ import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStat
 import { ORDERS_THIS_MONTH, copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
 import { markShipped } from "@/lib/client/admin/orders";
+import { simToday } from "@/lib/clock";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -39,7 +40,7 @@ export function OrdersPage() {
   const orders = useAdminQuery(() => getOrders({ search: q || undefined }), [q]);
 
   const exportAll = (rows: Order[]) => {
-    download(`geste-orders-${new Date().toISOString().slice(0, 10)}.csv`, ordersCsv(rows));
+    download(`geste-orders-${simToday()}.csv`, ordersCsv(rows));
     audit({ action: "order.export", target: "orders", summary: `${staff.fullName} exported ${rows.length} orders (CSV)` });
     setExported(true);
   };

@@ -4,7 +4,7 @@
  * gift cards bought at checkout in this browser (local orders) are listed with the mock ones.
  */
 import { AUDIENCES, affiliates, campaigns, giftCards, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
-import { MOCK_NOW } from "@/data/customers";
+import { simNowIso } from "@/lib/clock";
 import { clone } from "./clone";
 import { allCustomers, allOrders, merged } from "./local";
 
@@ -31,7 +31,7 @@ function promoStatus(p: PromoRow, now: string): PromoCode["status"] {
 }
 
 /** Oldest first, as on the board (a new code goes at the end). */
-export async function getPromoCodes(now = MOCK_NOW): Promise<PromoCode[]> {
+export async function getPromoCodes(now = simNowIso()): Promise<PromoCode[]> {
   return clone(
     merged("promo_codes", promoCodes)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))

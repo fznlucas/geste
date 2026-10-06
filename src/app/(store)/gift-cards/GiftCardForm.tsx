@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Field, GiftCardPreview, Input, Segmented, Textarea } from "@/components";
 import { GIFT_CARD_PRESETS } from "@/lib/api";
 import { addToCart } from "@/lib/client";
+import { simToday } from "@/lib/clock";
 import { formatPrice } from "@/lib/format";
 import { duration } from "@/lib/motion";
 import { cn } from "@/lib/cn";
@@ -126,7 +127,7 @@ export function GiftCardForm({ designs }: { designs: Design[] }) {
             options={[{ value: "now", label: "Now" }, { value: "date", label: "On a date" }]}
           />
           {when === "date" && (
-            <Field label="Date"><Input type="date" value={sendOn} min="2026-10-02" onChange={(e) => setSendOn(e.target.value)} /></Field>
+            <Field label="Date"><Input type="date" value={sendOn} min={simToday()} onChange={(e) => setSendOn(e.target.value)} /></Field>
           )}
         </div>
         <Button trailing={added ? "✓" : formatPrice(amount)} onClick={add} fullWidth>{added ? "Added" : "Add to cart"}</Button>

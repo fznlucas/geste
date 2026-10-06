@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MOCK_NOW, setAdminOverlaySource, type AdminOverlay } from "@/lib/api";
+import { setAdminOverlaySource, type AdminOverlay } from "@/lib/api";
+import { simNow } from "@/lib/clock";
 import type { StaffRole } from "@/lib/types";
 import { usePurchases } from "./purchases";
 import { sessionStore } from "./session";
@@ -76,9 +77,14 @@ export function setDemoRole(role: StaffRole) {
 
 // ── Writes ───────────────────────────────────────────────────────────────────
 
-/** Mock "now": never before the mock's now, so a change made today sorts after the mock rows. */
+/**
+ * Time of an admin change: the simulated now (`simNow()`), and never before the last audit line, so
+ * changes keep their order when the clock is pinned (e2e build, `?simNow=`).
+ */
 export function adminNow(): string {
-  return new Date(Math.max(Date.now(), Date.parse(MOCK_NOW))).toISOString();
+  const last = adminStore.get().audit[0]?.at;
+  const lastMs = last ? Date.parse(last) : 0;
+  return new Date(Math.max(simNow().getTime(), Number.isNaN(lastMs) ? 0 : lastMs + 1)).toISOString();
 }
 
 function auditEntry(action: string, target: string, summary: string): AuditEntry {

@@ -6,7 +6,7 @@
  */
 import { asset } from "@/lib/asset";
 import type { Orientation } from "@/lib/pricing";
-import { MOCK_NOW } from "@/data/customers";
+import { simToday, startOfDayParis } from "@/lib/clock";
 import { chartNotes, dailyRevenue, guidesSold30d, last30d, today } from "@/data/dashboard";
 import { clone } from "./clone";
 import { allOrders, allWorks } from "./local";
@@ -77,7 +77,7 @@ export interface Dashboard {
 
 export async function getDashboard(): Promise<Dashboard> {
   // Orders placed in this browser: dated from the mock's today, after every aggregate.
-  const since = `${MOCK_NOW.slice(0, 10)}T00:00:00Z`;
+  const since = startOfDayParis(simToday()).toISOString();
   const fresh = allOrders().filter((o) => o.createdAt >= since && o.status !== "cancelled" && o.status !== "pending");
   const freshCents = fresh.reduce((s, o) => s + o.totalCents, 0);
   const items = fresh.flatMap((o) => o.items);

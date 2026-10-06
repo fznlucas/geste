@@ -5,9 +5,9 @@
  * savePalettes, saveShoppingList, setWorkStatus). Mock: patches in the admin overlay + audit log.
  * The store pages are built at deploy time and do not show these edits (docs/mock-plan.md §6).
  */
-import { MOCK_NOW, formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
+import { formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
 import { formatsOf, mediumFormat, type Orientation, type Proportion } from "@/lib/pricing";
-import { insertRow, patchRow, requireStaff } from "../admin";
+import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
 
 export interface WorkDraft {
   description: string;
@@ -134,7 +134,7 @@ export async function createWork(): Promise<string> {
       seoTitle: `N°${num} — paint it yourself · Geste`,
       seoDescription: "",
       sortOrder: 1000 + n,
-      createdAt: new Date(Math.max(Date.now(), Date.parse(MOCK_NOW))).toISOString(),
+      createdAt: adminNow(),
     },
     { action: "work.create", target: `work:${slug}`, summary: `${staff.fullName} created N°${num} (draft)` },
   );

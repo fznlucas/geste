@@ -2,10 +2,14 @@
  * The 14 customers of AdminCustomers. Cities come from AdminFulfilment where the boards disagree
  * (the shipping prices of the orders depend on them); the country is the address country.
  */
+import { simNowIso } from "@/lib/clock";
 import type { Address, ProfileRow } from "./types";
 
-/** "Now" of the mock: every relative date (dashboard ranges, "today") is computed from here. */
-export const MOCK_NOW = "2026-10-02T12:00:00Z";
+/**
+ * @deprecated Read `simNow()` / `simToday()` from `@/lib/clock` (docs/admin-v2/01 §1). Kept exported so
+ * nothing that imports it breaks; it is the clock at module load, and nothing in the app reads it any more.
+ */
+export const MOCK_NOW = simNowIso();
 
 function customer(slug: string, fullName: string, address: Omit<Address, "name">, opts: { newsletter: boolean; since: string; phone?: string }): ProfileRow {
   return {

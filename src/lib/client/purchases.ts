@@ -1,6 +1,7 @@
 "use client";
 
-import { DEMO_CUSTOMER_ID, MOCK_NOW, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput } from "@/lib/api";
+import { DEMO_CUSTOMER_ID, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput } from "@/lib/api";
+import { simNow } from "@/lib/clock";
 import { clearCart } from "./cart";
 import { signIn } from "./session";
 import { createPersistentStore, isRecord, useStore } from "./store";
@@ -64,12 +65,12 @@ export async function placeOrder(req: PlaceOrderRequest): Promise<string> {
 }
 
 /**
- * Payment time of a mock order: never before the mock's "now" (its orders are dated up to
- * Oct 2, 2026) and after the previous local order, so a new purchase always tops Orders and Library.
+ * Payment time of a mock order: the simulated now (`simNow()`), and a minute after the previous local
+ * order, so a new purchase always tops Orders and Library even when the clock is pinned.
  */
 function orderTime(): string {
   const last = purchasesStore.get().orders.reduce((m, o) => Math.max(m, Date.parse(o.createdAt)), 0);
-  return new Date(Math.max(Date.now(), Date.parse(MOCK_NOW), last + 60_000)).toISOString();
+  return new Date(Math.max(simNow().getTime(), last + 60_000)).toISOString();
 }
 
 /** Re-renders when a purchase is recorded (e.g. in another tab). */

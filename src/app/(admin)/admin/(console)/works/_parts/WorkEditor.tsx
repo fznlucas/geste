@@ -17,6 +17,7 @@ import {
 import { getAdminWork, type AdminWorkDetail, type LevelKey, type WorkStatus } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { STATUS_LABEL, markStudioTested, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
+import { addDays, simToday } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
 import { BUNDLE_DISCOUNT_PCT, CANVASES, LEVELS, SIZES, LEVEL_ORDER, PROPORTION_ORDER, SIGNATURE_CENTS, defaultLevel, estimatedTime, formatLabel, formatsOf, printCm, type FormatKey, type Orientation, type Proportion } from "@/lib/pricing";
@@ -64,8 +65,8 @@ const toForm = (w: AdminWorkDetail): Form => ({
   shoppingList: w.shoppingList.map((i) => ({ position: i.position, url: i.url })),
   editions: w.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: String(e.editionSize), price: money(e.priceCents) })),
   status: w.status,
-  // A new schedule defaults to four days after the mock's today (AdminCatalog "Scheduled · Oct 6").
-  publishAt: (w.publishAt ?? "2026-10-06T08:00:00Z").slice(0, 10),
+  // A new schedule defaults to four days after today (AdminCatalog "Scheduled · Oct 6" on Oct 2).
+  publishAt: (w.publishAt ?? addDays(simToday(), 4)).slice(0, 10),
 });
 
 export function WorkEditorPage({ slug }: { slug: string }) {
@@ -154,7 +155,7 @@ function Editor({ work }: { work: AdminWorkDetail }) {
           </Select>
           {form.status === "scheduled" && (
             <Field label="Publish on">
-              <Input type="date" value={form.publishAt} min="2026-10-02" onChange={(e) => edit({ publishAt: e.target.value })} />
+              <Input type="date" value={form.publishAt} min={simToday()} onChange={(e) => edit({ publishAt: e.target.value })} />
             </Field>
           )}
           {blocked && <p className="text-danger">Complete the checklist before going live.</p>}

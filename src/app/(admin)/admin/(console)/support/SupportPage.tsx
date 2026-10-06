@@ -9,21 +9,22 @@
 import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { AdminTabs, Button, MessageList, PillButton, Textarea, ThreadListItem, UnderLink, useToast } from "@/components";
-import { MOCK_NOW, getCustomer, getSavedReplies, getSupportThread, getSupportThreads, type SupportThread } from "@/lib/api";
+import { getCustomer, getSavedReplies, getSupportThread, getSupportThreads, type SupportThread } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { markThreadRead, reply, setThreadStatus, startThread } from "@/lib/client/admin/support";
 import { cn } from "@/lib/cn";
+import { simNow } from "@/lib/clock";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
 type Tab = "Open" | "Done";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** "09:12" today, "Yesterday", "Mon" this week, "Sept 24" before (mock now, UTC). */
+/** "09:12" today, "Yesterday", "Mon" this week, "Sept 24" before (simulated now, UTC). */
 function inboxWhen(iso: string): string {
   const d = new Date(iso);
   const day = (x: Date) => Math.floor(x.getTime() / 86_400_000);
-  const diff = day(new Date(MOCK_NOW)) - day(d);
+  const diff = day(simNow()) - day(d);
   if (diff <= 0) return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
   if (diff === 1) return "Yesterday";
   if (diff < 7) return DAYS[d.getUTCDay()]!;

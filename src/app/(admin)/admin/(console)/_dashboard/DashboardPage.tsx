@@ -10,6 +10,7 @@ import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
 import { getDashboard, getLowEdition, getOrders, type Dashboard, type Order } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
+import { parisHour } from "@/lib/clock";
 import { formatPrice } from "@/lib/format";
 import type { StaffRole, StatusState } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -21,7 +22,7 @@ const orderHref = (o: Order) => `/admin/orders/detail/?number=${o.number}`;
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function greeting(name: string) {
-  const h = new Date().getHours();
+  const h = parisHour();
   return `Good ${h < 12 ? "morning" : h < 18 ? "afternoon" : "evening"}, ${name}`;
 }
 
