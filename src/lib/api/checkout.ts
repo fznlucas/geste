@@ -10,6 +10,7 @@ import { includedVatCents } from "@/data/tax";
 import type { EntitlementRow, OrderItemRow, PrintCopyRow } from "@/data/types";
 import { works } from "@/data/works";
 import { priceCart } from "./cart";
+import { ORDER_NUMBER_START } from "@/sim/config";
 import { allEntitlements, allOrders, type LocalRows } from "./local";
 import type { Address, StoredCartLine } from "./types";
 
@@ -41,10 +42,9 @@ export class CheckoutError extends Error {
   }
 }
 
-/** "GS-2042": one more than the highest order number, mock or local. */
+/** The number the next order gets: orders are numbered in payment order (GS-1001 on launch day). */
 export function nextOrderNumber(): string {
-  const max = Math.max(...allOrders().map((o) => Number.parseInt(o.number.slice(3), 10) || 0));
-  return `GS-${max + 1}`;
+  return `GS-${ORDER_NUMBER_START + allOrders().length}`;
 }
 
 /** Builds the rows the webhook would write. Throws `CheckoutError` for an empty cart or a sold-out line. */
@@ -56,7 +56,8 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
   if (payable.length === 0) throw new CheckoutError("empty", "Your cart is empty.");
 
   const number = nextOrderNumber();
-  const n = number.slice(3);
+  // Ids of this browser's orders follow their own sequence; the number is given at read time.
+  const n = String(allOrders().filter((o) => o.id.startsWith("order-local-")).length + 1);
   const orderId = `order-local-${n}`;
   const items: OrderItemRow[] = [];
   const copies: PrintCopyRow[] = [];
@@ -84,7 +85,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
       });
       const workPart = line.edition.id.split("-")[1];
       for (const num of numbers) {
-        copies.push({ id: `copy-${line.edition.id}-${num}`, editionId: line.edition.id, number: num, status: "sold", orderItemId: id, fulfilment: "to_print", certificateNo: `C-${workPart}-${String(num).padStart(3, "0")}`, printedAt: null });
+        copies.push({ id: `copy-local-${n}-${line.edition.id}-${num}`, editionId: line.edition.id, number: num, status: "sold", orderItemId: id, fulfilment: "to_print", certificateNo: `C-${workPart}-${String(num).padStart(3, "0")}`, printedAt: null });
       }
       return;
     }

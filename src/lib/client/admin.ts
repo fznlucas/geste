@@ -98,11 +98,15 @@ export interface AuditInput {
   summary: string;
 }
 
-/** Changes columns of one row (e.g. `patchRow("print_copies", id, { fulfilment: "packed" }, audit)`). */
+/**
+ * Changes columns of one row (e.g. `patchRow("print_copies", id, { fulfilment: "packed" }, audit)`).
+ * `_at` keeps when the row was first changed: on a simulated order it is when Lucas took it over.
+ */
 export function patchRow(table: string, id: string, changes: Record<string, unknown>, audit?: AuditInput) {
+  const firstAt = adminStore.get().patches[table]?.[id]?._at ?? adminNow();
   adminStore.set((s) => ({
     ...s,
-    patches: { ...s.patches, [table]: { ...s.patches[table], [id]: { ...s.patches[table]?.[id], ...changes } } },
+    patches: { ...s.patches, [table]: { ...s.patches[table], [id]: { ...s.patches[table]?.[id], ...changes, _at: firstAt } } },
     audit: audit ? [auditEntry(audit.action, audit.target, audit.summary), ...s.audit] : s.audit,
   }));
 }

@@ -70,6 +70,10 @@ export async function getEntitlement(id: string, customerId: string): Promise<{ 
 }
 
 /** Every entitlement id the reader can open: the mock ones and `local-<guideId>` for each published guide (static export params). */
+/**
+ * Reader pages built at deploy time: the fixture library and `local-<guideId>` for purchases in this
+ * browser. Simulated customers never sign in here, so their guides get no page.
+ */
 export async function getEntitlementIds(): Promise<string[]> {
-  return [...allEntitlements().map((e) => e.id), ...guides.filter((g) => g.currentVersion > 0).map((g) => `local-${g.id}`)];
+  return [...allEntitlements().filter((e) => !e.id.startsWith("ent-s")).map((e) => e.id), ...guides.filter((g) => g.currentVersion > 0).map((g) => `local-${g.id}`)];
 }

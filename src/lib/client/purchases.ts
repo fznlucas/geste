@@ -65,12 +65,14 @@ export async function placeOrder(req: PlaceOrderRequest): Promise<string> {
 }
 
 /**
- * Payment time of a mock order: the simulated now (`simNow()`), and a minute after the previous local
- * order, so a new purchase always tops Orders and Library even when the clock is pinned.
+ * Payment time of a mock order: the simulated now, just before its minute starts (where the simulated
+ * rows are cut, so no generated order can later slip in before it and change its number), and a minute
+ * after the previous local order, so a new purchase always tops Orders and Library.
  */
 function orderTime(): string {
   const last = purchasesStore.get().orders.reduce((m, o) => Math.max(m, Date.parse(o.createdAt)), 0);
-  return new Date(Math.max(simNow().getTime(), last + 60_000)).toISOString();
+  const cut = Math.floor(simNow().getTime() / 60_000) * 60_000 - 1;
+  return new Date(Math.max(cut, last + 60_000)).toISOString();
 }
 
 /** Re-renders when a purchase is recorded (e.g. in another tab). */

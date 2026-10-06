@@ -4,16 +4,19 @@ import { passkeys, passwordChangedAt } from "@/data/security";
 import type { ProfileRow } from "@/data/types";
 import { clone } from "./clone";
 import { mapLibraryItem } from "./library";
-import { allCustomers, allEntitlements, allOrders, allReviews } from "./local";
+import { allCustomers, allEntitlements, allReviews, customerById, ordersOfCustomer } from "./local";
 import { mapOrder } from "./orders";
 import { mapReview } from "./reviews";
 import type { AccountSecurity, CustomerDetail, CustomerSegment, CustomerSummary } from "./types";
+
+/** Tag of a simulated customer's first source (fixtures keep their board tags). */
+const SOURCE_LABEL: Record<string, string> = { tiktok: "TikTok", instagram: "Instagram", direct: "Direct", google: "Google", newsletter: "Newsletter", pinterest: "Pinterest", referral: "Friend" };
 
 /** The store ships from France: "Abroad" is any other country. */
 const HOME_COUNTRY = "FR";
 
 function mapCustomer(row: ProfileRow): CustomerSummary {
-  const paid = allOrders().filter((o) => o.userId === row.id && o.status !== "refunded" && o.status !== "cancelled" && o.status !== "pending");
+  const paid = ordersOfCustomer(row.id).filter((o) => o.status !== "refunded" && o.status !== "cancelled" && o.status !== "pending");
   return {
     id: row.id,
     fullName: row.fullName,
@@ -49,20 +52,20 @@ export async function getCustomers(query: { segment?: CustomerSegment; search?: 
 }
 
 export async function getCustomer(id: string): Promise<CustomerDetail | null> {
-  const row = allCustomers().find((c) => c.id === id);
+  const row = customerById(id);
   if (!row) return null;
   return clone({
     ...mapCustomer(row),
     phone: row.phone,
     address: row.defaultAddress,
-    orders: allOrders().filter((o) => o.userId === id).map(mapOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    orders: ordersOfCustomer(id).map(mapOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     // Newest purchase first; within one order, guides in progress or not started before finished ones.
     library: allEntitlements()
       .filter((e) => e.userId === id)
       .map(mapLibraryItem)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || Number(a.state === "finished") - Number(b.state === "finished")),
     reviews: allReviews().filter((r) => r.userId === id).map(mapReview),
-    source: CUSTOMER_SOURCES[id] ?? null,
+    source: CUSTOMER_SOURCES[id] ?? (row.source ? (SOURCE_LABEL[row.source] ?? null) : null),
     passkeyDevices: passkeys.filter((p) => p.userId === id).map((p) => p.device),
   });
 }

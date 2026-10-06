@@ -3,30 +3,32 @@
  * use and will stay the same on Supabase. Isomorphic: callable from server and client components.
  */
 import { asset } from "@/lib/asset";
-import { CANVASES, LEVELS, canvasArea, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind, type WorkPricing } from "@/lib/pricing";
+import { CANVASES, LEVELS, canvasArea, PRINT_SIZES, PRINT_SIZE_ORDER, canvasCm, defaultLevel, estimatedTime, formatLabel, formatsOf, guidePriceCents, imageRatio, printCm, quantityLabel, type FormatKey, type LevelKey, type Orientation, type PrintSize, type Proportion, type QuantityKind } from "@/lib/pricing";
 import type { Palette as ConfiguratorPalette, Work as WorkCardData } from "@/lib/types";
-import { orders } from "@/data/orders";
 import { guides } from "@/data/guides";
 import type { WorkRow } from "@/data/types";
-import { HISTORICAL_SALES, HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/data/works";
+import { HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/data/works";
 import { clone } from "./clone";
 import { getGuideEditor } from "./guides";
-import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, inserted, localSoldCount, patched } from "./local";
+import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, editionSoldCount, inserted, patched } from "./local";
 import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorkStatus, WorksQuery } from "./types";
 
-/** What the price of a work's guide depends on: its Signature flag and its own format prices. */
-export function workPricing(row: Pick<WorkRow, "id" | "signature">): WorkPricing {
-  return {
-    signature: row.signature,
-    formatCents: Object.fromEntries(workFormats.filter((f) => f.workId === row.id).map((f) => [f.format, f.guidePriceCents])),
-  };
-}
+import { minGuidePriceCents, workPricing } from "./price-lines";
 
-/** Cheapest guide of a work: its cheapest active format ("from $15"; a Signature work from $21). */
-export function minGuidePriceCents(workId: string): number {
-  const row = works.find((w) => w.id === workId)!;
-  const pricing = workPricing(row);
-  return Math.min(...workFormats.filter((f) => f.workId === workId && f.active).map((f) => guidePriceCents(f.format, pricing)));
+export { minGuidePriceCents, workPricing };
+
+/** All-time guides sold per work, every source (refunded and cancelled orders left out). */
+let soldMemo: { orders: ReturnType<typeof allOrders>; counts: Map<string, number> } | null = null;
+function guidesSold(): Map<string, number> {
+  const orders = allOrders();
+  if (soldMemo?.orders === orders) return soldMemo.counts;
+  const counts = new Map<string, number>();
+  for (const o of orders) {
+    if (o.status === "refunded" || o.status === "cancelled" || o.status === "pending") continue;
+    for (const i of o.items) if (i.kind === "guide" && i.workId) counts.set(i.workId, (counts.get(i.workId) ?? 0) + 1);
+  }
+  soldMemo = { orders, counts };
+  return counts;
 }
 
 export function mapWork(row: WorkRow): CatalogWork {
@@ -49,10 +51,7 @@ export function mapWork(row: WorkRow): CatalogWork {
       };
     });
   const card = formats.find((f) => f.format === row.defaultFormat)!;
-  const sold = orders
-    .filter((o) => o.status !== "refunded" && o.status !== "cancelled")
-    .flatMap((o) => o.items)
-    .filter((i) => i.kind === "guide" && i.workId === row.id).length;
+  const sold = guidesSold().get(row.id) ?? 0;
   return {
     id: row.id,
     number: row.number,
@@ -83,7 +82,7 @@ export function mapWork(row: WorkRow): CatalogWork {
     minPriceCents: minGuidePriceCents(row.id),
     levelLabel: card.levelLabel,
     duration: card.duration,
-    soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
+    soldCount: sold,
   };
 }
 
@@ -360,7 +359,7 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     signature: !!row.signature,
     formatLabel: formatLabel(defaultFormat, row.orientation ?? "portrait"),
     levelLabel: LEVELS[baseLevel].label,
-    soldCount: (HISTORICAL_SALES[row.slug] ?? 0) + sold,
+    soldCount: sold,
     isDraftCreated,
     editorHref: isDraftCreated ? `/admin/works/draft?slug=${row.slug}` : `/admin/works/${row.slug}`,
   };
@@ -402,7 +401,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
     const e = editionRows.find((x) => x.size === size);
     const dimensions = printCm(size, work.orientation);
     return e
-      ? { size, dimensions, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: e.soldCount + localSoldCount(e.id) }
+      ? { size, dimensions, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: editionSoldCount(e.id) }
       : { size, dimensions, editionId: null, editionSize: PRINT_SIZES[size].editionSize, priceCents: PRINT_SIZES[size].priceCents, open: false, sold: 0 };
   });
 

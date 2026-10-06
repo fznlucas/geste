@@ -73,7 +73,7 @@ function CustomerRow({ c }: { c: CustomerSummary }) {
   return (
     <AdminRow cols={COLS} className="relative hover:bg-surface-hover has-[a:focus-visible]:outline has-[a:focus-visible]:outline-1 has-[a:focus-visible]:outline-fg">
       <span role="cell">
-        <Link href={`/admin/customers/${c.id}`} className="outline-none after:absolute after:inset-0">{c.fullName}</Link>
+        <Link href={`/admin/customers/detail/?id=${c.id}`} className="outline-none after:absolute after:inset-0">{c.fullName}</Link>
         {c.deletionScheduledAt && <span className="text-fg-muted"> · deletion scheduled</span>}
       </span>
       <span role="cell" className="truncate text-fg-muted">{c.email}</span>

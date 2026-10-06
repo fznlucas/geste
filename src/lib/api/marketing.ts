@@ -3,10 +3,10 @@
  * calendar. Promo codes and campaigns created or changed in this browser come from the admin overlay;
  * gift cards bought at checkout in this browser (local orders) are listed with the mock ones.
  */
-import { AUDIENCES, affiliates, campaigns, giftCards, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
+import { AUDIENCES, affiliates, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
 import { simNowIso } from "@/lib/clock";
 import { clone } from "./clone";
-import { allCustomers, allOrders, merged } from "./local";
+import { allCampaigns, allCustomers, allGiftCards, allOrders, merged, orderNumberOf } from "./local";
 
 export type { PromoKind, PromoScope } from "@/data/marketing";
 
@@ -74,7 +74,8 @@ const localCode = (itemId: string) => {
 /** Newest first: gift cards bought in this browser, then the mock ones in board order. */
 export async function getGiftCards(): Promise<GiftCard[]> {
   const orders = allOrders();
-  const known = new Set(giftCards.map((g) => g.purchaseOrderId).filter(Boolean));
+  const cards = allGiftCards();
+  const known = new Set(cards.map((g) => g.purchaseOrderId).filter(Boolean));
   const local: GiftCardRow[] = orders
     .filter((o) => o.id.startsWith("order-local-") && !known.has(o.id))
     .flatMap((o) =>
@@ -95,14 +96,14 @@ export async function getGiftCards(): Promise<GiftCard[]> {
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return clone(
-    [...local, ...giftCards].map((g) => ({
+    [...local, ...[...cards].sort((a, b) => b.createdAt.localeCompare(a.createdAt))].map((g) => ({
       id: g.id,
       code: g.code,
       fromTo: `${g.senderName} → ${g.recipientName ?? "by email"}`,
       amountCents: g.initialCents,
       balanceCents: g.balanceCents,
       ...giftStatus(g),
-      orderNumber: orders.find((o) => o.id === g.purchaseOrderId)?.number ?? null,
+      orderNumber: g.purchaseOrderId ? orderNumberOf(g.purchaseOrderId) : null,
     })),
   );
 }
@@ -122,7 +123,7 @@ export interface Campaign {
 }
 
 export async function getCampaigns(): Promise<{ draft: Campaign | null; past: Campaign[]; audiences: typeof AUDIENCES }> {
-  const rows = merged("campaigns", campaigns as Array<CampaignRow & { testSentAt?: string | null }>).map((c) => ({
+  const rows = (allCampaigns() as Array<CampaignRow & { testSentAt?: string | null }>).map((c) => ({
     id: c.id,
     subject: c.subject,
     body: c.bodyMd,
@@ -134,7 +135,8 @@ export async function getCampaigns(): Promise<{ draft: Campaign | null; past: Ca
     openRate: c.openRate,
     clickRate: c.clickRate,
   }));
-  return clone({ draft: rows.find((c) => !c.sentAt) ?? null, past: rows.filter((c) => c.sentAt).sort((a, b) => b.sentAt!.localeCompare(a.sentAt!)), audiences: AUDIENCES });
+  // The draft: a letter neither sent nor scheduled first (the October one), else the next scheduled.
+  return clone({ draft: rows.find((c) => !c.sentAt && !c.scheduledAt) ?? rows.find((c) => !c.sentAt) ?? null, past: rows.filter((c) => c.sentAt).sort((a, b) => b.sentAt!.localeCompare(a.sentAt!)), audiences: AUDIENCES });
 }
 
 export async function getAffiliates() {

@@ -1,12 +1,12 @@
 /** Support inbox (AdminSupport): threads, messages, saved replies. */
-import { savedReplies, supportMessages } from "@/data/support";
+import { savedReplies } from "@/data/support";
 import type { SupportMessageRow, SupportThreadRow } from "@/data/types";
 import { clone } from "./clone";
-import { allCustomers, allOrders, allSupportThreads, merged } from "./local";
+import { allCustomers, allOrders, allSupportMessages, allSupportThreads, merged } from "./local";
 import type { SavedReply, SupportThread, SupportThreadDetail, ThreadStatus } from "./types";
 
 /** Mock messages + replies sent from this browser, oldest first. */
-const allMessages = () => merged<SupportMessageRow>("support_messages", supportMessages).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+const allMessages = () => merged<SupportMessageRow>("support_messages", allSupportMessages()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
 export function mapThread(row: SupportThreadRow): SupportThread {
   const messages = allMessages().filter((m) => m.threadId === row.id);

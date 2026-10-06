@@ -142,7 +142,7 @@ function DesktopOrders({ orders, q, onExport, exported }: { orders: Order[] | un
             </span>
             <span role="cell" className="text-fg-muted">{adminDate(o.createdAt)}</span>
             <span role="cell" className="min-w-0 truncate">
-              <Link href={`/admin/customers/${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link>
+              <Link href={`/admin/customers/detail/?id=${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link>
             </span>
             <span role="cell" className="min-w-0 truncate text-fg-muted">{o.summary}</span>
             <span role="cell" className="tabular-nums">{formatPrice(o.totalCents)}</span>

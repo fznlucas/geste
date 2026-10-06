@@ -9,8 +9,8 @@ import type { OrderRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
 import { VAT_RATES } from "@/data/tax";
-import { allCustomers, allEntitlements, allOrders, allPrintCopies, allRefunds, allShipments, allSupportThreads } from "./local";
-import { inOrderTab, ordersThisMonth } from "@/lib/metrics/orders";
+import { allOrders, copiesOfItem, customerById, entitlementOfItem, orderByNumber, ordersOfCustomer, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
+import { inOrderTab } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
 import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrderTracking, RefundOption, TrackingStep } from "./types";
 
@@ -29,7 +29,7 @@ function displayStatus(row: OrderRow): OrderDisplayStatus {
   if (row.status === "cancelled") return "Cancelled";
   if (row.status === "refunded") return "Refunded";
   if (row.status === "partially_refunded") return "Partly refunded";
-  if (allSupportThreads().some((t) => t.orderId === row.id && t.category === "refund" && t.status === "open")) return "Refund asked";
+  if (threadsOfOrder(row.id).some((t) => t.category === "refund" && t.status === "open")) return "Refund asked";
   const prints = row.items.filter((i) => i.kind === "print").map((i) => itemFulfilment(i.id, i.fulfilment));
   if (prints.length === 0) return "Delivered";
   return PRINT_STATUS.find(([f]) => prints.includes(f))?.[1] ?? "Delivered";
@@ -37,21 +37,19 @@ function displayStatus(row: OrderRow): OrderDisplayStatus {
 
 /** A print line follows its numbered copies (moved on the fulfilment board); the least advanced wins. */
 function itemFulfilment(itemId: string, fallback: FulfilmentStatus): FulfilmentStatus {
-  const copies = allPrintCopies().filter((c) => c.orderItemId === itemId);
+  const copies = copiesOfItem(itemId);
   if (!copies.length) return fallback;
   return PRINT_STATUS.find(([f]) => copies.some((c) => c.fulfilment === f))?.[0] ?? fallback;
 }
 
 
 export function mapOrder(row: OrderRow): Order {
-  const customer = allCustomers().find((c) => c.id === row.userId)!;
-  const shipment = allShipments().find((s) => s.orderId === row.id);
-  const copies = allPrintCopies();
-  const entitlements = allEntitlements();
+  const customer = customerById(row.userId)!;
+  const shipment = shipmentOfOrder(row.id);
   const items = row.items.map((i) => {
-    const ent = i.kind === "guide" ? entitlements.find((e) => e.orderItemId === i.id) : undefined;
+    const ent = i.kind === "guide" ? entitlementOfItem(i.id) : undefined;
     const work = works.find((w) => w.id === i.workId);
-    const itemCopies = copies.filter((c) => c.orderItemId === i.id).sort((a, b) => a.number - b.number);
+    const itemCopies = [...copiesOfItem(i.id)].sort((a, b) => a.number - b.number);
     return {
       id: i.id,
       kind: i.kind,
@@ -105,8 +103,7 @@ export function mapOrder(row: OrderRow): Order {
     risk: row.risk,
     paidAt: row.paidAt,
     createdAt: row.createdAt,
-    refunds: allRefunds()
-      .filter((r) => r.orderId === row.id)
+    refunds: refundsOfOrder(row.id)
       .map(({ id, amountCents, reason, restock, revokeAccess, createdAt }) => ({ id, amountCents, reason, restock, revokeAccess, createdAt })),
     shipment: shipment
       ? { id: shipment.id, labelCreatedAt: shipment.labelCreatedAt ?? null, carrier: shipment.carrier, trackingNo: shipment.trackingNo, parcel: shipment.parcel, status: shipment.status, shippedAt: shipment.shippedAt, inTransitAt: shipment.inTransitAt, outForDeliveryAt: shipment.outForDeliveryAt, deliveredAt: shipment.deliveredAt }
@@ -121,7 +118,7 @@ function timeline(order: Order): OrderEvent[] {
   else events.push({ at: order.paidAt, label: "Receipt emailed" });
   for (const item of order.items.filter((i) => i.kind === "gift_card")) events.push({ at: order.paidAt, label: `${item.title} emailed` });
   for (const item of order.items.filter((i) => i.kind === "print")) {
-    const copy = allPrintCopies().find((c) => c.orderItemId === item.id);
+    const copy = copiesOfItem(item.id)[0];
     const edition = printEditions.find((e) => e.id === item.editionId);
     if (copy?.printedAt && edition) events.push({ at: copy.printedAt, label: `${item.title} ${copy.number}/${edition.editionSize} printed and signed` });
   }
@@ -133,7 +130,7 @@ function timeline(order: Order): OrderEvent[] {
   if (order.shipment?.deliveredAt) events.push({ at: order.shipment.deliveredAt, label: "Delivered" });
   for (const r of order.refunds) events.push({ at: r.createdAt, label: `Refunded ${formatPrice(r.amountCents)} · ${r.reason}` });
   // Open threads only: a message waiting for an answer belongs on the order; answered ones stay in the support inbox.
-  for (const t of allSupportThreads().filter((t) => t.orderId === order.id && t.status === "open")) events.push({ at: t.createdAt, label: `Customer wrote: ${t.subject}` });
+  for (const t of threadsOfOrder(order.id).filter((t) => t.status === "open")) events.push({ at: t.createdAt, label: `Customer wrote: ${t.subject}` });
   return events.sort((a, b) => a.at.localeCompare(b.at));
 }
 
@@ -155,24 +152,24 @@ export async function getOrders(query: OrdersQuery = {}): Promise<Order[]> {
 
 /** Accepts "GS-2041", "#GS-2041" or "2041". */
 export async function getOrder(number: string): Promise<OrderDetail | null> {
-  const row = allOrders().find((o) => o.number === normalizeNumber(number));
+  const row = orderByNumber(normalizeNumber(number));
   if (!row) return null;
   const order = mapOrder(row);
-  const history = allOrders().filter((o) => o.userId === row.userId && o.createdAt <= row.createdAt && o.status !== "refunded");
+  const history = ordersOfCustomer(row.userId).filter((o) => o.createdAt <= row.createdAt && o.status !== "refunded");
   return clone({
     ...order,
     timeline: timeline(order),
     customerOrdersCount: history.length,
     customerLifetimeCents: history.reduce((s, o) => s + o.totalCents, 0),
-    customerPhone: allCustomers().find((c) => c.id === row.userId)?.phone ?? null,
+    customerPhone: customerById(row.userId)?.phone ?? null,
     vatLabel: vatLabel(row),
-    supportThreads: allSupportThreads().filter((t) => t.orderId === row.id).map(mapThread),
+    supportThreads: threadsOfOrder(row.id).map(mapThread),
   });
 }
 
 /** "VAT included (FR 20%)": the country of the shipping address, else the customer's. */
 function vatLabel(row: OrderRow): string | null {
-  const country = row.shippingAddress?.country ?? allCustomers().find((c) => c.id === row.userId)?.defaultAddress.country ?? "";
+  const country = row.shippingAddress?.country ?? customerById(row.userId)?.defaultAddress.country ?? "";
   const rate = VAT_RATES[country];
   return rate && row.taxCents > 0 ? `VAT included (${country} ${Math.round(rate * 1000) / 10}%)` : null;
 }
@@ -183,9 +180,9 @@ function vatLabel(row: OrderRow): string | null {
  * appears only when the order has that kind of line.
  */
 export async function getRefundOptions(number: string): Promise<RefundOption[]> {
-  const row = allOrders().find((o) => o.number === normalizeNumber(number));
+  const row = orderByNumber(normalizeNumber(number));
   if (!row) return [];
-  const refunded = allRefunds().filter((r) => r.orderId === row.id).reduce((s, r) => s + r.amountCents, 0);
+  const refunded = refundsOfOrder(row.id).reduce((s, r) => s + r.amountCents, 0);
   const left = Math.max(0, row.totalCents - refunded);
   // Net of the bundle discount: what the customer paid for those lines.
   const sum = (kind: string) => row.items.filter((i) => i.kind === kind).reduce((s, i) => s + i.unitPriceCents * i.quantity - (i.discountCents ?? 0), 0);
@@ -197,8 +194,11 @@ export async function getRefundOptions(number: string): Promise<RefundOption[]> 
   return clone(options.filter((o) => o.amountCents > 0));
 }
 
-/** @deprecated Read `ordersThisMonth()` from `@/lib/metrics` (one source per number). Kept so existing imports work. */
-export const ORDERS_THIS_MONTH = ordersThisMonth();
+/**
+ * @deprecated The board's September figure, kept so existing imports work; nothing reads it. The page
+ * shows `ordersThisMonth()` from `@/lib/metrics` (paid orders of the current Paris month).
+ */
+export const ORDERS_THIS_MONTH = 187;
 
 // ── Customer side (Account › Orders, confirmation, tracking) ────────────────
 
@@ -245,7 +245,7 @@ export function customerOrderStatus(o: Order): string {
  * come from the mock shipments; later the Boxtal webhook writes them.
  */
 export async function getOrderTracking(number: string): Promise<OrderTracking | null> {
-  const row = allOrders().find((o) => o.number === normalizeNumber(number));
+  const row = orderByNumber(normalizeNumber(number));
   if (!row) return null;
   const o = mapOrder(row);
   const prints = o.items.filter((i) => i.kind === "print");

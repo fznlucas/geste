@@ -4,13 +4,13 @@ import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
-import { allCustomers, allOrders, allPrintCopies, allPrintEditions, localSoldCount } from "./local";
+import { allPrintCopies, allPrintEditions, customerById, editionSoldCount, orderOfItem } from "./local";
 import type { FulfilmentStatus, PrintCopy, PrintEdition } from "./types";
 
 function mapEdition(row: PrintEditionRow): PrintEdition {
   const work = works.find((w) => w.id === row.workId)!;
-  // Mock: the stored count + copies bought in this browser (the database counts print_copies).
-  const sold = row.soldCount + localSoldCount(row.id);
+  // Counted from the copies of every source: pre-launch, fixtures, simulated, this browser (print_copies).
+  const sold = editionSoldCount(row.id);
   const left = Math.max(0, row.editionSize - sold - row.reservedCount);
   return {
     id: row.id,
@@ -51,14 +51,15 @@ export async function getEdition(id: string): Promise<PrintEdition | null> {
 /** Numbered copies sold (fulfilment board, certificate log), local checkout copies included. Newest order first. */
 export async function getPrintCopies(query: { fulfilment?: FulfilmentStatus | FulfilmentStatus[] } = {}): Promise<PrintCopy[]> {
   const wanted = query.fulfilment === undefined ? null : ([] as FulfilmentStatus[]).concat(query.fulfilment);
+  const editions = new Map(allPrintEditions().map((e) => [e.id, e]));
   return clone(
     allPrintCopies()
       .filter((c) => !wanted || wanted.includes(c.fulfilment))
       .map((c) => {
-        const edition = allPrintEditions().find((e) => e.id === c.editionId)!;
+        const edition = editions.get(c.editionId)!;
         const work = works.find((w) => w.id === edition.workId)!;
-        const order = allOrders().find((o) => o.items.some((i) => i.id === c.orderItemId));
-        const customer = order ? allCustomers().find((p) => p.id === order.userId) : undefined;
+        const order = c.orderItemId ? orderOfItem(c.orderItemId) : undefined;
+        const customer = order ? customerById(order.userId) : undefined;
         return {
           id: c.id,
           editionId: c.editionId,

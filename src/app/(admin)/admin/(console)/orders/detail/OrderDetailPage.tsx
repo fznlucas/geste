@@ -241,7 +241,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
       <div className="col-span-4 flex flex-col gap-16">
         <AdminBox>
           <AdminTitle>Customer</AdminTitle>
-          <UnderLink href={`/admin/customers/${o.customer.id}`} className="self-start">{o.customer.fullName}</UnderLink>
+          <UnderLink href={`/admin/customers/detail/?id=${o.customer.id}`} className="self-start">{o.customer.fullName}</UnderLink>
           <span>
             {o.customer.email}
             {o.customerPhone && (

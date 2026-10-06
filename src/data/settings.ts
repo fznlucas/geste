@@ -42,12 +42,13 @@ export const integrations = [
 ];
 
 /**
- * `audit_log` before this browser's own actions: the board's four lines, dated and numbered like the
- * mock rows they describe (GS-2033 shipped Sept 29, GS-2025 refunded Sept 24: docs/decisions.md).
+ * `audit_log` before this browser's own actions: the board's four lines, dated like the mock rows they
+ * describe (order-2033 shipped Sept 29, order-2025 refunded Sept 24: docs/decisions.md). Orders are
+ * referred to by id, `{order:<id>}`: their number is given at read time (docs/admin-v2/01 §2).
  */
 export const pastAudit = [
   { id: "audit-mock-4", at: "2026-10-02T09:02:00Z", summary: "Lucas edited guide N°03 step 2c (v4)" },
   { id: "audit-mock-3", at: "2026-10-01T08:15:00Z", summary: "Login from Lyon · Mac · passkey" },
-  { id: "audit-mock-2", at: "2026-09-29T16:00:00Z", summary: "Lucas marked #GS-2033 as shipped" },
-  { id: "audit-mock-1", at: "2026-09-24T17:00:00Z", summary: "Lucas refunded #GS-2025 · $35" },
+  { id: "audit-mock-2", at: "2026-09-29T16:00:00Z", summary: "Lucas marked {order:order-2033} as shipped" },
+  { id: "audit-mock-1", at: "2026-09-24T17:00:00Z", summary: "Lucas refunded {order:order-2025} · $25" },
 ];

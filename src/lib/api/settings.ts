@@ -2,7 +2,7 @@
 import { integrations, pastAudit, paymentProviders, securitySettings, shippingZones, storeSettings } from "@/data/settings";
 import { staff } from "@/data/staff";
 import { clone } from "./clone";
-import { inserted, patched } from "./local";
+import { inserted, orderNumberOf, patched } from "./local";
 import type { StaffRole } from "./types";
 
 export type { SettingStatus } from "@/data/settings";
@@ -54,6 +54,9 @@ export async function getTeam(): Promise<TeamMember[]> {
 }
 
 /** The audit log before this browser's actions (the client lists its own entries first). */
+/** "{order:order-2033}" → "#GS-1402": orders are referred to by id, numbered at read time. */
+const withOrderNumbers = (text: string) => text.replace(/\{order:([^}]+)\}/g, (_, id: string) => `#${orderNumberOf(id) ?? id}`);
+
 export async function getPastAudit() {
-  return clone(pastAudit);
+  return clone(pastAudit.map((a) => ({ ...a, summary: withOrderNumbers(a.summary) })));
 }

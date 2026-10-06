@@ -118,7 +118,7 @@ function TopSearch() {
     }
     if (hasRole(staff.role, "support")) {
       const customer = (await getCustomers({ search: q }))[0];
-      if (customer) return router.push(`/admin/customers/${customer.id}`);
+      if (customer) return router.push(`/admin/customers/detail/?id=${customer.id}`);
     }
     if (hasRole(staff.role, "content")) {
       const digits = low.replace(/[^0-9]/g, "");
