@@ -59,6 +59,14 @@ describe("Europe/Paris days", () => {
     expect(startOfDayParis("2027-03-29").getTime() - startOfDayParis("2027-03-28").getTime()).toBe(23 * 3_600_000);
   });
 
+  it("agrees with Intl (the tz database) for every hour of 2026–2028", () => {
+    const f = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" });
+    for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2029, 0, 1); t += 3_600_000) {
+      const p = Object.fromEntries(f.formatToParts(t).map((x) => [x.type, x.value]));
+      expect(`${parisDay(t)} ${parisHour(t)}`).toBe(`${p.year}-${p.month}-${p.day} ${Number(p.hour)}`);
+    }
+  });
+
   it("adds days and reads the Paris hour", () => {
     expect(addDays("2026-10-30", 3)).toBe("2026-11-02");
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");

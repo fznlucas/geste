@@ -54,12 +54,30 @@ export interface MaterializedRows extends Omit<SimRows, "copies" | "shipments" |
 }
 
 const t = (iso: string | null | undefined) => (iso ? Date.parse(iso) : Number.POSITIVE_INFINITY);
-const seen = (iso: string | null | undefined, c: SimClock) => t(iso) <= c.now;
+
+/**
+ * Every timestamp of the rows is ISO UTC to the second ("2026-10-01T14:02:00Z"), so instants compare
+ * as strings: much faster than parsing each one. The bounds are written the same way (whole seconds).
+ */
+const isoSecond = (ms: number) => new Date(Math.floor(ms / 1000) * 1000).toISOString().slice(0, 19) + "Z";
+const bounds = new WeakMap<SimClock, { now: string; settled: string; until: string | null }>();
+function boundsOf(c: SimClock) {
+  let b = bounds.get(c);
+  if (!b) {
+    b = { now: isoSecond(c.now), settled: isoSecond(c.now - c.handsOffMs), until: c.humanUntil === undefined ? null : isoSecond(c.humanUntil) };
+    bounds.set(c, b);
+  }
+  return b;
+}
+const at19 = (iso: string) => (iso.length === 20 ? iso : isoSecond(Date.parse(iso)));
+const seen = (iso: string | null | undefined, c: SimClock) => !!iso && at19(iso) <= boundsOf(c).now;
 
 /** A human event: its time has passed, its subject left the hands-off window, Lucas has not taken over. */
 function human(eventAt: string | null | undefined, subjectAt: string, c: SimClock): boolean {
-  const e = t(eventAt);
-  return e <= c.now && t(subjectAt) <= c.now - c.handsOffMs && (c.humanUntil === undefined || e <= c.humanUntil);
+  if (!eventAt) return false;
+  const b = boundsOf(c);
+  const e = at19(eventAt);
+  return e <= b.now && at19(subjectAt) <= b.settled && (b.until === null || e <= b.until);
 }
 
 // ── Prints ────────────────────────────────────────────────────────────────────
@@ -109,13 +127,13 @@ export function shipmentAt(s: PlannedShipment, c: SimClock): ShipmentRow | null 
 export function entitlementAt(e: PlannedEntitlement, refund: RefundRow | undefined, c: SimClock): EntitlementRow {
   const { plan, ...row } = e;
   let step = row.progress.step;
-  for (const [at, s] of plan.steps) if (seen(at, c)) step = s;
+  for (const [at, s] of plan.steps) if (at <= c.now) step = s;
   const completedAt = seen(plan.completedAt, c) ? plan.completedAt! : undefined;
   return {
     ...row,
     openedAt: seen(plan.openedAt, c) ? plan.openedAt : null,
     progress: completedAt ? { step, completedAt } : { step },
-    printsLeft: 3 - plan.printsAt.filter((at) => seen(at, c)).length,
+    printsLeft: 3 - plan.printsAt.filter((at) => at <= c.now).length,
     revokedAt: refund?.revokeAccess ? refund.createdAt : null,
   };
 }

@@ -98,23 +98,39 @@ export function subscribeClock(listener: () => void): () => void {
 
 // ── Europe/Paris days ─────────────────────────────────────────────────────────
 
-const partsFormat = new Intl.DateTimeFormat("en-GB", {
-  timeZone: PARIS, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
-});
+/**
+ * Summer time in Paris is the EU rule (since 1996): from the last Sunday of March, 01:00 UTC, to the
+ * last Sunday of October, 01:00 UTC. Computed, not read from Intl: the simulation asks this for every
+ * row, and Intl.DateTimeFormat is far too slow for that (the unit tests check both agree).
+ */
+const lastSundayUtc = (year: number, month: number) => {
+  const last = new Date(Date.UTC(year, month + 1, 0));
+  return Date.UTC(year, month, last.getUTCDate() - last.getUTCDay(), 1);
+};
+const dstCache = new Map<number, [number, number]>();
+function summerTime(t: number): boolean {
+  const year = new Date(t).getUTCFullYear();
+  let range = dstCache.get(year);
+  if (!range) {
+    range = [lastSundayUtc(year, 2), lastSundayUtc(year, 9)];
+    dstCache.set(year, range);
+  }
+  return t >= range[0] && t < range[1];
+}
 
 /** Paris wall clock of an instant. */
 export function parisParts(at: Date | string | number): { year: number; month: number; day: number; hour: number; minute: number; second: number } {
-  const p: Record<string, number> = {};
-  for (const part of partsFormat.formatToParts(new Date(at))) if (part.type !== "literal") p[part.type] = Number(part.value);
-  return { year: p.year!, month: p.month!, day: p.day!, hour: p.hour!, minute: p.minute!, second: p.second! };
+  const t = typeof at === "number" ? at : new Date(at).getTime();
+  const d = new Date(t + (summerTime(t) ? 120 : 60) * 60_000);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate(), hour: d.getUTCHours(), minute: d.getUTCMinutes(), second: d.getUTCSeconds() };
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "2026-10-02": the Paris day of an instant. */
 export function parisDay(at: Date | string | number): string {
-  const p = parisParts(at);
-  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+  const t = typeof at === "number" ? at : new Date(at).getTime();
+  return new Date(t + (summerTime(t) ? 120 : 60) * 60_000).toISOString().slice(0, 10);
 }
 
 /** Today in Paris, by the simulated clock. */
@@ -124,10 +140,7 @@ export function simToday(): string {
 
 /** Minutes Paris is ahead of UTC at an instant (60 in winter, 120 in summer). */
 export function parisOffsetMinutes(at: Date | string | number): number {
-  const t = new Date(at).getTime();
-  const p = parisParts(t);
-  const wall = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-  return Math.round((wall - Math.floor(t / 1000) * 1000) / 60_000);
+  return summerTime(new Date(at).getTime()) ? 120 : 60;
 }
 
 /** The instant a Paris day starts (midnight is never inside a DST jump in Paris). */

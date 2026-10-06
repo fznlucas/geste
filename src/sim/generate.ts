@@ -585,12 +585,12 @@ export class Simulator {
       let lastMs = openedMs;
       for (let i = 0; i <= last; i++) {
         lastMs = openedMs + (span * i) / (steps.length - 1) + (i ? r.between(0, 0.02) * DAY : 0);
-        plan.steps.push([isoOf(lastMs), steps[i]!]);
+        plan.steps.push([lastMs, steps[i]!]);
       }
       if (last === steps.length - 1) plan.completedAt = isoOf(lastMs + r.between(5, 40) * 60_000);
       const prints = r.next() < GUIDE_PRINTS.twice ? 2 : r.next() < GUIDE_PRINTS.once ? 1 : 0;
-      for (let k = 0; k < prints; k++) plan.printsAt.push(isoOf(openedMs + r.between(0.01, 1) * span));
-      plan.printsAt.sort();
+      for (let k = 0; k < prints; k++) plan.printsAt.push(openedMs + r.between(0.01, 1) * span);
+      plan.printsAt.sort((a, b) => a - b);
       if (plan.completedAt && r.chance(REVIEWS.rate)) this.review(order, item, plan.completedAt, r);
     }
     this.rows.entitlements.push({

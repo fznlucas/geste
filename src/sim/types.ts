@@ -21,7 +21,8 @@ export interface PlannedShipment extends ShipmentRow {
 
 /** A guide in a library and how its buyer paints it (customer events, no hands-off). */
 export interface PlannedEntitlement extends EntitlementRow {
-  plan: { openedAt: string | null; steps: Array<[at: string, step: string]>; completedAt: string | null; printsAt: string[] };
+  /** Step and print times in epoch ms (they are compared, never shown). */
+  plan: { openedAt: string | null; steps: Array<[at: number, step: string]>; completedAt: string | null; printsAt: number[] };
 }
 
 /** An order whose refund Lucas makes after the customer asked (support thread). */
