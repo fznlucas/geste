@@ -21,8 +21,6 @@ import { entitlements } from "@/data/entitlements";
 import type { CampaignRow, GiftCardRow } from "@/data/marketing";
 import { campaigns as fixtureCampaigns, giftCards as fixtureGiftCards } from "@/data/marketing";
 import { orders, refunds, shipments } from "@/data/orders";
-import { reviews } from "@/data/reviews";
-import { supportMessages, supportThreads } from "@/data/support";
 import type {
   AffiliateClickDayRow, AffiliateCommissionRow, AiCandidateRow, AiJobRow, EntitlementRow, OrderRow, PaymentRow, PrintCopyRow, ProfileRow,
   RefundRow, ShipmentRow, SocialPostRow, SubscriberRow, SupportMessageRow, SupportThreadRow, TrafficDayRow,
@@ -32,6 +30,7 @@ import { ORDER_NUMBER_START } from "@/sim/config";
 import { fixtureDevice, fixtureSource } from "@/sim/fixtures";
 import { preLaunchCounts, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
 import { frozenSimOrder } from "@/sim/freeze";
+import { fixturePlans, materializeFixtures, type MaterializedFixtures } from "@/sim/fixturePlans";
 
 export interface LocalRows {
   orders: OrderRow[];
@@ -171,7 +170,8 @@ const copiesMemo = memo(() => {
   const paidOfItem = new Map<string, string>();
   for (const o of allOrders()) for (const i of o.items) paidOfItem.set(i.id, o.paidAt);
   const s = frozenSim();
-  const all = merged("print_copies", [...local().copies, ...s.copies, ...printCopies, ...PRE_LAUNCH_COPIES])
+  const fx = fixturesNow();
+  const all = merged("print_copies", [...local().copies, ...s.copies, ...printCopies.map((c) => fx.copies.get(c.id) ?? c), ...PRE_LAUNCH_COPIES])
     .map((c) => ({ ...c, paidAt: c.paidAt ?? (c.orderItemId ? paidOfItem.get(c.orderItemId) : undefined) ?? "2026-06-30T10:00:00Z" }));
   // Numbers follow payment order within each edition (pre-launch copies first). A copy bought in this
   // browser keeps the number its buyer was shown (sold-out race: "Take 13/100 and pay"); the others skip it.
@@ -244,21 +244,25 @@ export const allRefunds = (): RefundRow[] => refundsMemo().rows;
 export const refundsOfOrder = (orderId: string): RefundRow[] => refundsMemo().byOrder.get(orderId) ?? [];
 
 const shipmentsMemo = memo(() => {
-  const rows = merged("shipments", [...frozenSim().shipments, ...shipments]);
+  const fx = fixturesNow();
+  const replaced = new Set(fixturePlans(simSettings().seed).shipments.map((s) => s.id));
+  const rows = merged("shipments", [...frozenSim().shipments, ...fx.shipments, ...shipments.filter((s) => !replaced.has(s.id))]);
   return { rows, byOrder: byOrder(rows) };
 });
 export const allShipments = (): ShipmentRow[] => shipmentsMemo().rows;
 export const shipmentOfOrder = (orderId: string): ShipmentRow | undefined => shipmentsMemo().byOrder.get(orderId)?.[0];
 
 const threadsMemo = memo(() => {
-  const rows = merged("support_threads", [...sim().threads, ...supportThreads]);
+  const rows = merged("support_threads", [...sim().threads, ...fixturesNow().threads]);
   return { rows, byOrder: byOrder(rows) };
 });
 export const allSupportThreads = (): SupportThreadRow[] => threadsMemo().rows;
 export const threadsOfOrder = (orderId: string): SupportThreadRow[] => threadsMemo().byOrder.get(orderId) ?? [];
-export const allSupportMessages = memo((): SupportMessageRow[] => [...sim().messages, ...supportMessages]);
+export const allSupportMessages = memo((): SupportMessageRow[] => [...sim().messages, ...fixturesNow().messages]);
 
-export const allReviews = memo(() => merged("reviews", [...sim().reviews, ...reviews]));
+export const allReviews = memo(() => merged("reviews", [...sim().reviews, ...fixturesNow().reviews]));
+/** The board's AI candidates, decided by "Lucas · simulated" once out of the hands-off window. */
+export const fixtureAiCandidates = (): AiCandidateRow[] => fixturesNow().candidates;
 /** Admin view of the works (status, copy). The store pages are built at deploy time and ignore it. */
 export const allWorks = () => merged("works", works);
 
@@ -274,7 +278,7 @@ export const allSocialPosts = (): SocialPostRow[] => sim().socialPosts;
 export const simAiJobs = (): AiJobRow[] => sim().aiJobs;
 export const simAiCandidates = (): AiCandidateRow[] => sim().aiCandidates;
 /** "Lucas · simulated" audit lines, newest first. */
-export const simAudit = (): SimAuditLine[] => sim().audit;
+export const simAudit = memo((): SimAuditLine[] => [...sim().audit, ...fixturesNow().audit].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
 /** Is the simulation on (Settings › Simulation; off when Supabase is Live later)? */
 export const simEnabled = () => simSettings().enabled;
 
@@ -284,27 +288,47 @@ export const localSoldCount = (editionId: string): number => local().copies.filt
 // ── Lucas takes over a simulated order ────────────────────────────────────────
 
 /**
- * When the admin overlay touched a simulated order (its row, items, copies, or a shipment or refund
- * inserted for it), the simulation's human steps of that order stop at Lucas's first action.
+ * What Lucas touched in the admin (overlay), with the time of his first action: orders (their row,
+ * items, copies, a shipment or refund inserted for them), threads (read, replied), reviews, AI
+ * candidates. Simulated and fixture plans of those stop there.
  */
-const frozenSim = memo(() => {
+const takeovers = memo(() => {
   const s = sim();
   const o = overlay();
   const touched = new Map<string, number>();
-  const touch = (orderId: string | undefined, at: unknown) => {
-    if (!orderId || !orderId.startsWith("order-s")) return;
+  const touch = (id: string | undefined, at: unknown) => {
+    if (!id) return;
     const t = typeof at === "string" ? Date.parse(at) : Number.NaN;
     const when = Number.isNaN(t) ? 0 : t;
-    touched.set(orderId, Math.min(touched.get(orderId) ?? Number.POSITIVE_INFINITY, when));
+    touched.set(id, Math.min(touched.get(id) ?? Number.POSITIVE_INFINITY, when));
   };
   const orderOfItem = new Map<string, string>();
-  for (const order of s.orders) for (const i of order.items) orderOfItem.set(i.id, order.id);
-  const orderOfCopy = new Map(s.copies.map((c) => [c.id, c.orderItemId ? orderOfItem.get(c.orderItemId) : undefined]));
+  for (const order of [...s.orders, ...orders]) for (const i of order.items) orderOfItem.set(i.id, order.id);
+  const orderOfCopy = new Map([...s.copies, ...printCopies].map((c) => [c.id, c.orderItemId ? orderOfItem.get(c.orderItemId) : undefined]));
   for (const [id, p] of Object.entries(o.patches.orders ?? {})) touch(id, p._at);
   for (const [id, p] of Object.entries(o.patches.order_items ?? {})) touch(orderOfItem.get(id), p._at);
   for (const [id, p] of Object.entries(o.patches.print_copies ?? {})) touch(orderOfCopy.get(id) ?? undefined, p._at);
   for (const r of o.inserts.shipments ?? []) touch(r.orderId as string | undefined, r.labelCreatedAt ?? r.shippedAt);
   for (const r of o.inserts.refunds ?? []) touch(r.orderId as string | undefined, r.createdAt);
+  for (const table of ["support_threads", "reviews", "ai_candidates"]) for (const [id, p] of Object.entries(o.patches[table] ?? {})) touch(id, p._at);
+  for (const m of o.inserts.support_messages ?? []) touch(m.threadId as string | undefined, m.createdAt);
+  return touched;
+});
+
+/** The fixtures' open items at now, through the same 48 h rule (src/sim/fixturePlans.ts). */
+const fixturesNow = memo((): MaterializedFixtures => {
+  const s = sim();
+  const settings = simSettings();
+  if (!settings.enabled || !s.now) return materializeFixtures(fixturePlans(settings.seed), Number.NEGATIVE_INFINITY, 0, new Map());
+  return materializeFixtures(fixturePlans(settings.seed), s.now, s.handsOffMs, takeovers());
+});
+
+/** Simulated orders Lucas took over: their simulated human steps stop at his first action. */
+const frozenSim = memo(() => {
+  const s = sim();
+  const all = takeovers();
+  const touched = new Map<string, number>();
+  for (const [id, t] of all) if (id.startsWith("order-s")) touched.set(id, t);
   if (!touched.size) return s;
   return frozenSimOrder(s, touched);
 });

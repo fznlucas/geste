@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     include: ["tests/unit/**/*.test.ts"],
+    // The cold-generation guard runs alone (SIM_PERF=1, `npm run test:unit`): no CPU contention.
+    exclude: process.env.SIM_PERF ? [] : ["tests/unit/sim-perf.test.ts"],
     environment: "node",
     // Same instant as the e2e build, unless a test sets its own clock.
     env: { NEXT_PUBLIC_SIM_NOW: E2E_SIM_NOW, TZ: "UTC" },

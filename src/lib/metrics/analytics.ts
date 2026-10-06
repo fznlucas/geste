@@ -18,6 +18,9 @@ const RANGE_DAYS: Record<AnalyticsRange, number> = { "7 days": 7, "30 days": 30,
 /** The period of an analytics range, ending today. */
 export const analyticsPeriod = (range: AnalyticsRange): Period => rollingDays(RANGE_DAYS[range]);
 
+/** Under this many painters, the completion drops are noise more than signal. */
+export const SMALL_SAMPLE_READERS = 100;
+
 export const ANALYTICS_RANGES: AnalyticsRange[] = ["7 days", "30 days", "90 days", "Year"];
 
 export interface Analytics {
@@ -26,7 +29,8 @@ export interface Analytics {
   /** "Biggest leak: work → cart (11.8%)": the step with the lowest conversion from the one before. */
   leak: { from: string; to: string; pct: number };
   sources: Array<{ label: string; orders: number }>;
-  completion: { workNumber: string; steps: Array<{ step: string; pct: number; drop: { points: number; reason: string } | null }> };
+  /** `readers`: the painters counted; under 100 the page says it is a small sample. */
+  completion: { workNumber: string; readers: number; steps: Array<{ step: string; pct: number; drop: { points: number; reason: string } | null }> };
   devices: Array<{ label: string; pct: number }>;
   levelMix: Array<{ label: string; pct: number }>;
   repeat: { pct: number; context: string };
@@ -61,6 +65,7 @@ export const completion = metric("Buyers of the work's guide who opened it at le
   const biggest = new Set([...drops.keys()].sort((a, b) => drops[b]! - drops[a]!).slice(0, 2).filter((i) => drops[i]! > 0));
   return {
     workNumber,
+    readers: painters.length,
     steps: STEP_IDS.map((step, i) => ({ step, pct: pct[i]!, drop: biggest.has(i) ? { points: drops[i]!, reason: DROP_REASONS[step] ?? `${step} loses painters` } : null })),
   };
 });

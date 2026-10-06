@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { AdminBox, AdminTabs, AdminTitle, GUIDE_EDITOR_HREF, HBar, UnderLink } from "@/components";
-import { ANALYTICS_RANGES, analytics, type Analytics, type AnalyticsRange } from "@/lib/metrics";
+import { ANALYTICS_RANGES, analytics, type Analytics, type AnalyticsRange, SMALL_SAMPLE_READERS } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
 import { AdminPage } from "../../_admin/AdminPage";
 
@@ -119,6 +119,7 @@ function Completion({ a }: { a: Analytics }) {
           · {drops.map((d) => d.drop!.reason).join("; ")}. <UnderLink href={GUIDE_EDITOR_HREF} className="text-fg">Edit these steps</UnderLink>
         </span>
       </span>
+      {a.completion.readers < SMALL_SAMPLE_READERS && <span className="text-fg-muted">Small sample ({a.completion.readers} readers)</span>}
     </>
   );
 }

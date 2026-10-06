@@ -11,7 +11,7 @@ import { calendarMonth, inPeriod } from "@/lib/metrics/period";
 import type { AiCandidateRow, AiJobRow } from "@/data/types";
 import { setAiToReviewSource } from "./admin";
 import { clone } from "./clone";
-import { merged, simAiCandidates, simAiJobs } from "./local";
+import { fixtureAiCandidates, merged, simAiCandidates, simAiJobs } from "./local";
 import type { PaletteKey } from "./types";
 
 export type AiStyle = AiJobRow["params"]["style"];
@@ -109,7 +109,7 @@ function numberedSimJobs(): { jobs: AiJobRow[]; candidates: AiCandidateRow[] } {
 }
 
 export const allAiJobs = () => merged("ai_jobs", [...aiJobs, ...numberedSimJobs().jobs]);
-export const allAiCandidates = () => merged("ai_candidates", [...aiCandidates, ...numberedSimJobs().candidates]);
+export const allAiCandidates = () => merged("ai_candidates", [...fixtureAiCandidates(), ...numberedSimJobs().candidates]);
 
 export function aiStage(progress: number): string {
   if (progress < 5) return "Queued";

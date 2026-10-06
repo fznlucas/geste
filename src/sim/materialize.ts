@@ -60,11 +60,12 @@ const t = (iso: string | null | undefined) => (iso ? Date.parse(iso) : Number.PO
  * as strings: much faster than parsing each one. The bounds are written the same way (whole seconds).
  */
 const isoSecond = (ms: number) => new Date(Math.floor(ms / 1000) * 1000).toISOString().slice(0, 19) + "Z";
-const bounds = new WeakMap<SimClock, { now: string; settled: string; until: string | null }>();
+const bounds = new WeakMap<SimClock, { now: string; settled: string; until: string | null; untilSettled: string | null }>();
 function boundsOf(c: SimClock) {
   let b = bounds.get(c);
   if (!b) {
-    b = { now: isoSecond(c.now), settled: isoSecond(c.now - c.handsOffMs), until: c.humanUntil === undefined ? null : isoSecond(c.humanUntil) };
+    const until = c.humanUntil;
+    b = { now: isoSecond(c.now), settled: isoSecond(c.now - c.handsOffMs), until: until === undefined ? null : isoSecond(until), untilSettled: until === undefined ? null : isoSecond(until - c.handsOffMs) };
     bounds.set(c, b);
   }
   return b;
@@ -72,12 +73,17 @@ function boundsOf(c: SimClock) {
 const at19 = (iso: string) => (iso.length === 20 ? iso : isoSecond(Date.parse(iso)));
 const seen = (iso: string | null | undefined, c: SimClock) => !!iso && at19(iso) <= boundsOf(c).now;
 
-/** A human event: its time has passed, its subject left the hands-off window, Lucas has not taken over. */
+/**
+ * A human event: its time has passed and its subject left the hands-off window. When Lucas took the
+ * subject over, only what he could already see at that moment stays: the event happened before, and
+ * the subject was already out of the window then.
+ */
 function human(eventAt: string | null | undefined, subjectAt: string, c: SimClock): boolean {
   if (!eventAt) return false;
   const b = boundsOf(c);
   const e = at19(eventAt);
-  return e <= b.now && at19(subjectAt) <= b.settled && (b.until === null || e <= b.until);
+  const subject = at19(subjectAt);
+  return e <= b.now && subject <= b.settled && (b.until === null || (e <= b.until && subject <= b.untilSettled!));
 }
 
 // ── Prints ────────────────────────────────────────────────────────────────────

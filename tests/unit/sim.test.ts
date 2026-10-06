@@ -12,6 +12,7 @@ import { printEditions } from "@/data/editions";
 import { orders as fixtureOrders } from "@/data/orders";
 import { works } from "@/data/works";
 import { HANDS_OFF_HOURS, SIM_SEED } from "@/sim/config";
+import { fixturePlans, materializeFixtures } from "@/sim/fixturePlans";
 import { Simulator } from "@/sim/generate";
 import { materialize } from "@/sim/materialize";
 import { hashString } from "@/sim/random";
@@ -219,5 +220,36 @@ describe("performance", () => {
     console.info(`Sim performance (Node): cold ${cold.toFixed(0)} ms, warm ${warm.toFixed(0)} ms, 730 days cold ${projection.toFixed(0)} ms (${two.rows.orders.length} orders)`);
     expect(cold).toBeLessThan(400);
     expect(warm).toBeLessThan(150);
+  });
+});
+
+describe("fixtures follow the 48 h rule", () => {
+  const plans = fixturePlans(SIM_SEED);
+  const at = (iso: string, frozen = new Map<string, number>()) => materializeFixtures(plans, Date.parse(iso), handsOff, frozen);
+
+  it("the board's open items used by the e2e tests are still open on Oct 2, 12:00", () => {
+    const m = at("2026-10-02T12:00:00Z");
+    expect(m.copies.get("copy-ed-07-s-10")!.fulfilment).toBe("to_print"); // order-2041, paid Oct 1 14:02
+    for (const id of ["thread-1", "thread-4", "thread-5", "thread-6"]) expect(m.threads.find((t) => t.id === id)!.status).toBe("open");
+    for (const id of ["rev-1", "rev-2", "rev-3", "rev-4"]) expect(m.reviews.find((r) => r.id === id)!.status).toBe("pending");
+    expect(m.candidates.every((c) => c.status === "pending")).toBe(true);
+    // Camille's parcel (order-2028) is still in transit.
+    expect(m.shipments.find((s) => s.id === "ship-2028")!.status).toBe("in_transit");
+  });
+
+  it("a week later, Lucas · simulated has handled them", () => {
+    const m = at("2026-10-09T12:00:00Z");
+    expect(["shipped", "delivered"]).toContain(m.copies.get("copy-ed-07-s-10")!.fulfilment);
+    for (const id of ["thread-1", "thread-4", "thread-5", "thread-6"]) expect(m.threads.find((t) => t.id === id)!.status).toBe("done");
+    expect(m.reviews.filter((r) => r.status === "pending")).toHaveLength(0);
+    expect(m.candidates.filter((c) => c.status === "pending")).toHaveLength(0);
+    expect(m.shipments.find((s) => s.id === "ship-2028")!.status).toBe("delivered");
+    expect(m.audit.length).toBeGreaterThan(0);
+  });
+
+  it("what Lucas touched in the admin stays as he left it", () => {
+    const m = at("2026-10-09T12:00:00Z", new Map([["order-2041", Date.parse("2026-10-02T12:00:00Z")], ["thread-1", Date.parse("2026-10-02T12:00:00Z")]]));
+    expect(m.copies.get("copy-ed-07-s-10")!.fulfilment).toBe("to_print");
+    expect(m.threads.find((t) => t.id === "thread-1")!.status).toBe("open");
   });
 });

@@ -50,7 +50,8 @@ test("a print moves along the fulfilment board and back", async ({ page }) => {
 test("shipping from the board ships the order", async ({ page }) => {
   await signIn(page);
   await page.goto("/admin/fulfilment/");
-  await page.getByRole("button", { name: `Move #${INES} to Packed` }).click();
+  // Inès's print was packed by "Lucas · simulated" once out of the 48 h window (docs/decisions.md).
+  await expect(column(page, "Packed").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
   await page.getByRole("button", { name: `Move #${INES} to Shipped` }).click();
   await expect(column(page, "Shipped").getByRole("article", { name: new RegExp(`#${INES}`) })).toBeVisible();
   await page.goto("/admin/customers/detail/?id=cus-ines-moreau");

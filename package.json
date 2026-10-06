@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test --project=desktop --project=phone",
-    "test:unit": "vitest run --exclude tests/unit/sim-perf.test.ts && vitest run tests/unit/sim-perf.test.ts",
+    "test:unit": "vitest run && SIM_PERF=1 vitest run tests/unit/sim-perf.test.ts",
     "db:test": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql",
     "screens": "playwright test --project=screens-1440 --project=screens-390",
     "screens:update": "playwright test --project=screens-1440 --project=screens-390 --update-snapshots"
