@@ -13,6 +13,15 @@ import { priceCart } from "./cart";
 import { ORDER_NUMBER_START } from "@/sim/config";
 import { allEntitlements, allOrders, type LocalRows } from "./local";
 import { vatRateAt } from "./vat";
+import { IntegrationNotConfigured } from "@/lib/integrations/errors";
+import { getMode } from "@/lib/integrations/mode";
+import { stripeMock } from "@/lib/integrations/stripe/mock";
+
+/** The PaymentIntent of a mock payment; in Live the server creates it (createPaymentIntent), never the browser. */
+function paymentIntentId(orderId: string): string {
+  if (getMode("stripe-payments") === "live") throw new IntegrationNotConfigured("stripe-payments", "Live payments are created by the server · set NEXT_PUBLIC_API_BASE");
+  return stripeMock.paymentIntentId(orderId);
+}
 import type { Address, StoredCartLine } from "./types";
 
 export interface PlaceOrderInput {
@@ -121,7 +130,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
       subtotalCents, discountCents, shippingCents, shippingMethod,
       taxCents: includedVatCents(totalCents, input.country, vatRateAt(input.country, input.now)), totalCents, country: input.country || undefined,
       shippingAddress: hasPrint ? input.shippingAddress : null,
-      stripePaymentIntent: `pi_3Px${n}L9aQ`, cardLast4: input.cardLast4, risk: "low",
+      stripePaymentIntent: paymentIntentId(orderId), cardLast4: input.cardLast4, risk: "low",
       withdrawalWaived: input.withdrawalWaived, paidAt: input.now, createdAt: input.now, items,
     }],
     entitlements,

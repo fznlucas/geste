@@ -13,6 +13,12 @@ export interface StoreSetting {
   value: string;
 }
 
+/** One Store setting now, sync (emails read the support address and the domain). */
+export function storeSetting(key: string): string {
+  const fallback = storeSettings.find((s) => s.key === key)?.value ?? "";
+  return patched("site_settings", { id: key, value: fallback }).value;
+}
+
 export async function getStoreSettings(): Promise<StoreSetting[]> {
   return clone(storeSettings.map((s) => ({ key: s.key, label: s.label, value: patched("site_settings", { id: s.key, value: s.value }).value })));
 }

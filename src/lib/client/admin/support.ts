@@ -6,10 +6,11 @@
  */
 import { getCustomer, getSupportThread } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
+import { sendEmail } from "./email";
 
 const ROLES = ["support"] as const;
 
-/** Sends a reply by email (Resend later) and keeps it in the thread. */
+/** Sends a reply by email (Resend adapter; mock: the Outbox) and keeps it in the thread. */
 export async function reply(threadId: string, body: string) {
   const staff = requireStaff([...ROLES]);
   const text = body.trim();
@@ -23,6 +24,7 @@ export async function reply(threadId: string, body: string) {
     summary: `${staff.fullName} replied to ${thread.customerName ?? thread.email}`,
   });
   patchRow("support_threads", threadId, { updatedAt: at, readAt: at });
+  await sendEmail("support_reply", thread.email, `thread:${threadId}`, { subject: thread.subject, body: text });
 }
 
 /** "Mark as done" / "Reopen". */
@@ -60,5 +62,6 @@ export async function startThread(customerId: string, subject: string, body: str
     target: `thread:${thread.id}`,
     summary: `${staff.fullName} wrote to ${customer.fullName}`,
   });
+  await sendEmail("support_reply", customer.email, `thread:${thread.id}`, { subject, body: text });
   return thread.id;
 }

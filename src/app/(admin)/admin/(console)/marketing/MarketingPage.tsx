@@ -226,8 +226,8 @@ function Draft({ draft, audiences }: { draft: Campaign; audiences: Array<{ key: 
           className="min-w-150"
           onClick={() => {
             if (!check()) return;
-            sendTest(draft.id, subject);
-            toast.show("Test sent to you");
+            sendTest(draft.id, subject, body);
+            toast.show("Test sent to you · in the Outbox");
           }}
         >
           {draft.testSentAt ? "Test sent to you" : "Send a test"}

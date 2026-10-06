@@ -6,6 +6,7 @@
  */
 import { promoCodeExists, type PromoScope } from "@/lib/api";
 import { adminNow, audit, insertRow, patchRow, requireStaff } from "../admin";
+import { sendEmail } from "./email";
 
 export const PROMO_DISCOUNTS = ["−10%", "−15%", "−20%", "−$5"] as const;
 export type PromoDiscount = (typeof PROMO_DISCOUNTS)[number];
@@ -55,9 +56,10 @@ export function saveCampaign(id: string, changes: { subject?: string; bodyMd?: s
 }
 
 /** "Send a test": the draft goes to the signed-in owner only. Mock: nothing is sent. */
-export function sendTest(id: string, subject: string) {
+export function sendTest(id: string, subject: string, body = "") {
   const staff = requireStaff("owner");
   patchRow("campaigns", id, { testSentAt: adminNow() }, { action: "campaign.test", target: `campaign:${id}`, summary: `${staff.fullName} sent a test of “${subject}” to ${staff.email}` });
+  void sendEmail("newsletter_test", staff.email, `campaign:${id}`, { subject, body });
 }
 
 /** "Schedule for Tuesday": next Tuesday 9:00 (Paris) after the mock's now. */

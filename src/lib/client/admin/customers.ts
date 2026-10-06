@@ -6,6 +6,7 @@
  */
 import { getCustomer, getOrders, type CustomerDetail } from "@/lib/api";
 import { adminNow, audit, patchRow, requireStaff } from "../admin";
+import { sendEmail } from "./email";
 
 async function customerOrThrow(id: string): Promise<CustomerDetail> {
   const c = await getCustomer(id);
@@ -17,6 +18,7 @@ async function customerOrThrow(id: string): Promise<CustomerDetail> {
 export async function sendLoginLink(customerId: string): Promise<void> {
   const staff = requireStaff("support");
   const c = await customerOrThrow(customerId);
+  await sendEmail("login_link", c.email, `profile:${customerId}`, { firstName: c.fullName.split(" ")[0] });
   audit({ action: "customer.login_link", target: `profile:${customerId}`, summary: `${staff.fullName} sent a login link to ${c.fullName}` });
 }
 

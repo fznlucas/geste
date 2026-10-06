@@ -7,6 +7,7 @@
 import { getTeam, TEAM_ROLE_LABEL } from "@/lib/api";
 import type { StaffRole } from "@/lib/types";
 import { deleteInsertedRow, insertRow, patchRow, adminNow, requireStaff } from "../admin";
+import { sendEmail } from "./email";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -18,6 +19,7 @@ export async function inviteStaff(emailInput: string, role: Exclude<StaffRole, "
   if (!EMAIL.test(email)) throw new Error("This email looks incomplete");
   if ((await getTeam()).some((m) => m.email === email)) throw new Error("Already in the team");
   insertRow("staff_invites", { email, role, at: adminNow() }, { action: "staff.invite", target: `staff:${email}`, summary: `${staff.fullName} invited ${email} as ${TEAM_ROLE_LABEL[role]}` });
+  await sendEmail("invite", email, `staff:${email}`, { role: TEAM_ROLE_LABEL[role] });
 }
 
 export function removeStaff(id: string, email: string) {
