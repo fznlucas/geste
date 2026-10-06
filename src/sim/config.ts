@@ -4,6 +4,7 @@
  * or "estimate — confirm". Settings › Simulation shows them read-only; the seed and the hands-off hours
  * can be changed there (admin overlay).
  */
+import { BUSINESS } from "@/config/business";
 import type { Device, Source } from "@/data/types";
 
 // ── Launch & seed ─────────────────────────────────────────────────────────────
@@ -180,5 +181,5 @@ export const NEWSLETTER = { firstSimMonth: "2026-11", weekday: 2, nth: 2, hour: 
 
 // ── Money (Phase 3 moves these to src/config/business.ts) ─────────────────────
 
-/** USD → EUR base rate and its daily drift (deterministic). The live adapter later reads Stripe's rate. estimate — confirm */
-export const FX = { eurPerUsd: 0.86, dailyDriftPct: 0.3 };
+/** USD → EUR base rate and its daily drift: the books' rule (src/config/business.ts). */
+export const FX = BUSINESS.fx.value;

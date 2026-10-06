@@ -118,7 +118,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     orders: [{
       id: orderId, number, userId: input.customerId, email: input.email, status: "paid",
       subtotalCents, discountCents, shippingCents, shippingMethod,
-      taxCents: includedVatCents(totalCents, input.country), totalCents,
+      taxCents: includedVatCents(totalCents, input.country), totalCents, country: input.country || undefined,
       shippingAddress: hasPrint ? input.shippingAddress : null,
       stripePaymentIntent: `pi_3Px${n}L9aQ`, cardLast4: input.cardLast4, risk: "low",
       withdrawalWaived: input.withdrawalWaived, paidAt: input.now, createdAt: input.now, items,
