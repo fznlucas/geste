@@ -75,7 +75,7 @@ export interface ReviewCardProps {
   rating: 1 | 2 | 3 | 4 | 5;
   body: string;
   photoUrl: string | null;
-  /** Pending: the Approve / Feature / Hide buttons. Decided: the verdict line in Stone ("Published · featured on home"). */
+  /** Pending: Approve / Feature / Hide. Decided: the verdict line in Stone ("Published · featured on home"), then its own actions (Unfeature, Hide, Publish). */
   actions?: ReactNode;
   verdict?: string;
   /** "Reply privately" link, when the role can open the inbox. */
@@ -94,7 +94,8 @@ export function ReviewCard({ who, work, rating, body, photoUrl, actions, verdict
         <span role="img" aria-label={`${rating} out of 5`}>{"★".repeat(rating) + "☆".repeat(5 - rating)}</span>
       </span>
       <span>“{body}”</span>
-      {actions ?? (verdict && <span className="text-fg-muted">{verdict}</span>)}
+      {verdict && <span className="text-fg-muted">{verdict}</span>}
+      {actions}
       {reply}
     </li>
   );

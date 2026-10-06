@@ -4,7 +4,7 @@
  * Support actions (future `src/actions/admin/support.ts`): reply, setThreadStatus, plus opening a
  * thread (marks it read) and writing first to a customer ("Reply privately" on a review).
  */
-import { getCustomer, getSupportThread } from "@/lib/api";
+import { findGuide, getCustomer, getGuide, getOrder, getSupportThread, type FormatKey } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
 import { sendEmail } from "./email";
 
@@ -64,4 +64,41 @@ export async function startThread(customerId: string, subject: string, body: str
   });
   await sendEmail("support_reply", customer.email, `thread:${thread.id}`, { subject, body: text });
   return thread.id;
+}
+
+/** "Save as a saved reply": the draft becomes a saved reply ("{name}" for the customer's first name). */
+export async function saveReply(name: string, body: string): Promise<void> {
+  const staff = requireStaff([...ROLES]);
+  const label = name.trim(), text = body.trim();
+  if (!label || !text) throw new Error("Write the reply first.");
+  insertRow("saved_replies", { name: label, body: text }, { action: "support.saved_reply", target: "saved_replies", summary: `${staff.fullName} saved the reply “${label}”` });
+}
+
+/** Removes a saved reply (the board's or one saved here). */
+export async function deleteReply(id: string, name: string): Promise<void> {
+  const staff = requireStaff([...ROLES]);
+  patchRow("saved_replies", id, { deleted: true }, { action: "support.saved_reply_delete", target: `saved_reply:${id}`, summary: `${staff.fullName} removed the saved reply “${name}”` });
+}
+
+/**
+ * "Switch the guide": the customer bought the wrong canvas; their library now holds the same work and
+ * level on another canvas (same price band, no refund). The reader opens the new guide.
+ */
+export async function swapGuideFormat(orderNumber: string, itemId: string, format: FormatKey): Promise<string> {
+  const staff = requireStaff([...ROLES]);
+  const order = await getOrder(orderNumber);
+  const item = order?.items.find((i) => i.id === itemId);
+  if (!order || !item || item.kind !== "guide" || !item.entitlementId || !item.workId) throw new Error("This guide is no longer in the order.");
+  if (item.accessRevoked) throw new Error("This guide was refunded.");
+  const current = item.guideId ? await getGuide(item.guideId) : null;
+  const target = current ? await findGuide(item.workId, format, current.level) : null;
+  if (!current || !target) throw new Error("This canvas has no guide for this work.");
+  if (target.id === current.id) return target.formatLabel;
+  patchRow("entitlements", item.entitlementId, { guideId: target.id }, {
+    action: "support.guide_swap",
+    target: `order:${order.number}`,
+    summary: `${staff.fullName} switched ${order.customer.fullName}’s ${current.workNumber} guide from ${current.formatLabel} to ${target.formatLabel}`,
+  });
+  patchRow("order_items", item.id, { guideId: target.id, config: { ...item.config, format } });
+  return target.formatLabel;
 }

@@ -2,15 +2,16 @@
 
 /**
  * /admin/reviews (AdminReviews): To moderate / Published / Hidden. Approve publishes, Feature publishes
- * and features ("Real results" on the home and the work page), Hide hides; each can be undone from the
- * toast. "Reply privately" opens the customer's conversation in the support inbox (Support only).
+ * and features ("Real results" on the home and the work page, four at most), Hide hides; published and
+ * hidden reviews keep their actions (Unfeature, Hide, Publish); each can be undone from the toast. Hiding a
+ * work's real-result photo asks first. "Reply privately" opens the customer's conversation in the support inbox (Support only).
  * Owner, Support and Content. The store is built at deploy time: in the mock it keeps its reviews.
  */
 import { useState } from "react";
 import { AdminTabs, Button, PillButton, ReviewCard, UnderLink, useToast } from "@/components";
 import { getReviews, type Review, type ReviewStatus } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
-import { setReviewStatus } from "@/lib/client/admin/reviews";
+import { ResultPhotoError, setReviewStatus } from "@/lib/client/admin/reviews";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
@@ -66,17 +67,41 @@ function Card({ review: r }: { review: Review }) {
   const { staff } = useAdmin();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const decide = async (status: ReviewStatus) => {
+  const decide = async (status: ReviewStatus, confirmed = false) => {
     setBusy(true);
+    const before = r.status;
     try {
-      const before = r.status;
-      await setReviewStatus(r.id, status);
-      toast.show(`${VERDICT[status]} · ${r.customer.fullName}`, { action: { label: "Undo", onClick: () => void setReviewStatus(r.id, before) } });
+      const done = await setReviewStatus(r.id, status, { confirmed });
+      const out = done.unfeatured;
+      toast.show(`${VERDICT[status]} · ${r.customer.fullName}${out ? ` · ${out.customer.fullName}’s ${out.work.number} no longer featured` : ""}`, {
+        action: { label: "Undo", onClick: () => void setReviewStatus(r.id, before).then(() => out && setReviewStatus(out.id, "featured")) },
+      });
     } catch (e) {
-      toast.show(e instanceof Error ? e.message : "Could not change the review.", { tone: "danger" });
+      // Hiding a work's real result asks first (no browser dialog: the toast carries the choice).
+      if (e instanceof ResultPhotoError) toast.show(e.message, { tone: "danger", action: { label: "Hide anyway", onClick: () => void decide(status, true) } });
+      else toast.show(e instanceof Error ? e.message : "Could not change the review.", { tone: "danger" });
+    } finally {
       setBusy(false);
     }
   };
+  // Every tab can act: publish, feature or hide what waits; unfeature or hide what is published; publish what is hidden.
+  const actions =
+    r.status === "pending" ? (
+      <div className="flex flex-wrap gap-6">
+        <Button size="sm" onClick={() => decide("published")} disabled={busy} className="grow justify-center!">Approve</Button>
+        <PillButton onClick={() => decide("featured")} disabled={busy}>Feature</PillButton>
+        <PillButton onClick={() => decide("hidden")} disabled={busy}>Hide</PillButton>
+      </div>
+    ) : r.status === "hidden" ? (
+      <div className="flex flex-wrap gap-6">
+        <PillButton onClick={() => decide("published")} disabled={busy}>Publish</PillButton>
+      </div>
+    ) : (
+      <div className="flex flex-wrap gap-6">
+        <PillButton onClick={() => decide(r.status === "featured" ? "published" : "featured")} disabled={busy}>{r.status === "featured" ? "Unfeature" : "Feature"}</PillButton>
+        <PillButton onClick={() => decide("hidden")} disabled={busy}>Hide</PillButton>
+      </div>
+    );
   return (
     <ReviewCard
       who={r.customer.fullName}
@@ -85,15 +110,7 @@ function Card({ review: r }: { review: Review }) {
       body={r.body}
       photoUrl={r.photoUrl}
       verdict={VERDICT[r.status]}
-      actions={
-        r.status === "pending" ? (
-          <div className="flex flex-wrap gap-6">
-            <Button size="sm" onClick={() => decide("published")} disabled={busy} className="grow justify-center!">Approve</Button>
-            <PillButton onClick={() => decide("featured")} disabled={busy}>Feature</PillButton>
-            <PillButton onClick={() => decide("hidden")} disabled={busy}>Hide</PillButton>
-          </div>
-        ) : undefined
-      }
+      actions={actions}
       reply={
         hasRole(staff.role, "support") ? (
           <UnderLink href={`/admin/support?customer=${r.customer.id}&about=${encodeURIComponent(r.work.number)}`} className="self-start">Reply privately</UnderLink>

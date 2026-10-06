@@ -545,6 +545,8 @@ export interface Review {
   rating: 1 | 2 | 3 | 4 | 5;
   body: string;
   photoUrl: string | null;
+  /** The stored photo (`works.result_photo_path` points at it when it is a work's real result). */
+  photoPath: string | null;
   status: ReviewStatus;
   createdAt: string;
   customer: { id: string; fullName: string };
@@ -567,6 +569,8 @@ export interface SupportThread {
   status: ThreadStatus;
   /** Not opened by staff since the customer wrote ("2 new support messages"). */
   unread: boolean;
+  /** Open, the customer's last message unanswered for more than 24 h. */
+  overdue: boolean;
   /** The customer's last message: the inbox list shows it and its time (replies do not move the thread). */
   lastCustomerMessage: { body: string; at: string } | null;
   createdAt: string;

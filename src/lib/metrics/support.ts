@@ -1,6 +1,7 @@
 /** Support metrics (AdminSupport). */
 import { simNow } from "@/lib/clock";
-import { allSupportMessages, allSupportThreads } from "@/lib/api/local";
+import { allSupportThreads } from "@/lib/api/local";
+import { allMessages } from "@/lib/api/support";
 import { metric } from "./define";
 
 /**
@@ -10,7 +11,8 @@ import { metric } from "./define";
 export const firstReplyMinutes = metric("Median time between a customer's first message and the first staff reply, threads opened in the last 7 days.", function firstReplyMinutes(): number | null {
   const since = simNow().getTime() - 7 * 86_400_000;
   const byThread = new Map<string, { first?: string; reply?: string }>();
-  for (const m of allSupportMessages()) {
+  // Replies sent from this browser count too.
+  for (const m of allMessages()) {
     const t = byThread.get(m.threadId) ?? {};
     if (m.from === "customer" && (!t.first || m.createdAt < t.first)) t.first = m.createdAt;
     if (m.from === "staff" && (!t.reply || m.createdAt < t.reply)) t.reply = m.createdAt;

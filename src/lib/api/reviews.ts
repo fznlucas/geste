@@ -14,6 +14,7 @@ export function mapReview(row: ReviewRow): Review {
     rating: row.rating,
     body: row.body,
     photoUrl: row.photoPath ? asset(row.photoPath) : null,
+    photoPath: row.photoPath ?? null,
     status: row.status,
     createdAt: row.createdAt,
     customer: { id: customer.id, fullName: customer.fullName },

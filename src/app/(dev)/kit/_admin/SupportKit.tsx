@@ -30,8 +30,8 @@ export function SupportKit() {
           actions={<div className="flex flex-wrap gap-6"><Button size="sm" className="grow justify-center!">Approve</Button><PillButton>Feature</PillButton><PillButton>Hide</PillButton></div>}
           reply={<UnderLink href="#" className="self-start">Reply privately</UnderLink>}
         />
-        <ReviewCard who="Emma Roux" work="N°05" rating={4} body="Layer 2 was tricky, the mud page saved me." photoUrl={asset("mock/work-04.jpg")} verdict="Published · featured on home" reply={<UnderLink href="#" className="self-start">Reply privately</UnderLink>} />
-        <ReviewCard who="Tom Laurent" work="N°02" rating={2} body="Shopping list link was broken for the canvas." photoUrl={null} verdict="Hidden" />
+        <ReviewCard who="Emma Roux" work="N°05" rating={4} body="Layer 2 was tricky, the mud page saved me." photoUrl={asset("mock/work-04.jpg")} verdict="Published · featured on home" actions={<div className="flex flex-wrap gap-6"><PillButton>Unfeature</PillButton><PillButton>Hide</PillButton></div>} reply={<UnderLink href="#" className="self-start">Reply privately</UnderLink>} />
+        <ReviewCard who="Tom Laurent" work="N°02" rating={2} body="Shopping list link was broken for the canvas." photoUrl={null} verdict="Hidden" actions={<div className="flex flex-wrap gap-6"><PillButton>Publish</PillButton></div>} />
         <ReviewCard
           who="Chloé Garnier" work="N°03" rating={5} body="I did not believe I could paint this." photoUrl={null}
           actions={<div className="flex flex-wrap gap-6"><Button size="sm" className="grow justify-center!" disabled>Approve</Button><PillButton disabled>Feature</PillButton><PillButton disabled>Hide</PillButton></div>}

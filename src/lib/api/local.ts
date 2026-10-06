@@ -28,7 +28,7 @@ import type {
   RefundRow, ShipmentRow, SocialPostRow, SubscriberRow, SupportMessageRow, SupportThreadRow, TrafficDayRow,
 } from "@/data/types";
 import { works } from "@/data/works";
-import { HANDS_OFF_HOURS, ORDER_NUMBER_START, SIM_SEED } from "@/sim/config";
+import { FEATURED_MAX, HANDS_OFF_HOURS, ORDER_NUMBER_START, SIM_SEED } from "@/sim/config";
 import { fixtureDevice, fixtureSource } from "@/sim/fixtures";
 import { preLaunchCounts, setSimSettings, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
 import { frozenSimOrder } from "@/sim/freeze";
@@ -294,7 +294,12 @@ export const allSupportThreads = (): SupportThreadRow[] => threadsMemo().rows;
 export const threadsOfOrder = (orderId: string): SupportThreadRow[] => threadsMemo().byOrder.get(orderId) ?? [];
 export const allSupportMessages = memo((): SupportMessageRow[] => [...sim().messages, ...fixturesNow().messages]);
 
-export const allReviews = memo(() => merged("reviews", [...sim().reviews, ...fixturesNow().reviews]));
+/** The newest four featured reviews stay featured; older ones go back to published (the row holds four). */
+function capFeatured<T extends { status: string; createdAt: string }>(rows: T[]): T[] {
+  const keep = new Set(rows.filter((r) => r.status === "featured").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, FEATURED_MAX));
+  return rows.map((r) => (r.status === "featured" && !keep.has(r) ? { ...r, status: "published" } : r));
+}
+export const allReviews = memo(() => merged("reviews", capFeatured([...sim().reviews, ...fixturesNow().reviews])));
 /** The board's AI candidates, decided by "Lucas · simulated" once out of the hands-off window. */
 export const fixtureAiCandidates = (): AiCandidateRow[] => fixturesNow().candidates;
 /** Admin view of the works (status, copy). The store pages are built at deploy time and ignore it. */

@@ -8,11 +8,11 @@
  */
 import { useSearchParams } from "next/navigation";
 import { useId, useMemo, useState } from "react";
-import { AdminTabs, Button, MessageList, PillButton, Textarea, ThreadListItem, UnderLink, useToast } from "@/components";
-import { getCustomer, getSavedReplies, getSupportThread, getSupportThreads, type SupportThread } from "@/lib/api";
+import { AdminTabs, Button, Input, MessageList, PillButton, Select, Textarea, ThreadListItem, UnderLink, useToast } from "@/components";
+import { getCustomer, getOrder, getSavedReplies, getSupportThread, getSupportThreads, getWorkGuides, storeSetting, type FormatKey, type SupportThread } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { durationLabel, firstReplyMinutes } from "@/lib/metrics";
-import { markThreadRead, reply, setThreadStatus, startThread } from "@/lib/client/admin/support";
+import { deleteReply, markThreadRead, reply, saveReply, setThreadStatus, startThread, swapGuideFormat } from "@/lib/client/admin/support";
 import { cn } from "@/lib/cn";
 import { simNow } from "@/lib/clock";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -93,7 +93,7 @@ export function SupportPage() {
               <li key={t.id}>
                 <ThreadListItem
                   who={t.customerName ?? t.email}
-                  when={t.lastCustomerMessage ? inboxWhen(t.lastCustomerMessage.at) : ""}
+                  when={t.lastCustomerMessage ? `${t.overdue ? "Overdue · " : ""}${inboxWhen(t.lastCustomerMessage.at)}` : ""}
                   subject={t.subject}
                   preview={preview(t)}
                   open={t.status === "open"}
@@ -194,6 +194,19 @@ function Conversation({ id, onStatusChange }: { id: string; onStatusChange: () =
           busy={busy}
           onSend={send}
           replies={(replies.data ?? []).map((r) => ({ id: r.id, name: r.name, text: r.body.replace("{name}", firstName(t.customerName, t.email)) }))}
+          // A draft can become a saved reply: the customer's first name turns back into {name}.
+          onSaveReply={async (name) => {
+            try {
+              await saveReply(name, draft.split(firstName(t.customerName, t.email)).join("{name}"));
+              toast.show(`Saved reply “${name}” added`);
+            } catch (e) {
+              toast.show(e instanceof Error ? e.message : "Could not save the reply.", { tone: "danger" });
+            }
+          }}
+          onDeleteReply={async (id, name) => {
+            await deleteReply(id, name);
+            toast.show(`Saved reply “${name}” removed`);
+          }}
         />
       </div>
       {desktop ? <Aside name={t.customerName ?? t.email} customerId={t.customerId} orderNumber={t.orderNumber} /> : null}
@@ -201,15 +214,20 @@ function Conversation({ id, onStatusChange }: { id: string; onStatusChange: () =
   );
 }
 
-function ReplyBox({ draft, setDraft, error, busy, onSend, replies }: {
+function ReplyBox({ draft, setDraft, error, busy, onSend, replies, onSaveReply, onDeleteReply }: {
   draft: string;
   setDraft: (v: string) => void;
   error: string | null;
   busy: boolean;
   onSend: () => void;
   replies: Array<{ id: string; name: string; text: string }>;
+  onSaveReply?: (name: string) => Promise<void>;
+  onDeleteReply?: (id: string, name: string) => Promise<void>;
 }) {
   const id = useId();
+  const nameId = useId();
+  const [managing, setManaging] = useState(false);
+  const [naming, setNaming] = useState<string | null>(null);
   return (
     <form
       className="mt-auto flex flex-col gap-8"
@@ -221,9 +239,14 @@ function ReplyBox({ draft, setDraft, error, busy, onSend, replies }: {
       {replies.length > 0 && (
         <div className="flex flex-wrap gap-6">
           <span className="text-fg-muted">Saved replies:</span>
-          {replies.map((r) => (
-            <PillButton key={r.id} onClick={() => setDraft(r.text)}>{r.name}</PillButton>
-          ))}
+          {replies.map((r) =>
+            managing && onDeleteReply ? (
+              <PillButton key={r.id} onClick={() => void onDeleteReply(r.id, r.name)} aria-label={`Remove saved reply ${r.name}`}>{r.name} ✕</PillButton>
+            ) : (
+              <PillButton key={r.id} onClick={() => setDraft(r.text)}>{r.name}</PillButton>
+            ),
+          )}
+          {onDeleteReply && <PillButton pressed={managing} onClick={() => setManaging((m) => !m)}>{managing ? "Done" : "Edit"}</PillButton>}
         </div>
       )}
       <label htmlFor={id} className="sr-only">Reply</label>
@@ -237,7 +260,18 @@ function ReplyBox({ draft, setDraft, error, busy, onSend, replies }: {
         className="min-h-110 resize-y"
       />
       {error && <p id={`${id}-err`} role="alert" className="text-danger">{error}</p>}
-      <div className="flex justify-end">
+      {naming !== null && onSaveReply && (
+        <div className="flex items-end gap-8">
+          <label htmlFor={nameId} className="sr-only">Name of the saved reply</label>
+          <Input id={nameId} value={naming} placeholder="Name of the saved reply" onChange={(e) => setNaming(e.target.value)} className="grow" />
+          <PillButton onClick={() => { if (naming.trim()) void onSaveReply(naming.trim()).then(() => setNaming(null)); }}>Save</PillButton>
+          <PillButton onClick={() => setNaming(null)}>Cancel</PillButton>
+        </div>
+      )}
+      <div className="flex justify-end gap-8">
+        {onSaveReply && naming === null && draft.trim() && (
+          <Button type="button" variant="ghost" onClick={() => setNaming(draft.trim().split(/\s+/).slice(0, 3).join(" "))}>Save as saved reply</Button>
+        )}
         <Button type="submit" trailing="→" loading={busy} className="min-w-180">Send reply</Button>
       </div>
     </form>
@@ -251,7 +285,45 @@ function Aside({ name, customerId, orderNumber }: { name: string; customerId: st
       <span className="font-medium">{name}</span>
       {customerId && <UnderLink href={`/admin/customers/detail/?id=${customerId}`} className="self-start">Customer profile</UnderLink>}
       {orderNumber && <UnderLink href={`/admin/orders/detail?number=${orderNumber}`} className="self-start">Order #{orderNumber}</UnderLink>}
-      <span className="text-fg-muted">Replies go out from hello@geste.studio. {firstReply === null ? "No reply this week yet." : `Average first reply this week: ${durationLabel(firstReply)}.`}</span>
+      {orderNumber && <GuideSwap orderNumber={orderNumber} />}
+      <span className="text-fg-muted">Replies go out from {storeSetting("store.support_email")}. {firstReply === null ? "No reply this week yet." : `Average first reply this week: ${durationLabel(firstReply)}.`}</span>
+    </div>
+  );
+}
+
+/** "Switch the guide" (the Format swap saved reply's action): the same work and level on another canvas. */
+function GuideSwap({ orderNumber }: { orderNumber: string }) {
+  const toast = useToast();
+  const id = useId();
+  const order = useAdminQuery(() => getOrder(orderNumber), [orderNumber]);
+  const guide = order.data?.items.find((i) => i.kind === "guide" && !i.accessRevoked);
+  const options = useAdminQuery(() => (guide?.workId ? getWorkGuides(guide.workId) : Promise.resolve([])), [guide?.workId]);
+  const [format, setFormat] = useState<FormatKey | "">("");
+  if (!guide?.workId || !options.data?.length) return null;
+  const current = options.data.find((g) => g.id === guide.guideId);
+  const formats = options.data.filter((g) => g.level === current?.level && g.id !== guide.guideId);
+  if (!current || !formats.length) return null;
+  return (
+    <div className="flex flex-col gap-6">
+      <label htmlFor={id} className="text-fg-muted">Guide · {current.label}</label>
+      <Select id={id} value={format} onChange={(e) => setFormat(e.target.value as FormatKey)}>
+        <option value="">Switch to another canvas…</option>
+        {formats.map((g) => <option key={g.id} value={g.format}>{g.label}</option>)}
+      </Select>
+      <PillButton
+        disabled={!format}
+        onClick={async () => {
+          if (!format) return;
+          try {
+            toast.show(`Guide switched to ${await swapGuideFormat(orderNumber, guide.id, format)}`);
+            setFormat("");
+          } catch (e) {
+            toast.show(e instanceof Error ? e.message : "Could not switch the guide.", { tone: "danger" });
+          }
+        }}
+      >
+        Switch the guide
+      </PillButton>
     </div>
   );
 }
