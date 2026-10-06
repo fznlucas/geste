@@ -14,3 +14,7 @@ export {
 } from "./finance";
 export type { LedgerAccount, LedgerLine, Payout, UrssafDeclaration, VatReturn } from "@/lib/ledger";
 export { durationLabel, firstReplyMinutes } from "./support";
+export {
+  INTEGRATIONS, INTEGRATION_ROWS, PAYMENT_ROWS, businessAssumptions, integrationLogs, modeCounts, outbox, simulationAssumptions, simulationStatus, statusOf, vatRegimeNow,
+  type Integration, type IntegrationLog, type OutboxEmail,
+} from "./integrations";

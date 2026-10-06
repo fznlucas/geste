@@ -5,12 +5,12 @@
  */
 import { asset } from "@/lib/asset";
 import { CANVASES, formatLabel, type FormatKey } from "@/lib/pricing";
-import { AI_CENTS_PER_CANDIDATE, AI_MONTHLY_BUDGET_CENTS, aiCandidates, aiJobs } from "@/data/ai";
+import { AI_CENTS_PER_CANDIDATE, AI_MONTHLY_BUDGET_CENTS as DEFAULT_BUDGET_CENTS, aiCandidates, aiJobs } from "@/data/ai";
 import { simNow } from "@/lib/clock";
 import { calendarMonth, inPeriod } from "@/lib/metrics/period";
 import type { AiCandidateRow, AiJobRow } from "@/data/types";
 import { clone } from "./clone";
-import { fixtureAiCandidates, merged, simAiCandidates, simAiJobs } from "./local";
+import { fixtureAiCandidates, merged, patched, simAiCandidates, simAiJobs } from "./local";
 import type { PaletteKey } from "./types";
 
 export type AiStyle = AiJobRow["params"]["style"];
@@ -129,6 +129,8 @@ export function aiJobLabel(p: AiJobParams): string {
 export function aiBudget(): AiBudget {
   const month = calendarMonth();
   const spent = allAiJobs().filter((j) => inPeriod(j.createdAt, month)).reduce((s, j) => s + j.costCents, 0);
+  // Settings › Integrations › GPU provider can change the budget (admin overlay).
+  const AI_MONTHLY_BUDGET_CENTS = Number(patched("business_settings", { id: "ai_budget_cents", value: String(DEFAULT_BUDGET_CENTS) }).value) || DEFAULT_BUDGET_CENTS;
   return { budgetCents: AI_MONTHLY_BUDGET_CENTS, spentCents: spent, leftCents: Math.max(0, AI_MONTHLY_BUDGET_CENTS - spent) };
 }
 

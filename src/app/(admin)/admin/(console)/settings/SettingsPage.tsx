@@ -4,28 +4,32 @@
  * /admin/settings (AdminSettings), owner only. Tabs: Store (fields saved when left: saveSetting),
  * Shipping, Payments & tax, Team & roles (inviteStaff / removeStaff + PermissionMatrix), Security
  * (with the audit log: this browser's admin actions, newest first, then the log before them),
- * Integrations. Provider buttons are demo actions ("Done · demo action").
+ * Integrations (Mock / Live per integration, Outbox, logs), Simulation. Payments & tax and Integrations
+ * keep the board's rows first (docs/admin-v2/03 §2). The tab is in the URL (`?tab=Simulation`).
  */
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, PillButton, Select, StatusChip, useToast,
+  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, Select, StatusChip, useToast,
 } from "@/components";
 import {
-  getIntegrations, getPastAudit, getPaymentProviders, getSecuritySettings, getShippingZones, getStoreSettings, getTeam,
+  getPastAudit, getSecuritySettings, getShippingZones, getStoreSettings, getTeam,
   type SettingStatus, type StoreSetting,
 } from "@/lib/api";
 import { useAdminQuery, useAudit } from "@/lib/client";
 import { inviteStaff, removeStaff, saveSetting } from "@/lib/client/admin/settings";
 import type { StaffRole } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
+import { Integrations, PaymentsAndTax, Simulation } from "./IntegrationsSettings";
 
-const TABS = ["Store", "Shipping", "Payments & tax", "Team & roles", "Security", "Integrations"] as const;
+const TABS = ["Store", "Shipping", "Payments & tax", "Team & roles", "Security", "Integrations", "Simulation"] as const;
 type Tab = (typeof TABS)[number];
 
 const CHIP: Record<SettingStatus, "done" | "todo" | "off"> = { on: "done", todo: "todo", off: "off" };
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("Store");
+  const asked = useSearchParams().get("tab");
+  const [tab, setTab] = useState<Tab>(TABS.find((t) => t === asked) ?? "Store");
   return (
     <AdminPage title="Settings & team" breadcrumbs={[{ label: "Studio", href: "/admin/settings" }]} roles={["owner"]} desktopHref="/admin/settings">
       <AdminBox>
@@ -35,10 +39,11 @@ export function SettingsPage() {
         <div className="flex flex-col gap-8">
           {tab === "Store" && <Store />}
           {tab === "Shipping" && <Shipping />}
-          {tab === "Payments & tax" && <Providers load={getPaymentProviders} label="Payment providers and tax" />}
+          {tab === "Payments & tax" && <PaymentsAndTax />}
           {tab === "Team & roles" && <Team />}
           {tab === "Security" && <Security />}
-          {tab === "Integrations" && <Providers load={getIntegrations} label="Integrations" />}
+          {tab === "Integrations" && <Integrations />}
+          {tab === "Simulation" && <Simulation />}
         </div>
       </AdminBox>
     </AdminPage>
@@ -86,7 +91,7 @@ function StoreField({ setting }: { setting: StoreSetting }) {
   );
 }
 
-// ── Shipping, payments, integrations ─────────────────────────────────────────
+// ── Shipping ─────────────────────────────────────────────────────────────────
 
 const SHIP_COLS = "1fr 1.4fr 90px 120px";
 
@@ -106,25 +111,6 @@ function Shipping() {
           <span role="cell" className="text-fg-muted">{z.carriers}</span>
           <span role="cell">{z.from}</span>
           <span role="cell"><StatusChip state={CHIP[z.state]} label={z.status} /></span>
-        </AdminRow>
-      ))}
-    </div>
-  );
-}
-
-function Providers({ load, label }: { load: () => Promise<Array<{ name: string; status: string; state: SettingStatus; action: string }>>; label: string }) {
-  const q = useAdminQuery(load, [load]);
-  const toast = useToast();
-  if (q.status === "loading") return <Loading />;
-  return (
-    <div role="table" aria-label={label} className="flex flex-col gap-8">
-      {q.data.map((p) => (
-        <AdminRow key={p.name} cols="1fr 200px 120px">
-          <span role="rowheader">{p.name}</span>
-          <span role="cell"><StatusChip state={CHIP[p.state]} label={p.status} /></span>
-          <span role="cell">
-            <PillButton onClick={() => toast.show("Done · demo action")} aria-label={`${p.action}: ${p.name}`}>{p.action}</PillButton>
-          </span>
         </AdminRow>
       ))}
     </div>

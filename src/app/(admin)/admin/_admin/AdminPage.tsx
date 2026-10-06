@@ -6,13 +6,16 @@
  * page sees a short notice instead (the sidebar already hides the link).
  */
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, ButtonLink, DemoRoleMenu, ROLE_LABEL,
   useToast, type AdminPhoneTab, type Crumb,
 } from "@/components";
 import { getCustomers, getOrders, getWorks } from "@/lib/api";
-import { alerts as getAlerts } from "@/lib/metrics";
+import { alerts as getAlerts, simulationStatus } from "@/lib/metrics";
+import { asset } from "@/lib/asset";
+import { clockOverride, setClockOverride } from "@/lib/clock";
+import { purchasesStore } from "@/lib/client/purchases";
 import { adminStore, hasRole, setDemoRole, useAdminQuery } from "@/lib/client";
 import type { StaffRole } from "@/lib/types";
 import { useAdmin } from "./AdminFrame";
@@ -84,20 +87,46 @@ function NoAccess({ role }: { role: StaffRole }) {
 function DemoMenu() {
   const { staff } = useAdmin();
   const toast = useToast();
+  const [clock, setClock] = useState(() => clockOverride());
+  const sim = simulationStatus();
   return (
-    <DemoRoleMenu
-      role={staff.role}
-      onRoleChange={(r) => {
-        setDemoRole(r);
-        toast.show(`Viewing as ${ROLE_LABEL[r]}`);
-      }}
-      onReset={() => {
-        adminStore.reset();
-        toast.show("Demo data reset");
-      }}
-    />
+    <span className="flex items-center gap-6">
+      {clock && (
+        <button
+          type="button"
+          onClick={() => {
+            setClockOverride(null);
+            setClock(null);
+            toast.show("Clock back to real time");
+            window.location.reload();
+          }}
+          className="inline-flex min-h-24 cursor-pointer items-center bg-surface-muted px-8 py-4 font-mono text-xs text-fg hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg"
+          aria-label={`Clock fixed at ${clockLabel(clock)}: back to real time`}
+        >
+          Clock: {clockLabel(clock)} · reset
+        </button>
+      )}
+      <DemoRoleMenu
+        role={staff.role}
+        onRoleChange={(r) => {
+          setDemoRole(r);
+          toast.show(`Viewing as ${ROLE_LABEL[r]}`);
+        }}
+        onReset={() => {
+          // Every admin change and every purchase made in this browser (the session stays).
+          adminStore.reset();
+          purchasesStore.reset();
+          toast.show("Demo data reset");
+        }}
+        simulatedUpTo={sim.time}
+        simulationHref={hasRole(staff.role, "owner") ? asset("admin/settings/?tab=Simulation") : undefined}
+      />
+    </span>
   );
 }
+
+/** "Oct 2, 12:00" (Paris). */
+const clockLabel = (iso: string) => new Date(iso).toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(/^(\d+) (\w+),/, "$2 $1,");
 
 function Alerts() {
   const { staff } = useAdmin();

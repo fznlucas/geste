@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
 import { getOrders, type Order } from "@/lib/api";
-import { dashboard, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
+import { dashboard, modeCounts, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { parisHour } from "@/lib/clock";
 import { formatPrice } from "@/lib/format";
@@ -91,6 +91,7 @@ function DesktopDashboard() {
       <div className="grid gap-12" style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))` }}>
         {tiles.map((t) => <KpiTile key={t.label} {...t} />)}
       </div>
+      {owner && <IntegrationsLine />}
       <div className="grid grid-cols-12 gap-16">
         {owner && <RevenueChart d={d} />}
         <AdminBox className={owner ? "col-span-4" : "col-span-12"}>
@@ -116,6 +117,17 @@ function DesktopDashboard() {
         <TopWorks works={d.topWorks.slice(0, 5)} wide={!seesOrders} links={hasRole(staff.role, "content")} />
       </div>
     </>
+  );
+}
+
+/** "Mock: 34 · Live: 0": where the data comes from, linking to Settings › Integrations (docs/admin-v2/03 §4). */
+function IntegrationsLine() {
+  const c = modeCounts();
+  return (
+    <p className="text-fg-muted">
+      Integrations · Mock: {c.mock} · Live: {c.live}{c.off ? ` · Off: ${c.off}` : ""} ·{" "}
+      <UnderLink href="/admin/settings/?tab=Integrations">Settings</UnderLink>
+    </p>
   );
 }
 

@@ -26,9 +26,9 @@ import type {
   RefundRow, ShipmentRow, SocialPostRow, SubscriberRow, SupportMessageRow, SupportThreadRow, TrafficDayRow,
 } from "@/data/types";
 import { works } from "@/data/works";
-import { ORDER_NUMBER_START } from "@/sim/config";
+import { HANDS_OFF_HOURS, ORDER_NUMBER_START, SIM_SEED } from "@/sim/config";
 import { fixtureDevice, fixtureSource } from "@/sim/fixtures";
-import { preLaunchCounts, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
+import { preLaunchCounts, setSimSettings, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
 import { frozenSimOrder } from "@/sim/freeze";
 import { fixturePlans, materializeFixtures, type MaterializedFixtures } from "@/sim/fixturePlans";
 
@@ -77,7 +77,17 @@ const EMPTY_SIM: MaterializedRows = {
   orderStatus: new Map(), audit: [], now: 0, handsOffMs: 0,
 };
 
+/** Settings › Simulation (admin overlay): seed and hands-off window, applied to the engine before a read. */
+function applySimSettings() {
+  const s = patched("sim_settings", { id: "sim", seed: "", handsOffHours: Number.NaN as number });
+  const current = simSettings();
+  const seed = s.seed || SIM_SEED;
+  const handsOffHours = Number.isFinite(s.handsOffHours) ? s.handsOffHours : HANDS_OFF_HOURS;
+  if (current.seed !== seed || current.handsOffHours !== handsOffHours) setSimSettings({ seed, handsOffHours });
+}
+
 function sim(): MaterializedRows {
+  applySimSettings();
   return simRows() ?? EMPTY_SIM;
 }
 
