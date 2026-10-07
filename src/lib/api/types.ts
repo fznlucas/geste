@@ -238,12 +238,15 @@ export interface PrintEdition {
   dimensions: string;
   editionSize: number;
   priceCents: number;
+  /** On sale: not closed by hand and copies left (a sold-out edition closes itself). */
   open: boolean;
+  /** Closed in the admin (Close edition). */
+  closedByHand: boolean;
   sold: number;
   reserved: number;
   left: number;
   soldOut: boolean;
-  /** Number the next buyer gets ("Edition 12/100"); null when sold out. */
+  /** Number the next buyer gets, the lowest free one ("Edition 12/100"); null when sold out. */
   nextNumber: number | null;
 }
 
@@ -285,7 +288,8 @@ export interface PricedCartLine extends CartItem {
   /** Receipt and phone summary: "N°03 — Guide, 60×80", "N°07 — Print S, 12/100". */
   receiptTitle: string;
   /** Prints: the edition and the first number this line gets. */
-  edition?: { id: string; size: string; editionSize: number; firstNumber: number; left: number };
+  /** `numbers`: the copies this line gets, lowest free first ("Editions 4, 12/100" after a restock). */
+  edition?: { id: string; size: string; editionSize: number; firstNumber: number; left: number; numbers: number[] };
   /** Second line under the detail: "+ shopping list", "Signed, with certificate". */
   note: string | null;
   /** "−15% with the print" / "−15% with the guide" when the line is in a bundle. */
@@ -295,7 +299,10 @@ export interface PricedCartLine extends CartItem {
   /** Stepper limit: 1 for guides and gift cards, copies left for prints. */
   maxQuantity: number;
   /** Not counted in the totals: the work was unpublished, the edition sold out, or the amount is invalid. */
-  unavailable: "unknown" | "sold_out" | "invalid" | null;
+  /** Promo code discount on this line (cents), on top of `discountCents` (the guide + print bundle). */
+  promoCents?: number;
+  /** "closed": the edition was closed in the admin ("No longer available"). */
+  unavailable: "unknown" | "sold_out" | "closed" | "invalid" | null;
 }
 
 export interface PricedCart {
@@ -307,6 +314,10 @@ export interface PricedCart {
   hasGuide: boolean;
   totals: CartTotals;
   crossSell: { workNumber: string; href: string; fromPriceCents: number } | null;
+  /** The gift card paying part of the total (its row id). */
+  giftCardId?: string;
+  /** A code typed at checkout and refused, with the precise reason ("This code expired on Sep 30."). */
+  codeErrors?: { promo?: string; giftCard?: string };
 }
 
 // ── Orders ─────────────────────────────────────────────────────────────────

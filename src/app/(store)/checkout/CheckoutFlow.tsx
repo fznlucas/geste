@@ -27,7 +27,7 @@ import {
   type ExpressMethod,
   type OrderSummaryLine,
 } from "@/components";
-import { CheckoutError, DEMO_CUSTOMER_ID, getCustomer, type PricedCart } from "@/lib/api";
+import { CheckoutError, DEMO_CUSTOMER_ID, codeKind, getCustomer, priceCart, type PricedCart } from "@/lib/api";
 import { placeOrder, useCart, useHydrated, useSession, type CustomerSession } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
@@ -150,7 +150,9 @@ type PayError =
   /** The number shown in the cart was taken: the next one is held (board "Take 13/50 and pay"). */
   | { kind: "soldout"; title: string; text: string; alt: string; editionId: string }
   /** No copy left at all: back to the cart. */
-  | { kind: "soldout_full"; title: string; text: string };
+  | { kind: "soldout_full"; title: string; text: string }
+  /** A code applied in the summary stopped being good before the payment: pay without it. */
+  | { kind: "code"; title: string; text: string };
 
 function payErrorCopy(err: PayError): { title: string; text: string } {
   if (err.kind === "declined") return { title: "Your card was declined", text: "No money was taken. Check the card details, try another card, or pay with PayPal." };
@@ -164,15 +166,22 @@ function soldOutError(cart: PricedCart, demoRace: boolean): PayError | null {
   if (gone) {
     return { kind: "soldout_full", title: `${gone.title.replace(" — Print", "")} ${gone.edition?.size ?? ""} just sold out`.replace(/\s+/g, " "), text: "Someone was faster. No money was taken. Remove it from your cart to pay for the rest." };
   }
+  // Closed by the studio while it was in the cart: the same outcome as sold out.
+  const closed = cart.lines.find((l) => l.unavailable === "closed");
+  if (closed) {
+    return { kind: "soldout_full", title: `${closed.title.replace(" — Print", "")} ${closed.edition?.size ?? ""} is no longer available`.replace(/\s+/g, " "), text: "This edition was closed. No money was taken. Remove it from your cart to pay for the rest." };
+  }
   if (!demoRace) return null;
   const print = cart.lines.find((l) => l.kind === "print" && l.unavailable === null && l.edition);
   if (!print?.edition) return null;
-  const { firstNumber: n, editionSize: size, left, id } = print.edition;
+  const { firstNumber: n, editionSize: size, left, id, numbers } = print.edition;
   const work = print.title.replace(" — Print", "");
   if (left <= print.quantity) {
     return { kind: "soldout_full", title: `Edition ${n}/${size} of ${work} just sold out`, text: "Someone was faster. It was the last copy. No money was taken. Remove it from your cart to pay for the rest." };
   }
-  return { kind: "soldout", title: `Edition ${n}/${size} of ${work} just sold out`, text: `Someone was faster. We reserved ${n + 1}/${size} for you for 10 minutes, same price.`, alt: `Take ${n + 1}/${size} and pay`, editionId: id };
+  // The next free number after the one just taken (the lowest free one, a restocked number first).
+  const next = numbers[1] ?? n + 1;
+  return { kind: "soldout", title: `Edition ${n}/${size} of ${work} just sold out`, text: `Someone was faster. We reserved ${next}/${size} for you for 10 minutes, same price.`, alt: `Take ${next}/${size} and pay`, editionId: id };
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -218,11 +227,13 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
   const [express, setExpress] = useState<ExpressMethod | null>(null);
   const [challenge, setChallenge] = useState(false);
   const [skip, setSkip] = useState<Record<string, number>>({});
+  /** Codes applied in the order summary: one promo, one gift card. */
+  const [codes, setCodes] = useState<{ promo?: string; giftCard?: string }>({});
   const busy = useRef(false);
   const sectionRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
-  const live = useCart({ shippingMethod: step === "contact" ? null : ship, country: v.country });
+  const live = useCart({ shippingMethod: step === "contact" ? null : ship, country: v.country, promoCode: codes.promo, giftCardCode: codes.giftCard, email: v.email });
   // After the order is placed the cart empties; keep showing the paid cart until the success page opens.
   const [frozen, setFrozen] = useState<(PricedCart & { stored: typeof live.stored }) | null>(null);
   const cart = frozen ?? live;
@@ -307,6 +318,8 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
         cardLast4: method === "card" ? digits(f.card).slice(-4) : "4242",
         withdrawalWaived: f.waiver || !!wallet,
         skipNumbers,
+        promoCode: codes.promo,
+        giftCardCode: codes.giftCard,
       });
       router.push(`/checkout/success?order=${number}`);
     } catch (e) {
@@ -315,6 +328,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
       setProcessing(false);
       setExpress(null);
       if (e instanceof CheckoutError && e.code === "sold_out") setPayErr(soldOutError(live, false) ?? { kind: "soldout_full", title: "A print in your cart just sold out", text: "Someone was faster. No money was taken. Remove it from your cart to pay for the rest." });
+      else if (e instanceof CheckoutError && e.code === "code") setPayErr({ kind: "code", title: "Your code no longer applies", text: `${e.message} No money was taken.` });
       else throw e;
     }
   }
@@ -397,7 +411,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
     priceCents: l.unitPriceCents * l.quantity,
     discountCents: l.discountCents,
     bundleNote: l.bundleNote,
-    issue: l.unavailable === "sold_out" ? "Sold out, not counted" : l.unavailable ? "Unavailable, not counted" : null,
+    issue: l.unavailable === "sold_out" ? "Sold out, not counted" : l.unavailable === "closed" ? "No longer available, not counted" : l.unavailable ? "Unavailable, not counted" : null,
   }));
   const totals = {
     subtotalCents: cart.totals.subtotalCents,
@@ -406,10 +420,19 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
     shippingCents: cart.hasPhysical ? cart.totals.shippingCents : undefined,
     totalCents: cart.totals.totalCents,
     vatCents: cart.totals.taxIncludedCents,
+    promo: cart.totals.promo ? { label: cart.totals.promo.label, cents: cart.totals.promo.cents } : undefined,
+    giftCard: cart.totals.giftCard ? { label: `Gift card ···${cart.totals.giftCard.code.slice(-4)}`, cents: cart.totals.giftCard.cents, leftCents: cart.totals.giftCard.balanceAfterCents } : undefined,
+    dueCents: cart.totals.dueCents,
   };
-  const applyCode = async () => {
+  /** "Apply": a gift card code or a promo code, checked by `priceCart`; the precise reason when refused. */
+  const applyCode = async (code: string): Promise<string | null> => {
     await wait(300);
-    return false; // Mock: no promotions or gift card balances yet.
+    const kind = codeKind(code);
+    const tried = priceCart(live.stored, { shippingMethod: step === "contact" ? null : ship, country: v.country, email: v.email, promoCode: kind === "promo" ? code : codes.promo, giftCardCode: kind === "gift_card" ? code : codes.giftCard });
+    const reason = kind === "promo" ? tried.codeErrors?.promo : tried.codeErrors?.giftCard;
+    if (reason) return reason;
+    setCodes((c) => (kind === "promo" ? { ...c, promo: code.trim().toUpperCase() } : { ...c, giftCard: code.trim().toUpperCase() }));
+    return null;
   };
 
   const field = (k: Key, label: string, props: Partial<React.ComponentProps<typeof Input>> = {}, className?: string) => (
@@ -430,6 +453,10 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
       err={payErr}
       busy={processing}
       onRetry={() => goTo("confirmation")}
+      onRemoveCode={() => {
+        setCodes({});
+        setPayErr(null);
+      }}
       onOtherMethod={() => {
         setPayErr(null);
         setPay("paypal");
@@ -445,7 +472,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
   const empty = cart.lines.length === 0;
   const payLabel = processing ? "Processing" : "Pay now";
   const payButton = (
-    <Button className="flex-1" onClick={() => goTo("confirmation")} disabled={processing || empty} loading={processing} trailing={formatPrice(cart.totals.totalCents)} aria-label={processing ? "Processing your payment" : `Pay now, ${formatPrice(cart.totals.totalCents)}`}>
+    <Button className="flex-1" onClick={() => goTo("confirmation")} disabled={processing || empty} loading={processing} trailing={formatPrice(cart.totals.dueCents ?? cart.totals.totalCents)} aria-label={processing ? "Processing your payment" : `Pay now, ${formatPrice(cart.totals.dueCents ?? cart.totals.totalCents)}`}>
       {payLabel}
     </Button>
   );
@@ -710,7 +737,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
         onOpenChange={(o) => !o && endChallenge(false)}
         width={440}
         title="Confirm the payment with your bank"
-        description={`3D Secure test: ${formatPrice(cart.totals.totalCents)} to Geste Studio. Your bank's page opens here in production.`}
+        description={`3D Secure test: ${formatPrice(cart.totals.dueCents ?? cart.totals.totalCents)} to Geste Studio. Your bank's page opens here in production.`}
         actions={
           <>
             <Button className="flex-1" trailing="→" onClick={() => endChallenge(true)}>Complete</Button>
@@ -773,7 +800,7 @@ function SummaryRow({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function PayAlert({ phone, err, busy, onRetry, onOtherMethod, onTakeAlt }: { phone: boolean; err: PayError; busy: boolean; onRetry: () => void; onOtherMethod: () => void; onTakeAlt: (editionId: string) => void }) {
+function PayAlert({ phone, err, busy, onRetry, onOtherMethod, onTakeAlt, onRemoveCode }: { phone: boolean; err: PayError; busy: boolean; onRetry: () => void; onOtherMethod: () => void; onTakeAlt: (editionId: string) => void; onRemoveCode: () => void }) {
   const { title, text } = payErrorCopy(err);
   return (
     <div role="alert" className={cn("flex flex-col border border-danger", phone ? "gap-6 p-14" : "gap-10 px-20 py-16")}>
@@ -783,6 +810,10 @@ function PayAlert({ phone, err, busy, onRetry, onOtherMethod, onTakeAlt }: { pho
         <div className={cn("flex", phone ? "flex-col gap-8" : "gap-10")}>
           <Button className={phone ? undefined : "min-w-220"} onClick={() => onTakeAlt(err.editionId)} disabled={busy} loading={busy} trailing="→">{err.alt}</Button>
           <ButtonLink href="/cart" variant="ghost">Back to cart</ButtonLink>
+        </div>
+      ) : err.kind === "code" ? (
+        <div className="flex gap-10">
+          <Button className={phone ? "flex-1" : "min-w-180"} onClick={onRemoveCode} disabled={busy} trailing="→">Remove the code</Button>
         </div>
       ) : err.kind === "soldout_full" ? (
         <div className="flex gap-10">

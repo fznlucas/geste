@@ -80,12 +80,30 @@ export async function advancePrints(number: string): Promise<void> {
   }
 }
 
+/**
+ * "Raise size" (AdminEditions): more copies in the edition, numbered after the last; a sold-out
+ * edition reopens with them. Never below the copies taken and their numbers.
+ */
+export async function setEditionSize(editionId: string, size: number): Promise<void> {
+  const staff = requireStaff("fulfilment");
+  const edition = await getEdition(editionId);
+  if (!edition) throw new Error("Unknown edition.");
+  if (!Number.isInteger(size) || size <= edition.editionSize) throw new Error(`Enter more than ${edition.editionSize} copies.`);
+  patchRow("print_editions", editionId, { editionSize: size, open: true }, {
+    action: "edition.size",
+    target: `print_edition:${editionId}`,
+    summary: `${staff.fullName} raised the ${edition.workNumber} ${edition.size} edition from ${edition.editionSize} to ${size} copies${edition.soldOut ? " (reopened)" : ""}`,
+  });
+}
+
 /** Close edition / Reopen (AdminEditions). A closed edition is hidden from the store (its size disappears). */
 export async function setEditionOpen(editionId: string, open: boolean): Promise<void> {
   const staff = requireStaff("fulfilment");
   const edition = await getEdition(editionId);
   if (!edition) throw new Error("Unknown edition.");
-  if (edition.open === open) return;
+  // A sold-out edition closes itself; it reopens only with more copies (`setEditionSize`).
+  if (open && edition.soldOut) throw new Error(`${edition.workNumber} ${edition.size} is sold out: raise the edition size to reopen it.`);
+  if (!edition.closedByHand === open) return;
   patchRow("print_editions", editionId, { open }, {
     action: open ? "edition.reopen" : "edition.close",
     target: `print_edition:${editionId}`,

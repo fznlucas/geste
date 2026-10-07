@@ -10,7 +10,7 @@ import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, Pill
 import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { isLowStock } from "@/lib/metrics";
-import { setEditionOpen } from "@/lib/client/admin/fulfilment";
+import { setEditionOpen, setEditionSize } from "@/lib/client/admin/fulfilment";
 import { cn } from "@/lib/cn";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
@@ -36,8 +36,20 @@ export function EditionsPage() {
   const toggle = async (e: PrintEdition) => {
     setBusy(e.id);
     try {
-      await setEditionOpen(e.id, !e.open);
-      toast.show(e.open ? `${e.workNumber} ${e.size} closed` : `${e.workNumber} ${e.size} reopened`);
+      await setEditionOpen(e.id, e.closedByHand);
+      toast.show(e.closedByHand ? `${e.workNumber} ${e.size} reopened` : `${e.workNumber} ${e.size} closed`);
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : "Could not change the edition.", { tone: "danger" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const raise = async (e: PrintEdition, size: number) => {
+    setBusy(e.id);
+    try {
+      await setEditionSize(e.id, size);
+      toast.show(`${e.workNumber} ${e.size}: ${size} copies${e.soldOut ? " · reopened" : ""}`);
     } catch (err) {
       toast.show(err instanceof Error ? err.message : "Could not change the edition.", { tone: "danger" });
     } finally {
@@ -61,10 +73,12 @@ export function EditionsPage() {
           </AdminHeadRow>
           {data.status === "loading"
             ? Array.from({ length: 7 }, (_, i) => <div key={i} aria-hidden="true" className="box-content min-h-60 border-b border-border" />)
-            : data.data.editions.map((e) => <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} />)}
+            : data.data.editions.map((e) => (
+                <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} onRaise={canClose ? (size) => raise(e, size) : undefined} />
+              ))}
         </div>
       </div>
-      <span className="text-fg-muted">Editions are numbered in order of payment. A refund with “back in stock” frees the number for the next buyer. Closing an edition hides the size from the store.</span>
+      <span className="text-fg-muted">Editions are numbered in order of payment. A refund with “back in stock” frees the number for the next buyer. Closing an edition hides the size from the store; a sold-out edition closes itself and reopens with a bigger size.</span>
       <AdminBox className="max-w-602">
         <AdminTitle>Certificate log</AdminTitle>
         {data.status === "ready" && data.data.log.length === 0 && <p className="text-fg-muted">No certificate signed yet.</p>}
@@ -79,7 +93,8 @@ export function EditionsPage() {
 }
 
 /** `onToggle` absent: the role reads the stock (Content), closing and reopening stay with Fulfilment. */
-function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onToggle?: () => void }) {
+function EditionRow({ e, busy, onToggle, onRaise }: { e: PrintEdition; busy: boolean; onToggle?: () => void; onRaise?: (size: number) => void }) {
+  const [size, setSize] = useState(String(e.editionSize + 10));
   const low = isLowStock(e);
   return (
     <AdminRow cols={COLS} className="min-h-60">
@@ -96,14 +111,25 @@ function EditionRow({ e, busy, onToggle }: { e: PrintEdition; busy: boolean; onT
       </span>
       <span role="cell">{e.reserved}</span>
       <span role="cell" className={cn(low && "text-danger")}>
-        {e.open ? e.left : "closed"}
+        {e.open ? e.left : e.soldOut ? "sold out" : "closed"}
         {low && <span className="sr-only"> (low stock)</span>}
       </span>
       <span role="cell">{formatPrice(e.priceCents)}</span>
       <span role="cell" className="flex gap-6">
-        {onToggle && (
-          <PillButton onClick={onToggle} disabled={busy} aria-label={`${e.open ? "Close edition" : "Reopen"} ${e.workNumber} ${e.size}`}>
-            {e.open ? "Close edition" : "Reopen"}
+        {onRaise && e.soldOut ? (
+          <>
+            <input
+              aria-label={`New size of the ${e.workNumber} ${e.size} edition`}
+              inputMode="numeric"
+              value={size}
+              onChange={(ev) => setSize(ev.target.value)}
+              className="min-h-32 w-56 border border-border-field bg-surface px-6 font-mono text-xs focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg"
+            />
+            <PillButton onClick={() => onRaise(Number(size))} disabled={busy} aria-label={`Raise size and reopen ${e.workNumber} ${e.size}`}>Raise size</PillButton>
+          </>
+        ) : onToggle && (
+          <PillButton onClick={onToggle} disabled={busy} aria-label={`${e.closedByHand ? "Reopen" : "Close edition"} ${e.workNumber} ${e.size}`}>
+            {e.closedByHand ? "Reopen" : "Close edition"}
           </PillButton>
         )}
         <PillLink href={`/admin/works/${e.workSlug}`}>

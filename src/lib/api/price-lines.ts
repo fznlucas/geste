@@ -23,6 +23,12 @@ export interface EditionStock {
   sold: number;
   reserved: number;
   open: boolean;
+  /** The edition's size now (an edition can be enlarged in the admin). */
+  editionSize?: number;
+  /** Numbers the next buyers get, lowest free first (a restocked number comes back first). */
+  numbers?: number[];
+  /** Sold out (as opposed to closed by hand). */
+  soldOut?: boolean;
 }
 /** How a caller reads stock; `null` = every edition open with every copy left (pricing only). */
 export type StockReader = ((edition: { id: string; soldCount: number; reservedCount: number; open: boolean }) => EditionStock) | null;
@@ -45,9 +51,10 @@ export function minGuidePriceCents(workId: string): number {
 }
 
 
-/** Number the next buyer of an edition gets ("Edition 12/100"). */
-function nextEditionNumber(sold: number, reserved: number) {
-  return sold + reserved + 1;
+/** "12", "12–13", "4, 12": the numbers of a line, a range when they follow each other. */
+function numbersLabel(n: number[]): string {
+  if (n.length === 1) return `${n[0]}`;
+  return n.every((x, i) => i === 0 || x === n[i - 1]! + 1) ? `${n[0]}–${n.at(-1)}` : n.join(", ");
 }
 
 function priceLine(line: StoredCartLine, stockOf: StockReader): PricedCartLine & { workId: string | null } {
@@ -78,12 +85,15 @@ function priceLine(line: StoredCartLine, stockOf: StockReader): PricedCartLine &
       return { ...base, kind: "print", title: "Print", detail: "", shortDetail: "", receiptTitle: "Print", note: null, href: null, unitPriceCents: 0, maxQuantity: 0, unavailable: "unknown" };
     }
     const stock = stockOf ? stockOf(edition) : UNLIMITED;
-    const sold = stock.sold;
-    const left = Math.max(0, edition.editionSize - sold - stock.reserved);
+    const size = stock.editionSize ?? edition.editionSize;
+    const free = stock.numbers ?? Array.from({ length: Math.max(0, size - stock.sold - stock.reserved) }, (_, i) => stock.sold + stock.reserved + 1 + i);
+    const left = Math.max(0, Math.min(size - stock.sold - stock.reserved, free.length));
     const quantity = Math.max(1, Math.min(line.quantity, left));
-    const first = nextEditionNumber(sold, stock.reserved);
-    const range = quantity > 1 ? `${first}–${first + quantity - 1}` : `${first}`;
-    const numbers = left === 0 ? "Sold out" : `${quantity > 1 ? "Editions" : "Edition"} ${range}/${edition.editionSize}`;
+    const mine = free.slice(0, quantity);
+    const first = mine[0] ?? stock.sold + stock.reserved + 1;
+    const range = numbersLabel(mine.length ? mine : [first]);
+    const closed = !stock.open && left > 0;
+    const numbers = left === 0 ? "Sold out" : closed ? "No longer available" : `${quantity > 1 ? "Editions" : "Edition"} ${range}/${size}`;
     return {
       ...base,
       workId: work.id,
@@ -92,8 +102,8 @@ function priceLine(line: StoredCartLine, stockOf: StockReader): PricedCartLine &
       detail: `${edition.size} · ${printCm(edition.size, work.orientation)} · ${numbers}`,
       // Checkout board: "S · Edition 12/100" in the summary, "N°07 — Print S, 12/100" on the receipt.
       shortDetail: `${edition.size} · ${numbers}`,
-      receiptTitle: `${work.number} — Print ${edition.size}${left === 0 ? "" : `, ${range}/${edition.editionSize}`}`,
-      edition: { id: edition.id, size: edition.size, editionSize: edition.editionSize, firstNumber: first, left },
+      receiptTitle: `${work.number} — Print ${edition.size}${left === 0 || closed ? "" : `, ${range}/${size}`}`,
+      edition: { id: edition.id, size: edition.size, editionSize: size, firstNumber: first, left, numbers: free },
       note: "Signed, with certificate",
       imageUrl: asset(work.previewPath),
       orientation: work.orientation,
@@ -101,7 +111,8 @@ function priceLine(line: StoredCartLine, stockOf: StockReader): PricedCartLine &
       unitPriceCents: edition.priceCents,
       quantity,
       maxQuantity: left,
-      unavailable: !stock.open || left === 0 ? "sold_out" : null,
+      // Closed in the admin: "No longer available"; no copy left: sold out. Neither is counted.
+      unavailable: left === 0 ? "sold_out" : closed ? "closed" : null,
     };
   }
 
@@ -151,6 +162,43 @@ function applyBundles(lines: Array<PricedCartLine & { workId: string | null }>):
   });
 }
 
+/** A promo code's rule as priced (`promo_codes`): the checks of dates, uses and first order are in ./cart.ts. */
+export interface PromoRule {
+  code: string;
+  kind: "percent" | "amount";
+  /** Percent, or cents for an amount. */
+  value: number;
+  scope: "guides" | "prints" | "everything";
+  label: string;
+}
+
+/** The lines a promo can discount: never a gift card; guides, prints or both by its scope. */
+export const promoEligible = (l: PricedCartLine, scope: PromoRule["scope"]) =>
+  l.unavailable === null && l.kind !== "gift_card" && (scope === "everything" || (scope === "guides" ? l.kind === "guide" : l.kind === "print"));
+
+/**
+ * A promo on priced lines, on each line's price after the guide + print bundle. Percent: per line,
+ * rounded. Amount: shared in proportion, never more than the lines. Returns the lines with `promoCents`.
+ */
+export function applyPromo(lines: PricedCartLine[], rule: PromoRule): PricedCartLine[] {
+  const net = (l: PricedCartLine) => l.unitPriceCents * l.quantity - (l.discountCents ?? 0);
+  const eligible = lines.filter((l) => promoEligible(l, rule.scope));
+  const base = eligible.reduce((s, l) => s + net(l), 0);
+  if (!base) return lines;
+  const shares = new Map<string, number>();
+  if (rule.kind === "percent") for (const l of eligible) shares.set(l.id, Math.round((net(l) * rule.value) / 100));
+  else {
+    const total = Math.min(rule.value, base);
+    let given = 0;
+    eligible.forEach((l, i) => {
+      const c = i === eligible.length - 1 ? total - given : Math.round((total * net(l)) / base);
+      shares.set(l.id, c);
+      given += c;
+    });
+  }
+  return lines.map((l) => (shares.get(l.id) ? { ...l, promoCents: shares.get(l.id) } : l));
+}
+
 export interface PriceCartOptions {
   /** null until the buyer picks a carrier (checkout step 02) → "Calculated at next step". */
   shippingMethod?: ShippingMethod | null;
@@ -158,20 +206,25 @@ export interface PriceCartOptions {
   country?: string;
   /** VAT rate of the sale (src/lib/api/vat.ts `vatRateAt`); omitted: France for France and the EU, 0 elsewhere. */
   vatRate?: number;
+  /** A promo already checked (./cart.ts `checkPromo`). */
+  promo?: PromoRule;
 }
 
 /** Prices lines with a stock reader. Unavailable lines (unpublished work, sold-out edition) are returned but not counted. */
 export function priceLines(lines: StoredCartLine[], opts: PriceCartOptions, stockOf: StockReader): PricedCart {
-  const priced = applyBundles(lines.map((l) => priceLine(l, stockOf)));
+  const bundled = applyBundles(lines.map((l) => priceLine(l, stockOf)));
+  const priced = opts.promo ? applyPromo(bundled, opts.promo) : bundled;
   const payable = priced.filter((l) => l.unavailable === null);
   const subtotalCents = payable.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
   const discountCents = payable.reduce((s, l) => s + (l.discountCents ?? 0), 0);
+  const promoCents = payable.reduce((s, l) => s + (l.promoCents ?? 0), 0);
   const hasPhysical = payable.some((l) => l.kind === "print");
   const shippingCents = !hasPhysical ? 0 : opts.shippingMethod ? SHIPPING[opts.shippingMethod].cents : null;
-  const totalCents = subtotalCents - discountCents + (shippingCents ?? 0);
+  const totalCents = subtotalCents - discountCents - promoCents + (shippingCents ?? 0);
   const totals: CartTotals = {
     subtotalCents,
     ...(discountCents ? { discountCents, discountLabel: `Guide + print −${BUNDLE_DISCOUNT_PCT}%` } : {}),
+    ...(opts.promo && promoCents ? { promo: { code: opts.promo.code, label: `${opts.promo.code} · ${opts.promo.label}`, cents: promoCents } } : {}),
     shippingCents,
     totalCents,
     taxIncludedCents: opts.country ? includedVatCents(totalCents, opts.country, opts.vatRate) : undefined,

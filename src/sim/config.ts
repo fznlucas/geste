@@ -161,6 +161,12 @@ export const SUPPORT_TOPICS = { print_eta: 30, format_swap: 20, access: 20, refu
 export const REVIEWS = { rate: 0.18, minDays: 2, maxDays: 10, photo: 0.6, stars: { 5: 68, 4: 25, 3: 5, 2: 1.5, 1: 0.5 } } as const;
 /** Moderation outcome. estimate — confirm */
 export const MODERATION = { published: 80, featured: 5, hidden: 15 };
+/**
+ * Promo codes used, in % of the orders that can use them: FIRSTCANVAS on a first order with a guide,
+ * TIKTOK10 on orders from TikTok, NOEL2026 on any order Dec 1–24. Chosen by a hash of the order (not
+ * the random stream), so the history is the same orders. estimate — confirm
+ */
+export const PROMO_USE: Record<string, number> = { FIRSTCANVAS: 12, TIKTOK10: 30, NOEL2026: 35 };
 /** Featured reviews at once: the "Real results" row holds four photos; a newer feature replaces the oldest. Method board */
 export const FEATURED_MAX = 4;
 /** Refunds: share of orders, days after payment. spec 01 §4 */

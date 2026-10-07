@@ -115,3 +115,37 @@ test("express checkout goes straight to the confirmation", async ({ page }) => {
   await expect(page).toHaveURL(/checkout\/success/);
   await expect(page.getByRole("heading", { name: "Thank you, Camille." })).toBeVisible();
 });
+
+test("codes: a refused code says why; a promo and a gift card apply; the card pays part", async ({ page }) => {
+  test.skip(isPhone(page), "the code field is in the desktop summary");
+  await open(page);
+  const summary = page.getByRole("complementary", { name: "Order summary" });
+  const code = summary.getByLabel("Gift card or promo code");
+  await code.fill("NOEL2026");
+  await summary.getByRole("button", { name: "Apply" }).click();
+  await expect(summary.getByRole("status")).toHaveText("This code starts on Dec 1.");
+  await code.fill("TIKTOK10");
+  await summary.getByRole("button", { name: /Apply|Invalid code/ }).click();
+  await expect(summary.getByText("TIKTOK10 · −10%")).toBeVisible();
+  await code.fill("GESTE-8JQ1-02BC");
+  await summary.getByRole("button", { name: "Apply" }).click();
+  await expect(summary.getByText("Gift card ···02BC")).toBeVisible();
+  await expect(summary.getByText("To pay")).toBeVisible();
+  await expectNoAxeViolations(page);
+
+  await toPayment(page);
+  await fillCard(page, "4242 4242 4242 4242");
+  await pay(page);
+  await expect(page).toHaveURL(new RegExp(`checkout/success/?\\?order=${NEXT}`));
+});
+
+test("an edition closed in the admin is no longer available in the cart", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate((cart) => {
+    localStorage.clear();
+    localStorage.setItem("geste.cart.v2", JSON.stringify(cart));
+    localStorage.setItem("geste.admin.v2", JSON.stringify({ patches: { print_editions: { "ed-07-s": { open: false, _at: "2026-10-02T11:00:00Z" } } }, inserts: {}, audit: [] }));
+  }, CART);
+  await page.goto("/cart/");
+  await expect(page.getByText("No longer available, not counted").first()).toBeVisible();
+});

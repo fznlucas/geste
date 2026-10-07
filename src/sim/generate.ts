@@ -7,7 +7,7 @@
  */
 import { addDays, parisDay } from "@/lib/clock";
 import { LEVELS, LEVEL_ORDER, defaultLevel, formatLabel, formatsOf, type FormatKey, type LevelKey, type PrintSize, type ShippingMethod } from "@/lib/pricing";
-import { priceLines } from "@/lib/api/price-lines";
+import { priceLines, type PromoRule } from "@/lib/api/price-lines";
 import type { StoredCartLine } from "@/lib/api/types";
 import { printCopies as fixtureCopies, printEditions } from "@/data/editions";
 import { guideId } from "@/data/guides";
@@ -24,13 +24,14 @@ import {
   AFFILIATE, AFFILIATE_PARTNERS, AI, ANCHORS, BASKET_WEIGHTS, CONVERSION, COUNTRY_WEIGHTS, DAILY_NOISE_SIGMA, DECEMBER, DECLINE_RATE,
   DELIVERY_DAYS, DEVICE_WEIGHTS, FIXTURE_SOCIAL_WEEK, FULFILMENT, FUNNEL, GIFT_CARD_USE, GIFT_CARD_WEIGHTS, GUIDE_PRINTS, HOUR_WEIGHTS,
   LAUNCH_DATE, LEVEL_WEIGHTS, MODERATION, NEWSLETTER, NEWSLETTER_OPT_IN, OPENING, COMPLETION_CURVE, OTHER_PALETTE_RATE, PAINTING_DAYS,
-  PAYMENT_METHOD_WEIGHTS, POSTS_PER_WEEK, PREMIUM_CARD_RATE, PRINT_SIZE_WEIGHTS, PRINT_WORK_WEIGHTS, REFUNDS, REPEAT, REVIEWS, RISK_WEIGHTS,
+  PAYMENT_METHOD_WEIGHTS, POSTS_PER_WEEK, PREMIUM_CARD_RATE, PROMO_USE, PRINT_SIZE_WEIGHTS, PRINT_WORK_WEIGHTS, REFUNDS, REPEAT, REVIEWS, RISK_WEIGHTS,
   SHIPPING_FR_WEIGHTS, SOURCE_SHIFT, SOURCE_WEIGHTS, SUPPORT, SUPPORT_TOPICS, THREE_DS_RATE, UNSUBSCRIBE_PER_SEND, VISITOR_SUBSCRIBE_RATE,
   WALLET_WEIGHTS, WORK_WEIGHTS,
 } from "./config";
 import { fixtureDevice, fixtureSource } from "./fixtures";
 import { EMAIL_DOMAINS, NAME_POOLS, emailLocal } from "./names";
-import { largestRemainder, rngFor, type Rng } from "./random";
+import { hashString, largestRemainder, rngFor, type Rng } from "./random";
+import { promoCodes } from "@/data/marketing";
 import { MONTH_NAMES, NEWSLETTER_SUBJECTS, REVIEW_TEXTS, SOCIAL_TITLES, THANKS, THREAD_TEXTS } from "./texts";
 import { emptyRows, type PlannedEntitlement, type SimRows } from "./types";
 
@@ -396,6 +397,18 @@ export class Simulator {
 
   // ── Orders ──────────────────────────────────────────────────────────────────
 
+  /** The promo code an order uses, if any (config `PROMO_USE`, picked by a hash of the order id). */
+  private promoFor(orderId: string, paidAt: string, firstOrder: boolean, source: Source): PromoRule | undefined {
+    const roll = hashString(`promo|${orderId}`) % 100;
+    for (const p of promoCodes) {
+      if ((p.startsAt && p.startsAt > paidAt) || (p.endsAt && p.endsAt < paidAt)) continue;
+      if (p.firstOrderOnly && !firstOrder) continue;
+      if (p.code === "TIKTOK10" && source !== "tiktok") continue;
+      if (roll < (PROMO_USE[p.code] ?? 0)) return { code: p.code, kind: p.kind, value: p.value, scope: p.scope, label: p.label };
+    }
+    return undefined;
+  }
+
   private order(day: string, hour: number, slot: { customerId?: string; giftCardId?: string }, r: Rng): OrderRow | null {
     const paidAt = parisInstant(day, hour);
     const source = this.sourceOf(day, r);
@@ -405,12 +418,18 @@ export class Simulator {
     const country = customer.country;
     const hasPrint = lines.some((l) => l.kind === "print");
     const shippingMethod: ShippingMethod | null = !hasPrint ? null : country === "FR" ? (r.weighted(SHIPPING_FR_WEIGHTS) as ShippingMethod) : "international";
-    const cart = priceLines(lines, { shippingMethod, country }, null);
-    const payable = cart.lines.filter((l) => l.unavailable === null);
-    if (!payable.length) return null;
+    let cart = priceLines(lines, { shippingMethod, country }, null);
+    if (!cart.lines.some((l) => l.unavailable === null)) return null;
 
     const n = this.next("order");
     const orderId = `order-s${pad(n, 5)}`;
+    // A promo code, by the rules checkout applies (dates, first order, scope; never on a gift card).
+    const promo = this.promoFor(orderId, paidAt, customer.orders === 0, source);
+    if (promo) {
+      const withPromo = priceLines(lines, { shippingMethod, country, promo }, null);
+      if (withPromo.totals.promo) cart = withPromo;
+    }
+    const payable = cart.lines.filter((l) => l.unavailable === null);
     const items: OrderItemRow[] = payable.map((line, index) => {
       const stored = lines.find((l) => l.id === line.id)!;
       const id = `item-s${pad(n, 5)}-${index + 1}`;
@@ -420,7 +439,7 @@ export class Simulator {
       if (stored.kind === "print") {
         const edition = printEditions.find((e) => e.id === stored.editionId)!;
         const work = works.find((w) => w.id === edition.workId)!;
-        return { id, kind: "print", workId: work.id, guideId: null, editionId: edition.id, config: {}, title: `Print ${work.number}`, detail: `${edition.size} · edition`, unitPriceCents: line.unitPriceCents, quantity: line.quantity, discountCents: line.discountCents ?? 0, fulfilment: "to_print" };
+        return { id, kind: "print", workId: work.id, guideId: null, editionId: edition.id, config: {}, title: `Print ${work.number}`, detail: `${edition.size} · edition`, unitPriceCents: line.unitPriceCents, quantity: line.quantity, discountCents: (line.discountCents ?? 0) + (line.promoCents ?? 0), fulfilment: "to_print" };
       }
       const work = works.find((w) => w.id === stored.workId)!;
       const level = stored.level === "match" ? defaultLevel(stored.format, work.baseLevel) : stored.level;
@@ -428,7 +447,7 @@ export class Simulator {
         id, kind: "guide", workId: work.id, guideId: guideId(work.slug, stored.format, level), editionId: null,
         config: { format: stored.format, level, palette: stored.palette },
         title: `Guide ${work.number}`, detail: line.detail,
-        unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: line.discountCents ?? 0, fulfilment: "not_required",
+        unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: (line.discountCents ?? 0) + (line.promoCents ?? 0), fulfilment: "not_required",
       };
     });
     const subtotalCents = items.reduce((s, i) => s + i.unitPriceCents * i.quantity, 0);
@@ -463,6 +482,7 @@ export class Simulator {
       stripePaymentIntent: payment.id.replace("pay-s", "pi_3Ps"), cardLast4: pad(r.int(0, 9999), 4), risk: payment.risk,
       withdrawalWaived: items.some((i) => i.kind === "guide") && r.chance(0.97),
       paidAt, createdAt: paidAt, items, source, device, country, paymentId: payment.id, giftCardRedemptions: redemptions, origin: "sim",
+      ...(cart.totals.promo ? { promoCode: cart.totals.promo.code } : {}),
     };
     this.rows.orders.push(order);
     this.afterPayment(day, order, customer, r);

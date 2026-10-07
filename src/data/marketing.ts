@@ -12,7 +12,6 @@ export interface PromoRow {
   scope: PromoScope;
   firstOrderOnly: boolean;
   maxUses: number | null;
-  uses: number;
   startsAt: string | null;
   endsAt: string | null;
   /** Where it is shared ("TikTok bio"). */
@@ -21,10 +20,15 @@ export interface PromoRow {
   createdAt: string;
 }
 
+/**
+ * Uses are counted from the orders that carry the code (docs/admin-v2/05 "Marketing"). A promo never
+ * discounts a gift card. NOEL2026: −20 % on guides and prints, Dec 1–24 (Paris), decided by Lucas.
+ * TIKTOK10 starts with the TikTok bio link (Aug 10).
+ */
 export const promoCodes: PromoRow[] = [
-  { id: "promo-firstcanvas", code: "FIRSTCANVAS", kind: "percent", value: 15, scope: "guides", firstOrderOnly: true, maxUses: null, uses: 58, startsAt: null, endsAt: null, note: "Print card", label: "−15% first guide", createdAt: "2026-07-01T09:00:00Z" },
-  { id: "promo-tiktok10", code: "TIKTOK10", kind: "percent", value: 10, scope: "everything", firstOrderOnly: false, maxUses: null, uses: 112, startsAt: null, endsAt: null, note: "TikTok bio", label: "−10%", createdAt: "2026-08-10T09:00:00Z" },
-  { id: "promo-noel2026", code: "NOEL2026", kind: "percent", value: 20, scope: "everything", firstOrderOnly: false, maxUses: null, uses: 0, startsAt: "2026-12-01T00:00:00Z", endsAt: "2026-12-31T23:59:00Z", note: "Scheduled Dec 1", label: "−20% gift cards", createdAt: "2026-09-20T09:00:00Z" },
+  { id: "promo-firstcanvas", code: "FIRSTCANVAS", kind: "percent", value: 15, scope: "guides", firstOrderOnly: true, maxUses: null, startsAt: "2026-07-01T09:00:00Z", endsAt: null, note: "Print card", label: "−15% first guide", createdAt: "2026-07-01T09:00:00Z" },
+  { id: "promo-tiktok10", code: "TIKTOK10", kind: "percent", value: 10, scope: "everything", firstOrderOnly: false, maxUses: null, startsAt: "2026-08-10T09:00:00Z", endsAt: null, note: "TikTok bio", label: "−10%", createdAt: "2026-08-10T09:00:00Z" },
+  { id: "promo-noel2026", code: "NOEL2026", kind: "percent", value: 20, scope: "everything", firstOrderOnly: false, maxUses: null, startsAt: "2026-11-30T23:00:00Z", endsAt: "2026-12-24T22:59:59Z", note: "Scheduled Dec 1", label: "−20% guides and prints", createdAt: "2026-09-20T09:00:00Z" },
 ];
 
 /** `gift_cards`. The first two were bought in mock orders (GS-2039, GS-2012). */

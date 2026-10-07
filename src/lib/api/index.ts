@@ -14,7 +14,7 @@ export { getOrders, getOrder, getRefundOptions, REFUNDABLE_STATUSES, ORDERS_THIS
 export { getCustomers, getCustomer, findCustomerByEmail, getAccountSecurity } from "./customers";
 export { getLibrary, getEntitlement, getEntitlementIds, libraryProgress } from "./library";
 export { getReviews } from "./reviews";
-export { priceCart, sameCartLine, GIFT_CARD_PRESETS, GIFT_CARD_MIN, GIFT_CARD_MAX } from "./cart";
+export { checkGiftCard, checkPromo, codeKind, priceCart, sameCartLine, GIFT_CARD_PRESETS, GIFT_CARD_MIN, GIFT_CARD_MAX, type CartCodes } from "./cart";
 export { buildOrder, nextOrderNumber, CheckoutError, type PlaceOrderInput } from "./checkout";
 export { setLocalRowsSource, setAdminOverlaySource, type LocalRows, type AdminOverlay } from "./local";
 export { getStaffMember, sessionExpired, sessionTimeoutHours } from "./staff";

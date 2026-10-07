@@ -25,6 +25,7 @@ export interface CartPanelProps {
 
 const ISSUES: Record<NonNullable<PricedCartLine["unavailable"]>, string> = {
   sold_out: "Sold out, not counted",
+  closed: "No longer available, not counted",
   unknown: "No longer available, not counted",
   invalid: "Amount not valid, not counted",
 };

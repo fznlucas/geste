@@ -6,7 +6,7 @@
 import { AUDIENCES, affiliates, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
 import { simNowIso } from "@/lib/clock";
 import { clone } from "./clone";
-import { allCampaigns, allCustomers, allGiftCards, allOrders, allSubscribers, merged, orderNumberOf } from "./local";
+import { allCampaigns, allGiftCards, allOrders, allSubscribers, merged, orderNumberOf } from "./local";
 
 export type { PromoKind, PromoScope } from "@/data/marketing";
 
@@ -23,10 +23,19 @@ export interface PromoCode {
   status: "Active" | "Scheduled" | "Ended";
 }
 
+/** Promo codes, the board's and those created in this browser (sync: checkout prices with them). */
+export const allPromos = (): PromoRow[] => merged("promo_codes", promoCodes);
+
+/** Uses of a code: paid orders that carry it, every source, up to `now`. */
+export function promoUses(code: string, now = simNowIso()): number {
+  const c = code.toUpperCase();
+  return allOrders().filter((o) => o.promoCode === c && o.status !== "pending" && o.status !== "cancelled" && o.paidAt <= now).length;
+}
+
 function promoStatus(p: PromoRow, now: string): PromoCode["status"] {
   if (p.startsAt && p.startsAt > now) return "Scheduled";
   if (p.endsAt && p.endsAt < now) return "Ended";
-  if (p.maxUses !== null && p.uses >= p.maxUses) return "Ended";
+  if (p.maxUses !== null && promoUses(p.code, now) >= p.maxUses) return "Ended";
   return "Active";
 }
 
@@ -35,7 +44,7 @@ export async function getPromoCodes(now = simNowIso()): Promise<PromoCode[]> {
   return clone(
     merged("promo_codes", promoCodes)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-      .map((p) => ({ id: p.id, code: p.code, discount: p.label, where: p.note, uses: p.uses, maxUses: p.maxUses, endsAt: p.endsAt, status: promoStatus(p, now) })),
+      .map((p) => ({ id: p.id, code: p.code, discount: p.label, where: p.note, uses: promoUses(p.code, now), maxUses: p.maxUses, endsAt: p.endsAt, status: promoStatus(p, now) })),
   );
 }
 
@@ -65,39 +74,12 @@ function giftStatus(g: GiftCardRow): Pick<GiftCard, "status" | "state"> {
   return { status: "Sent, unused", state: "todo" };
 }
 
-/** A readable code for a card bought in this browser, stable per order line ("GESTE-2042-0001"). */
-const localCode = (itemId: string) => {
-  const [, , n, i] = itemId.split("-");
-  return `GESTE-${n}-${String(i).padStart(4, "0")}`;
-};
-
-/** Newest first: gift cards bought in this browser, then the mock ones in board order. */
+/** Gift cards bought in this browser first, then the others newest first. */
 export async function getGiftCards(): Promise<GiftCard[]> {
-  const orders = allOrders();
   const cards = allGiftCards();
-  const known = new Set(cards.map((g) => g.purchaseOrderId).filter(Boolean));
-  const local: GiftCardRow[] = orders
-    .filter((o) => o.id.startsWith("order-local-") && !known.has(o.id))
-    .flatMap((o) =>
-      o.items
-        .filter((i) => i.kind === "gift_card")
-        .map((i) => ({
-          id: `gc-${i.id}`,
-          code: localCode(i.id),
-          initialCents: i.unitPriceCents,
-          balanceCents: i.unitPriceCents,
-          purchaseOrderId: o.id,
-          senderName: allCustomers().find((c) => c.id === o.userId)?.fullName ?? o.email,
-          // The checkout's gift form: recipient and send date kept on the line.
-          recipientName: i.config.recipientName ?? null,
-          sendAt: i.config.sendOn ? `${i.config.sendOn}T08:00:00Z` : null,
-          sentAt: i.config.sendOn && `${i.config.sendOn}T08:00:00Z` > simNowIso() ? null : o.paidAt,
-          createdAt: o.createdAt,
-        })),
-    )
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return clone(
-    [...local, ...[...cards].sort((a, b) => b.createdAt.localeCompare(a.createdAt))].map((g) => ({
+    // This browser's cards first, then the others newest first.
+    [...cards].sort((a, b) => Number(b.id.startsWith("gc-item-local")) - Number(a.id.startsWith("gc-item-local")) || b.createdAt.localeCompare(a.createdAt)).map((g) => ({
       id: g.id,
       code: g.code,
       fromTo: `${g.senderName} → ${g.recipientName ?? "by email"}`,

@@ -202,6 +202,8 @@ export interface OrderRow {
   /** `payments` row of the successful payment. */
   paymentId?: string;
   /** Gift cards used to pay (a tender, not a discount: the total is unchanged). */
+  /** The promo code used ("TIKTOK10"); its discount is in the lines' `discountCents`. */
+  promoCode?: string;
   giftCardRedemptions?: Array<{ giftCardId: string; cents: number }>;
   origin?: RowOrigin;
 }

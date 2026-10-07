@@ -3,14 +3,15 @@ import { asset } from "@/lib/asset";
 import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
 import { clone } from "./clone";
-import { allPrintCopies, allPrintEditions, customerById, workById, editionSoldCount, orderOfItem } from "./local";
+import { allPrintCopies, allPrintEditions, customerById, editionStock, workById, orderOfItem } from "./local";
 import type { FulfilmentStatus, PrintCopy, PrintEdition } from "./types";
 
 function mapEdition(row: PrintEditionRow): PrintEdition {
   const work = workById(row.workId)!;
-  // Counted from the copies of every source: pre-launch, fixtures, simulated, this browser (print_copies).
-  const sold = editionSoldCount(row.id);
-  const left = Math.max(0, row.editionSize - sold - row.reservedCount);
+  // Counted from the copies of every source: pre-launch, fixtures, simulated, this browser (print_copies);
+  // the same stock as the cart and checkout (`editionStock`).
+  const stock = editionStock(row.id)!;
+  const { sold, left } = stock;
   return {
     id: row.id,
     workId: work.id,
@@ -23,12 +24,13 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
     dimensions: printCm(row.size, work.orientation),
     editionSize: row.editionSize,
     priceCents: row.priceCents,
-    open: row.open,
+    open: stock.open,
+    closedByHand: stock.closedByHand,
     sold,
     reserved: row.reservedCount,
     left,
     soldOut: left === 0,
-    nextNumber: left === 0 ? null : sold + row.reservedCount + 1,
+    nextNumber: stock.numbers[0] ?? null,
   };
 }
 
@@ -36,6 +38,7 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
 export async function getEditions(query: { workId?: string; includeClosed?: boolean } = {}): Promise<PrintEdition[]> {
   return clone(
     allPrintEditions()
+      // The store lists editions closed by nobody; a sold-out one stays listed as "Sold out".
       .filter((e) => query.includeClosed || e.open)
       .filter((e) => !query.workId || e.workId === query.workId)
       .map(mapEdition),

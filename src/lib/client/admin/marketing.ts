@@ -43,7 +43,7 @@ export async function createPromo(input: { code: string; discount: PromoDiscount
   insertRow(
     "promo_codes",
     {
-      code, kind: amount ? "amount" : "percent", value, scope: input.scope, firstOrderOnly: false, maxUses: max, uses: 0,
+      code, kind: amount ? "amount" : "percent", value, scope: input.scope, firstOrderOnly: false, maxUses: max,
       startsAt: null, endsAt: input.endsOn ? `${input.endsOn}T23:59:00Z` : null, note: "Not shared yet", label: `${input.discount}${scopeLabel}`, createdAt: now,
     },
     { action: "promo.create", target: `promo:${code}`, summary: `${staff.fullName} created the code ${code} (${input.discount}${scopeLabel})` },

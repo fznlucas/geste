@@ -191,26 +191,40 @@ const copiesMemo = memo(() => {
   const fx = fixturesNow();
   const all = merged("print_copies", [...local().copies, ...s.copies, ...printCopies.map((c) => fx.copies.get(c.id) ?? c), ...PRE_LAUNCH_COPIES])
     .map((c) => ({ ...c, paidAt: c.paidAt ?? (c.orderItemId ? paidOfItem.get(c.orderItemId) : undefined) ?? "2026-06-30T10:00:00Z" }));
-  // Numbers follow payment order within each edition (pre-launch copies first). A copy bought in this
-  // browser keeps the number its buyer was shown (sold-out race: "Take 13/100 and pay"); the others skip it.
+  // Numbers follow payment order within each edition (pre-launch copies first): each buyer gets the
+  // lowest free number, and a copy put back in stock frees its number for the next buyer. A copy bought
+  // in this browser keeps the number its buyer was shown (sold-out race: "Take 13/100 and pay").
   const browserIds = new Set(local().copies.map((c) => c.id));
-  const byEdition = new Map<string, PrintCopyRow[]>();
-  for (const c of [...all].sort((a, b) => byPaid({ paidAt: a.paidAt!, id: a.id }, { paidAt: b.paidAt!, id: b.id }))) {
-    byEdition.set(c.editionId, [...(byEdition.get(c.editionId) ?? []), c]);
+  type Ev = { at: string; id: string; c: PrintCopyRow; back: boolean };
+  const byEdition = new Map<string, Ev[]>();
+  const push = (e: Ev) => byEdition.set(e.c.editionId, [...(byEdition.get(e.c.editionId) ?? []), e]);
+  for (const c of all) {
+    push({ at: c.paidAt!, id: c.id, c, back: false });
+    // Back in stock (a refund with restock): the number is free from then on.
+    if (c.status === "available" && c.orderItemId) push({ at: (c as { _at?: string })._at ?? c.paidAt!, id: c.id, c, back: true });
   }
   const numbered = new Map<string, number>();
-  for (const list of byEdition.values()) {
-    const kept = new Set(list.filter((c) => browserIds.has(c.id)).map((c) => c.number));
-    let n = 0;
-    for (const c of list) {
-      if (browserIds.has(c.id)) {
-        numbered.set(c.id, c.number);
+  const taken = new Map<string, Set<number>>();
+  for (const [editionId, events] of byEdition) {
+    events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.back !== b.back ? (a.back ? 1 : -1) : a.id < b.id ? -1 : 1));
+    const used = new Set(events.filter((e) => !e.back && browserIds.has(e.id)).map((e) => e.c.number));
+    for (const e of events) {
+      if (e.back) {
+        if (!browserIds.has(e.id)) used.delete(numbered.get(e.id)!);
+        else used.delete(e.c.number);
         continue;
       }
-      do n++;
-      while (kept.has(n));
-      numbered.set(c.id, n);
+      if (browserIds.has(e.id)) {
+        numbered.set(e.id, e.c.number);
+        used.add(e.c.number);
+        continue;
+      }
+      let n = 1;
+      while (used.has(n)) n++;
+      numbered.set(e.id, n);
+      used.add(n);
     }
+    taken.set(editionId, used);
   }
   // A delivered parcel closes its copies (the carrier's last scan).
   const delivered = (c: PrintCopyRow) => {
@@ -228,8 +242,25 @@ const copiesMemo = memo(() => {
     if (c.orderItemId) byItem.set(c.orderItemId, [...(byItem.get(c.orderItemId) ?? []), c]);
     if (ACTIVE.includes(c.status)) sold.set(c.editionId, (sold.get(c.editionId) ?? 0) + 1);
   }
-  return { rows, byItem, sold };
+  return { rows, byItem, sold, taken };
 });
+
+/**
+ * Stock of an edition, the one function the store, the cart, checkout and the admin read: copies taken,
+ * reserved, left, the numbers the next buyers get (lowest free first, after the reserved ones), closed
+ * by hand, sold out. A sold-out edition counts as closed; more copies (a bigger edition, a restock) reopen it.
+ */
+export function editionStock(editionId: string): { size: number; sold: number; reserved: number; left: number; numbers: number[]; closedByHand: boolean; soldOut: boolean; open: boolean } | null {
+  const row = allPrintEditions().find((e) => e.id === editionId);
+  if (!row) return null;
+  const used = copiesMemo().taken.get(editionId) ?? new Set<number>();
+  const free: number[] = [];
+  for (let n = 1; n <= row.editionSize; n++) if (!used.has(n)) free.push(n);
+  const numbers = free.slice(row.reservedCount);
+  const sold = editionSoldCount(editionId);
+  const left = Math.max(0, Math.min(row.editionSize - sold - row.reservedCount, numbers.length));
+  return { size: row.editionSize, sold, reserved: row.reservedCount, left, numbers: numbers.slice(0, left), closedByHand: !row.open, soldOut: left === 0, open: row.open && left > 0 };
+}
 
 export const allPrintCopies = (): PrintCopyRow[] => copiesMemo().rows;
 export const copiesOfItem = (itemId: string): PrintCopyRow[] => copiesMemo().byItem.get(itemId) ?? [];
@@ -311,11 +342,46 @@ export const workById = (id: string | null | undefined) => (id ? worksById().get
 export const editionById = (id: string | null | undefined) => (id ? editionsById().get(id) : undefined);
 
 /** Gift cards, with what refunds paid back onto them added to their balance. */
+/** A readable code for a card bought in this browser, stable per order line ("GESTE-2042-0001"). */
+export const browserGiftCode = (itemId: string) => {
+  const [, , n, i] = itemId.split("-");
+  return `GESTE-${n}-${String(i).padStart(4, "0")}`;
+};
+
+/**
+ * Gift cards: simulated, the board's, and those bought at checkout in this browser. Balances are net of
+ * every use (simulated and board uses are in their rows; this browser's orders are taken off here) and
+ * of refunds paid back onto them.
+ */
 export const allGiftCards = memo((): GiftCardRow[] => {
-  const back = new Map<string, number>();
-  for (const r of allRefunds()) for (const g of r.giftCards ?? []) back.set(g.giftCardId, (back.get(g.giftCardId) ?? 0) + g.cents);
-  return merged("gift_cards", [...sim().giftCards, ...fixtureGiftCards]).map((g) => (back.has(g.id) ? { ...g, balanceCents: g.balanceCents + back.get(g.id)! } : g));
+  const delta = new Map<string, number>();
+  const add = (id: string, c: number) => delta.set(id, (delta.get(id) ?? 0) + c);
+  for (const r of allRefunds()) for (const g of r.giftCards ?? []) add(g.giftCardId, g.cents);
+  const browserOrders = local().orders;
+  for (const o of browserOrders) if (o.status !== "pending" && o.status !== "cancelled") for (const g of o.giftCardRedemptions ?? []) add(g.giftCardId, -g.cents);
+  const bought: GiftCardRow[] = browserOrders.flatMap((o) =>
+    o.items.filter((i) => i.kind === "gift_card").map((i) => ({
+      id: `gc-${i.id}`,
+      code: browserGiftCode(i.id),
+      initialCents: i.unitPriceCents,
+      balanceCents: i.unitPriceCents,
+      purchaseOrderId: o.id,
+      senderName: customerById(o.userId)?.fullName ?? o.email,
+      // The checkout's gift form: recipient and send date kept on the line.
+      recipientName: i.config.recipientName ?? null,
+      sendAt: i.config.sendOn ? `${i.config.sendOn}T08:00:00Z` : null,
+      sentAt: i.config.sendOn && `${i.config.sendOn}T08:00:00Z` > simNow().toISOString() ? null : o.paidAt,
+      createdAt: o.createdAt,
+    })),
+  );
+  return merged("gift_cards", [...bought, ...sim().giftCards, ...fixtureGiftCards]).map((g) => (delta.has(g.id) ? { ...g, balanceCents: g.balanceCents + delta.get(g.id)! } : g));
 });
+
+/** A gift card by its code, as typed at checkout (case and spaces ignored). */
+export const giftCardByCode = (code: string): GiftCardRow | undefined => {
+  const c = code.replace(/\s+/g, "").toUpperCase();
+  return allGiftCards().find((g) => g.code.replace(/\s+/g, "").toUpperCase() === c);
+};
 export const allCampaigns = memo((): CampaignRow[] => merged("campaigns", [...sim().campaigns, ...fixtureCampaigns]));
 export const allPayments = (): PaymentRow[] => sim().payments;
 export const allTraffic = (): TrafficDayRow[] => sim().traffic;

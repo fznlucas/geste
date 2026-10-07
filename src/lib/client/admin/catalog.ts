@@ -51,6 +51,11 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   if (!draft.seoTitle.trim()) errors.push("Enter a page title.");
   for (const f of draft.formats) if (!Number.isFinite(f.priceCents) || f.priceCents <= 0) errors.push(`Enter a price for ${f.format.replace("x", "×")}.`);
   for (const e of draft.editions) if (e.editionId && (!Number.isInteger(e.editionSize) || e.editionSize < 1 || !Number.isFinite(e.priceCents) || e.priceCents <= 0)) errors.push(`Check the ${e.size} edition.`);
+  // An edition never shrinks below the copies already taken.
+  for (const e of draft.editions) {
+    const b = before.editions.find((x) => x.size === e.size);
+    if (e.editionId && b && e.editionSize < b.sold) errors.push(`The ${e.size} edition has ${b.sold} copies sold: it cannot be smaller.`);
+  }
   if (errors.length) throw new Error(errors[0]);
 
   const tabs = changedTabs(before, draft);

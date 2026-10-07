@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { priceCart, sameCartLine, type PriceCartOptions } from "@/lib/api/cart";
+import { priceCart, sameCartLine, type CartCodes, type PriceCartOptions } from "@/lib/api/cart";
 import type { CartLineInput, PricedCart, StoredCartLine } from "@/lib/api/types";
 import { LEVELS, isFormatKey } from "@/lib/pricing";
 import { createPersistentStore, isRecord, newId, useStore } from "./store";
@@ -89,8 +89,11 @@ export function clearCart() {
  * The priced cart. Before hydration it is the empty cart: pair it with `useHydrated()` to avoid
  * showing "Your cart is empty" for a frame.
  */
-export function useCart(opts: PriceCartOptions = {}): PricedCart & { stored: StoredCartLine[] } {
+export function useCart(opts: PriceCartOptions & CartCodes = {}): PricedCart & { stored: StoredCartLine[] } {
   const stored = useStore(cartStore);
-  const { shippingMethod, country } = opts;
-  return useMemo(() => ({ ...priceCart(stored, { shippingMethod, country }), stored }), [stored, shippingMethod, country]);
+  const { shippingMethod, country, promoCode, giftCardCode, email } = opts;
+  return useMemo(
+    () => ({ ...priceCart(stored, { shippingMethod, country, promoCode, giftCardCode, email }), stored }),
+    [stored, shippingMethod, country, promoCode, giftCardCode, email],
+  );
 }

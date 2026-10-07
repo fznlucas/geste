@@ -3,6 +3,7 @@
  * stock, prices, funnel, calibration on the boards, performance. The clock values: Oct 2, 2026 12:00
  * (the e2e clock), today (real time) and Mar 15, 2027 18:00.
  */
+import { promoCodes } from "@/data/marketing";
 import { describe, expect, it } from "vitest";
 import { addDays, parisDay } from "@/lib/clock";
 import { priceLines } from "@/lib/api/price-lines";
@@ -95,9 +96,12 @@ describe("orders, stock and prices", () => {
             ? { kind: "print", id: `${k}`, addedAt: "", editionId: i.editionId!, quantity: i.quantity }
             : { kind: "guide", id: `${k}`, addedAt: "", workId: i.workId!, format: i.config.format!, level: i.config.level!, palette: i.config.palette! },
       );
-      const cart = priceLines(lines, { shippingMethod: o.shippingMethod, country: o.country }, null);
+      // With the order's promo code, priced as checkout prices it.
+      const p = o.promoCode ? promoCodes.find((x) => x.code === o.promoCode)! : undefined;
+      const promo = p && { code: p.code, kind: p.kind, value: p.value, scope: p.scope, label: p.label };
+      const cart = priceLines(lines, { shippingMethod: o.shippingMethod, country: o.country, promo }, null);
       expect(cart.totals.totalCents).toBe(o.totalCents);
-      expect(cart.totals.discountCents ?? 0).toBe(o.discountCents);
+      expect((cart.totals.discountCents ?? 0) + (cart.totals.promo?.cents ?? 0)).toBe(o.discountCents);
     }
   });
 

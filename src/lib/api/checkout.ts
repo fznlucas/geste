@@ -40,12 +40,15 @@ export interface PlaceOrderInput {
    * someone else took them between the cart and the payment.
    */
   skipNumbers?: Record<string, number>;
+  /** Codes applied in the order summary; checked again here (prices are never taken from the client). */
+  promoCode?: string | null;
+  giftCardCode?: string | null;
   now: string;
 }
 
 export class CheckoutError extends Error {
   constructor(
-    public code: "empty" | "sold_out",
+    public code: "empty" | "sold_out" | "code",
     message: string,
   ) {
     super(message);
@@ -59,9 +62,12 @@ export function nextOrderNumber(): string {
 
 /** Builds the rows the webhook would write. Throws `CheckoutError` for an empty cart or a sold-out line. */
 export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string } {
-  const cart = priceCart(input.lines, { shippingMethod: input.shippingMethod, country: input.country });
-  const soldOut = cart.lines.find((l) => l.unavailable === "sold_out");
-  if (soldOut) throw new CheckoutError("sold_out", `${soldOut.title} is sold out`);
+  const cart = priceCart(input.lines, { shippingMethod: input.shippingMethod, country: input.country, promoCode: input.promoCode, giftCardCode: input.giftCardCode, customerId: input.customerId, email: input.email });
+  const soldOut = cart.lines.find((l) => l.unavailable === "sold_out" || l.unavailable === "closed");
+  if (soldOut) throw new CheckoutError("sold_out", `${soldOut.title} is ${soldOut.unavailable === "closed" ? "no longer available" : "sold out"}`);
+  // A code that stopped being good between the summary and the payment: nothing is charged.
+  const refused = cart.codeErrors?.promo ?? cart.codeErrors?.giftCard;
+  if (refused) throw new CheckoutError("code", refused);
   const payable = cart.lines.filter((l) => l.unavailable === null);
   if (payable.length === 0) throw new CheckoutError("empty", "Your cart is empty.");
 
@@ -85,14 +91,15 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
     if (stored.kind === "print" && line.edition) {
       const edition = printEditions.find((e) => e.id === stored.editionId)!;
       const work = works.find((w) => w.id === edition.workId)!;
-      const first = line.edition.firstNumber + (input.skipNumbers?.[line.edition.id] ?? 0);
-      if (first + line.quantity - 1 > line.edition.editionSize) throw new CheckoutError("sold_out", `${line.title} is sold out`);
-      const numbers = Array.from({ length: line.quantity }, (_, i) => first + i);
+      // The lowest free numbers (a restocked one first); the sold-out race skips the ones just taken.
+      const skip = input.skipNumbers?.[line.edition.id] ?? 0;
+      const numbers = line.edition.numbers.slice(skip, skip + line.quantity);
+      if (numbers.length < line.quantity) throw new CheckoutError("sold_out", `${line.title} is sold out`);
       items.push({
         id, kind: "print", workId: work.id, guideId: null, editionId: edition.id, config: {},
         title: `Print ${work.number}`,
         detail: `${line.edition.size} · edition ${numbers.join(", ")}/${line.edition.editionSize}`,
-        unitPriceCents: line.unitPriceCents, quantity: line.quantity, discountCents: line.discountCents ?? 0, fulfilment: "to_print",
+        unitPriceCents: line.unitPriceCents, quantity: line.quantity, discountCents: (line.discountCents ?? 0) + (line.promoCents ?? 0), fulfilment: "to_print",
       });
       const workPart = line.edition.id.split("-")[1];
       for (const num of numbers) {
@@ -109,7 +116,7 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
         id, kind: "guide", workId: work.id, guideId: gid, editionId: null,
         config: { format, level, palette: stored.palette },
         title: `Guide ${work.number}`, detail: line.detail,
-        unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: line.discountCents ?? 0, fulfilment: "not_required",
+        unitPriceCents: line.unitPriceCents, quantity: 1, discountCents: (line.discountCents ?? 0) + (line.promoCents ?? 0), fulfilment: "not_required",
       });
       // A guide is bought once: a second purchase of the same guide keeps the first entitlement.
       if (!owned.some((e) => e.guideId === gid) && !entitlements.some((e) => e.guideId === gid)) {
@@ -133,6 +140,9 @@ export function buildOrder(input: PlaceOrderInput): LocalRows & { number: string
       shippingAddress: hasPrint ? input.shippingAddress : null,
       stripePaymentIntent: paymentIntentId(orderId), cardLast4: input.cardLast4, risk: "low",
       withdrawalWaived: input.withdrawalWaived, paidAt: input.now, createdAt: input.now, items,
+      ...(cart.totals.promo ? { promoCode: cart.totals.promo.code } : {}),
+      // The gift card is a means of payment: the total stays, the card pays its part (books: owed → turnover).
+      ...(cart.giftCardId && cart.totals.giftCard ? { giftCardRedemptions: [{ giftCardId: cart.giftCardId, cents: cart.totals.giftCard.cents }] } : {}),
     }],
     entitlements,
     copies,

@@ -8,6 +8,12 @@ export interface CartTotals {
   shippingCents: number | null;
   taxIncludedCents?: number;
   totalCents: number;
+  /** A promo code applied ("TIKTOK10 · −10%"), part of the total. */
+  promo?: { code: string; label: string; cents: number };
+  /** A gift card used to pay: comes off what is left to pay, not off the total. */
+  giftCard?: { code: string; cents: number; balanceAfterCents: number };
+  /** What the card is charged: the total minus the gift card. */
+  dueCents?: number;
 }
 
 /** Right-aligned totals block. Hidden entirely on the Confirmation step (validated change). */

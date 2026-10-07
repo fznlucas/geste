@@ -51,6 +51,12 @@ export interface OrderSummaryTotals {
   totalCents: number;
   /** "Including VAT $10.67" (hidden when 0 or unknown). */
   vatCents?: number;
+  /** A promo code applied: "TIKTOK10 · −10%" under the guide + print row. */
+  promo?: { label: string; cents: number };
+  /** A gift card paying part of the total, and what stays on it. */
+  giftCard?: { label: string; cents: number; leftCents: number };
+  /** Left to pay by card after the gift card. */
+  dueCents?: number;
 }
 
 const shippingText = (c: OrderSummaryTotals["shippingCents"]) => (c === undefined ? "Digital, no shipping" : c === null ? "Next step" : formatPrice(c));
@@ -58,8 +64,8 @@ const shippingText = (c: OrderSummaryTotals["shippingCents"]) => (c === undefine
 export interface OrderSummaryProps {
   lines: OrderSummaryLine[];
   totals: OrderSummaryTotals;
-  /** Mock: every code is refused. Later: the promotion / gift card lookup. Resolves false when invalid. */
-  onApplyCode: (code: string) => Promise<boolean>;
+  /** Applies a gift card or promo code: resolves null when applied, or the precise reason it is refused. */
+  onApplyCode: (code: string) => Promise<string | null>;
 }
 
 /**
@@ -68,7 +74,8 @@ export interface OrderSummaryProps {
  */
 export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) {
   const [code, setCode] = useState("");
-  const [invalid, setInvalid] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
+  const invalid = reason !== null;
   const [busy, setBusy] = useState(false);
   const id = useId();
   return (
@@ -117,7 +124,9 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
           e.preventDefault();
           if (!code.trim() || busy) return;
           setBusy(true);
-          setInvalid(!(await onApplyCode(code.trim())));
+          const refused = await onApplyCode(code.trim());
+          setReason(refused);
+          if (!refused) setCode("");
           setBusy(false);
         }}
       >
@@ -128,7 +137,7 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
-              setInvalid(false);
+              setReason(null);
             }}
             aria-invalid={invalid || undefined}
             aria-describedby={invalid ? `${id}-code-err` : undefined}
@@ -138,16 +147,26 @@ export function OrderSummary({ lines, totals, onApplyCode }: OrderSummaryProps) 
         <Button type="submit" variant="ghost" aria-busy={busy || undefined}>
           {invalid ? "Invalid code" : "Apply"}
         </Button>
-        {invalid && <span id={`${id}-code-err`} role="status" className="sr-only">This code is not valid.</span>}
       </form>
+      {invalid && <p id={`${id}-code-err`} role="status" className="-mt-8 text-danger">{reason}</p>}
       <div className="flex flex-col gap-8 border-t border-border pt-14">
         <div className="flex justify-between"><span className="text-fg-muted">Subtotal</span><span className="tabular-nums">{formatPrice(totals.subtotalCents)}</span></div>
         {!!totals.discountCents && (
           <div className="flex justify-between"><span className="text-fg-muted">{totals.discountLabel ?? "Discount"}</span><span className="tabular-nums">−{formatPrice(totals.discountCents)}</span></div>
         )}
+        {totals.promo && (
+          <div className="flex justify-between"><span className="text-fg-muted">{totals.promo.label}</span><span className="tabular-nums">−{formatPrice(totals.promo.cents)}</span></div>
+        )}
         <div className="flex justify-between"><span className="text-fg-muted">Shipping</span><span className="tabular-nums">{shippingText(totals.shippingCents)}</span></div>
         <div className="flex justify-between border-t border-border pt-8 font-medium"><span>Total</span><span className="tabular-nums">{formatPrice(totals.totalCents)}</span></div>
         {!!totals.vatCents && <span className="text-fg-muted">Including VAT {formatPrice(totals.vatCents)}</span>}
+        {totals.giftCard && (
+          <>
+            <div className="flex justify-between"><span className="text-fg-muted">{totals.giftCard.label}</span><span className="tabular-nums">−{formatPrice(totals.giftCard.cents)}</span></div>
+            <div className="flex justify-between font-medium"><span>To pay</span><span className="tabular-nums">{formatPrice(totals.dueCents ?? totals.totalCents - totals.giftCard.cents)}</span></div>
+            <span className="text-fg-muted">{formatPrice(totals.giftCard.leftCents)} stays on the gift card</span>
+          </>
+        )}
       </div>
       <div className="flex flex-col gap-4 border-t border-border pt-14 text-fg-muted">
         <span>Secure payment · 3D Secure</span>

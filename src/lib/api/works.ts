@@ -11,7 +11,7 @@ import { HOME_HERO_WORK, palettes, shoppingItems, workFormats, works } from "@/d
 import { simNow } from "@/lib/clock";
 import { clone } from "./clone";
 import { getGuideEditor, mapGuide } from "./guides";
-import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, editionSoldCount, inserted, patched } from "./local";
+import { allCustomers, allOrders, allPrintEditions, allReviews, allWorks, editionSoldCount, editionStock, inserted, patched } from "./local";
 import type { CatalogWork, GuideOutlineStep, PaletteKey, ShoppingListLine, WorkFormat, WorkStatus, WorksQuery } from "./types";
 
 import { minGuidePriceCents, workPricing } from "./price-lines";
@@ -463,7 +463,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
     const e = editionRows.find((x) => x.size === size);
     const dimensions = printCm(size, work.orientation);
     return e
-      ? { size, dimensions, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: e.open, sold: editionSoldCount(e.id) }
+      ? { size, dimensions, editionId: e.id, editionSize: e.editionSize, priceCents: e.priceCents, open: editionStock(e.id)?.open ?? e.open, sold: editionSoldCount(e.id) }
       : { size, dimensions, editionId: null, editionSize: PRINT_SIZES[size].editionSize, priceCents: PRINT_SIZES[size].priceCents, open: false, sold: 0 };
   });
 
