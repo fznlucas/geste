@@ -5,10 +5,12 @@
  * GDPR (export, delete in two clicks), library with the reader's progress, orders, results shared.
  * Owner and Support. Nothing is emailed or deleted in the mock; every action is audited.
  */
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { AdminBox, AdminRow, AdminTitle, Artwork, Button, ButtonLink, Select, StatusChip, UnderLink, useToast } from "@/components";
 import { getCustomer, libraryProgress, type CustomerDetail, type LibraryItem, type Order } from "@/lib/api";
-import { useAdminQuery, useLibraryProgress } from "@/lib/client";
+import { useAdminCurrency, useAdminQuery, useLibraryProgress } from "@/lib/client";
+import { customerSpentEur, orderMoney } from "@/lib/metrics";
+import { formatMoney } from "@/lib/format";
 import { cancelDeletion, exportCustomerData, resetPrintCredits, scheduleDeletion, sendLoginLink } from "@/lib/client/admin/customers";
 import { simNow } from "@/lib/clock";
 import { downloadFile } from "@/lib/client/admin/download";
@@ -23,7 +25,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
   const customer = useAdminQuery(() => getCustomer(id), [id]);
   const c = customer.data;
   return (
-    <AdminPage title={c?.fullName ?? "Customer"} breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]} roles={["support"]} desktopHref={`/admin/customers/${id}`}>
+    <AdminPage title={c?.fullName ?? "Customer"} currency breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]} roles={["support"]} desktopHref={`/admin/customers/${id}`}>
       {customer.status === "loading" ? (
         <div aria-busy="true" aria-label="Loading" className="min-h-480" />
       ) : !c ? (
@@ -40,6 +42,9 @@ function Detail({ c }: { c: CustomerDetail }) {
   const finished = library.filter((l) => l.state === "finished").length;
   const tags = [c.ordersCount > 1 && "repeat buyer", c.source, finished > 0 && `finished ${finished} guide${finished > 1 ? "s" : ""}`].filter(Boolean) as string[];
   const results = c.reviews.filter((r) => r.photoUrl);
+  // Top-bar money display: EUR excl. VAT from the books (default) or USD as charged.
+  const [currency] = useAdminCurrency();
+  const eur = useMemo(() => (currency === "eur" ? { spent: customerSpentEur().get(c.id) ?? 0, orders: orderMoney(c.orders) } : null), [currency, c]);
 
   return (
     <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-12">
@@ -52,7 +57,7 @@ function Detail({ c }: { c: CustomerDetail }) {
             {[c.phone, `${c.city}, ${c.country}`].filter(Boolean).join(" · ")}
           </span>
           <span className="text-fg-muted">
-            Customer since {shortDate(c.createdAt)} · {c.ordersCount} order{c.ordersCount === 1 ? "" : "s"} · {dollars(c.spentCents)} · newsletter {c.newsletter ? "yes" : "no"}
+            Customer since {shortDate(c.createdAt)} · {c.ordersCount} order{c.ordersCount === 1 ? "" : "s"} · {eur ? `${formatMoney(eur.spent, "EUR")} excl. VAT` : dollars(c.spentCents)} · newsletter {c.newsletter ? "yes" : "no"}
           </span>
           {tags.length > 0 && (
             <ul aria-label="Tags" className="flex flex-wrap gap-6">
@@ -76,7 +81,7 @@ function Detail({ c }: { c: CustomerDetail }) {
         <AdminBox>
           <AdminTitle>Orders</AdminTitle>
           {c.orders.length === 0 && <p className="text-fg-muted">No order yet.</p>}
-          {c.orders.map((o) => <OrderLine key={o.id} o={o} />)}
+          {c.orders.map((o) => <OrderLine key={o.id} o={o} eurCents={eur ? (eur.orders.get(o.id)?.totalExVatEurCents ?? 0) : null} />)}
         </AdminBox>
         <AdminBox>
           <AdminTitle>Results shared</AdminTitle>
@@ -225,14 +230,14 @@ function orderChip(o: Order): { state: StatusState; label: string } {
   return { state: "done", label: s };
 }
 
-function OrderLine({ o }: { o: Order }): ReactNode {
+function OrderLine({ o, eurCents }: { o: Order; eurCents: number | null }): ReactNode {
   const chip = orderChip(o);
   return (
-    <AdminRow cols="100px 90px 1fr 70px 130px" href={`/admin/orders/detail?number=${o.number}`}>
+    <AdminRow cols="100px 90px 1fr 80px 130px" href={`/admin/orders/detail?number=${o.number}`}>
       <span className="underline underline-offset-3">#{o.number}</span>
       <span className="text-fg-muted">{adminDate(o.paidAt)}</span>
       <span>{itemsLine(o)}</span>
-      <span>{dollars(o.totalCents)}</span>
+      <span className="tabular-nums">{eurCents === null ? dollars(o.totalCents) : formatMoney(eurCents, "EUR")}</span>
       <StatusChip state={chip.state} label={chip.label} />
     </AdminRow>
   );

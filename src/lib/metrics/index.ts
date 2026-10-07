@@ -5,7 +5,7 @@
 export { metric, type Metric } from "./define";
 export { calendarMonth, dayLabel, daysOf, inPeriod, periodDays, periodLabel, previousPeriod, rollingDays, type Period } from "./period";
 export { ORDER_TABS, inOrderTab, orderTab, ordersThisMonth } from "./orders";
-export { orderMoney, type OrderMoney } from "./order-money";
+export { customerSpentEur, orderEur, orderMoney, type OrderEur, type OrderMoney } from "./order-money";
 export { alertWhen, alerts, isLowStock, lowEdition, nextPickupLabel, pickup, setAiToReviewSource, todoCounts, todoItems, type AdminAlert, type AdminCounts, type TodoItem } from "./todo";
 export { DASHBOARD_DEFINITIONS, adminDay, dashboard, type Dashboard, type DashboardDay, type DashboardTopWork } from "./dashboard";
 export { ANALYTICS_DEFINITIONS, ANALYTICS_RANGES, SMALL_SAMPLE_READERS, analytics, type Analytics, type AnalyticsRange } from "./analytics";

@@ -8,7 +8,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 import {
-  AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, canOpenAdmin, ButtonLink, DemoRoleMenu, ROLE_LABEL,
+  AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, canOpenAdmin, ButtonLink, CurrencySwitch, DemoRoleMenu, ROLE_LABEL,
   useToast, type AdminPhoneTab, type Crumb,
 } from "@/components";
 import { adminSearch } from "@/lib/api";
@@ -16,7 +16,7 @@ import { alerts as getAlerts, simulationStatus } from "@/lib/metrics";
 import { asset } from "@/lib/asset";
 import { clockOverride, setClockOverride } from "@/lib/clock";
 import { purchasesStore } from "@/lib/client/purchases";
-import { adminStore, hasRole, setDemoRole, useAdminQuery } from "@/lib/client";
+import { adminStore, hasRole, setDemoRole, useAdminCurrency, useAdminQuery } from "@/lib/client";
 import { markAlertRead, markAlertsRead } from "@/lib/client/admin/alerts";
 import type { StaffRole } from "@/lib/types";
 import { useAdmin } from "./AdminFrame";
@@ -40,9 +40,11 @@ export interface AdminPageProps {
   /** Page path, opened by the phone header's "Desktop ↗". */
   desktopHref?: string;
   mainClassName?: string;
+  /** The money display switch in the top bar (EUR excl. VAT / USD charged): pages with store-side money (orders, customers). */
+  currency?: boolean;
 }
 
-export function AdminPage({ title, subtitle, breadcrumbs, actions, roles, children, phone, phoneTab = null, desktopHref = "/admin", mainClassName }: AdminPageProps) {
+export function AdminPage({ title, subtitle, breadcrumbs, actions, roles, children, phone, phoneTab = null, desktopHref = "/admin", mainClassName, currency = false }: AdminPageProps) {
   const { staff, desktop } = useAdmin();
   const pathname = usePathname();
   const allowed = !roles || hasRole(staff.role, roles);
@@ -73,7 +75,7 @@ export function AdminPage({ title, subtitle, breadcrumbs, actions, roles, childr
         search={<TopSearch />}
         demo={<DemoMenu />}
         alerts={<Alerts />}
-        actions={allowed ? actions : undefined}
+        actions={allowed ? (currency ? <><TopCurrency />{actions}</> : actions) : undefined}
       />
       <AdminMain className={mainClassName}>{body}</AdminMain>
     </>
@@ -153,4 +155,9 @@ function TopSearch() {
     [staff.role],
   );
   return <AdminSearch search={search} onOpen={(href) => router.push(href)} />;
+}
+
+function TopCurrency() {
+  const [currency, setCurrency] = useAdminCurrency();
+  return <CurrencySwitch value={currency} onChange={setCurrency} />;
 }

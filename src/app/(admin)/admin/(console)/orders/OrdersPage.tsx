@@ -11,8 +11,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, FilterSummary, Modal, OrderStatusChip, PillButton, canOpenAdmin, useToast } from "@/components";
 import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
-import { inOrderTab, orderTab, ordersThisMonth } from "@/lib/metrics";
-import { audit, hasRole, useAdminQuery } from "@/lib/client";
+import { inOrderTab, orderMoney, orderTab, ordersThisMonth } from "@/lib/metrics";
+import { audit, hasRole, useAdminCurrency, useAdminQuery } from "@/lib/client";
 import { PARCELS, createLabel, markShipped, shipCopies } from "@/lib/client/admin/orders";
 import { carrierOf } from "@/lib/delivery";
 import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
@@ -74,10 +74,12 @@ export function OrdersPage() {
     setExported(true);
   };
 
+  const [currency] = useAdminCurrency();
   return (
     <AdminPage
       title="Orders"
-      subtitle={orders.data ? `${ordersThisMonth()} paid orders this month · ${orders.data.filter((o) => orderTab(o) === "to_ship").length} to ship · totals in USD as charged` : undefined}
+      currency
+      subtitle={orders.data ? `${ordersThisMonth()} paid orders this month · ${orders.data.filter((o) => orderTab(o) === "to_ship").length} to ship · totals ${currency === "eur" ? "in EUR excl. VAT" : "in USD as charged"}` : undefined}
       breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]}
       roles={["support", "fulfilment"]}
       actions={<PillButton onClick={() => orders.data && exportAll(rows)}>{exported ? "CSV downloaded" : "Export CSV"}</PillButton>}
@@ -115,6 +117,9 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
   const [labelsFor, setLabelsFor] = useState<Order[] | null>(null);
   const canShip = hasRole(staff.role, "fulfilment");
   const shown = all ? rows : rows.slice(0, PAGE);
+  // Top-bar money display: EUR excl. VAT from the books (default), or USD as charged.
+  const [currency] = useAdminCurrency();
+  const eur = useMemo(() => (currency === "eur" ? orderMoney(rows) : null), [currency, rows]);
   const picked = rows.filter((o) => selected.has(o.number));
 
   const toggle = (n: string) =>
@@ -190,7 +195,7 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
           <span role="columnheader">Date</span>
           <span role="columnheader">Customer</span>
           <span role="columnheader">Items</span>
-          <span role="columnheader" className="text-right">Total</span>
+          <span role="columnheader" className="text-right">{eur ? "Excl. VAT" : "Total"}</span>
           <span role="columnheader">Status</span>
         </AdminHeadRow>
         {!orders && Array.from({ length: 6 }, (_, i) => <div key={i} aria-hidden="true" className="h-44 bg-surface-muted" />)}
@@ -208,7 +213,7 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
               {canOpenAdmin(staff.role, "/admin/customers") ? <Link href={`/admin/customers/detail/?id=${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link> : o.customer.fullName}
             </span>
             <span role="cell" className="min-w-0 truncate text-fg-muted">{o.summary}</span>
-            <span role="cell" className="text-right tabular-nums">{formatMoney(o.totalCents)}</span>
+            <span role="cell" className="text-right tabular-nums">{eur ? formatMoney(eur.get(o.id)?.totalExVatEurCents ?? 0, "EUR") : formatMoney(o.totalCents)}</span>
             <span role="cell"><OrderStatusChip status={o.displayStatus} /></span>
           </AdminRow>
         ))}

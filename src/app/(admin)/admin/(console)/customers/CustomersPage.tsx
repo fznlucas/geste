@@ -8,7 +8,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { AdminHeadRow, AdminRow, AdminTabs, FilterSummary, PillButton, useToast } from "@/components";
 import { getCustomers, type CustomerSegment, type CustomerSummary } from "@/lib/api";
-import { audit, requireStaff, useAdminQuery } from "@/lib/client";
+import { audit, requireStaff, useAdminCurrency, useAdminQuery } from "@/lib/client";
+import { customerSpentEur } from "@/lib/metrics";
 import { downloadFile, toCsv } from "@/lib/client/admin/download";
 import { adminDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/format";
@@ -30,6 +31,9 @@ export function CustomersPage() {
   const [segment, setSegment] = useState<CustomerSegment>("all");
   const list = useAdminQuery(() => getCustomers({ segment }), [segment]);
   const [all, setAll] = useState(false);
+  const [currency] = useAdminCurrency();
+  // Read with the list (the books change with it): EUR excl. VAT per customer.
+  const spentEur = currency === "eur" && list.status === "ready" ? customerSpentEur() : null;
   const toast = useToast();
 
   const exportCsv = () => {
@@ -47,7 +51,8 @@ export function CustomersPage() {
   return (
     <AdminPage
       title="Customers"
-      subtitle="Orders and spent net of refunds, pending and cancelled orders left out"
+      currency
+      subtitle={`Orders and spent net of refunds${currency === "eur" ? ", EUR excl. VAT" : ", USD as charged"}; pending and cancelled orders left out`}
       breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]}
       roles={["support"]}
       desktopHref="/admin/customers"
@@ -68,7 +73,7 @@ export function CustomersPage() {
             ? Array.from({ length: 8 }, (_, i) => <div key={i} role="row" aria-hidden="true" className="box-content min-h-44 border-b border-border" />)
             : list.data.length === 0
               ? <div role="row"><p role="cell" className="py-40 text-center text-fg-muted">No customer in this segment yet.</p></div>
-              : (all ? list.data : list.data.slice(0, PAGE)).map((c) => <CustomerRow key={c.id} c={c} />)}
+              : (all ? list.data : list.data.slice(0, PAGE)).map((c) => <CustomerRow key={c.id} c={c} spentEurCents={spentEur ? (spentEur.get(c.id) ?? 0) : null} />)}
         </div>
       </div>
       {list.status === "ready" && !all && list.data.length > PAGE && (
@@ -84,7 +89,7 @@ export function CustomersPage() {
 }
 
 /** A table row whose name is a link stretched over the whole row (the board's row link, with table semantics kept). */
-function CustomerRow({ c }: { c: CustomerSummary }) {
+function CustomerRow({ c, spentEurCents }: { c: CustomerSummary; spentEurCents: number | null }) {
   return (
     <AdminRow cols={COLS} className="relative hover:bg-surface-hover has-[a:focus-visible]:outline has-[a:focus-visible]:outline-1 has-[a:focus-visible]:outline-fg">
       <span role="cell">
@@ -93,7 +98,7 @@ function CustomerRow({ c }: { c: CustomerSummary }) {
       </span>
       <span role="cell" className="truncate text-fg-muted">{c.email}</span>
       <span role="cell" className="text-right tabular-nums">{c.ordersCount}</span>
-      <span role="cell" className="text-right tabular-nums">{dollars(c.spentCents)}</span>
+      <span role="cell" className="text-right tabular-nums">{spentEurCents === null ? dollars(c.spentCents) : formatMoney(spentEurCents, "EUR")}</span>
       <span role="cell">{c.lastOrderAt ? adminDate(c.lastOrderAt) : "—"}</span>
       <span role="cell">{c.newsletter ? "Yes" : "No"}</span>
       <span role="cell">{c.country}</span>

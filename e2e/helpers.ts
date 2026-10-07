@@ -45,7 +45,8 @@ export async function orderCopy(orderId: string, itemIndex = 0): Promise<{ numbe
 
 export { formatPrice };
 
-export { alerts, analytics, dashboard, orderTab, ordersThisMonth, todoCounts, todoItems } from "@/lib/metrics";
+export { alerts, analytics, customerSpentEur, dashboard, orderMoney, orderTab, ordersThisMonth, todoCounts, todoItems } from "@/lib/metrics";
+export { formatMoney } from "@/lib/format";
 export { getCustomers, getOrders, getSocialWeek } from "@/lib/api";
 
 /** A string as a literal piece of a RegExp. */

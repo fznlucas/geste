@@ -1,7 +1,8 @@
 "use client";
 
 /** /kit: dashboard and phone-shell pieces in every state (M6 "dashboard"). */
-import { AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, FilterSummary, InfoTip, KpiTile, StatusChip } from "@/components";
+import { useState } from "react";
+import { AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, CurrencySwitch, FilterSummary, InfoTip, KpiTile, StatusChip, type CurrencyChoice } from "@/components";
 
 function State({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -18,6 +19,17 @@ const ALERTS = [
   { id: "a2", text: "N°08 L edition: 4 left", when: "08:40", href: "#" },
   { id: "a3", text: "2 new support messages", when: "08:02", href: "#", read: true },
 ];
+
+function CurrencyStates() {
+  const [c, setC] = useState<CurrencyChoice>("eur");
+  return (
+    <div className="flex gap-12">
+      <CurrencySwitch value={c} onChange={setC} />
+      <CurrencySwitch value="usd" onChange={() => {}} />
+      <CurrencySwitch value="eur" onChange={() => {}} disabled />
+    </div>
+  );
+}
 
 export function DashboardKit() {
   return (
@@ -38,6 +50,9 @@ export function DashboardKit() {
             <FilterSummary count="1,204 orders" filters={[]} />
           </span>
         </div>
+      </State>
+      <State label="CurrencySwitch (top bar) · EUR excl. VAT (default) · USD charged · disabled">
+        <CurrencyStates />
       </State>
       <State label="KpiTile · sm (AdminMToday)">
         <div className="grid w-358 grid-cols-2 gap-10">

@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
 import { downloadCertificate, downloadInvoice, downloadLabel } from "@/lib/client/admin/documents";
 import {
@@ -16,14 +16,15 @@ import {
   fulfilmentLabel, useToast,
 } from "@/components";
 import { REFUNDABLE_STATUSES, copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
-import { hasRole, useAdminQuery } from "@/lib/client";
+import { hasRole, useAdminCurrency, useAdminQuery } from "@/lib/client";
+import { customerSpentEur, orderEur } from "@/lib/metrics";
 import {
   CARRIER_OPTIONS, PARCELS, REFUND_REASONS, addOrderNote, refundBlocked, createLabel, generateCertificate, markShipped, refundLimitCents, refundOrder, resendAccess, resendReceipt,
   type Carrier,
 } from "@/lib/client/admin/orders";
 import { adminDateTime } from "@/lib/dates";
 import { COUNTRIES, carrierOf, formatTrackingNo } from "@/lib/delivery";
-import { formatPrice } from "@/lib/format";
+import { formatMoney, formatPrice } from "@/lib/format";
 import { BUNDLE_DISCOUNT_PCT, SHIPPING } from "@/lib/pricing";
 import { AdminPage } from "../../../_admin/AdminPage";
 import { useAdmin } from "../../../_admin/AdminFrame";
@@ -62,6 +63,7 @@ export function OrderDetailPage() {
   return (
     <AdminPage
       title={`Order #${o.number}`}
+      currency
       breadcrumbs={crumbs}
       roles={["support", "fulfilment"]}
       phone={<PhoneOrder order={o} />}
@@ -136,6 +138,10 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
   const [note, setNote] = useState("");
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const refundedCents = o.refunds.reduce((s, r) => s + r.amountCents, 0);
+  // Top-bar money display: EUR excl. VAT (the books, at the payment day's rate) or USD as charged.
+  const [currency] = useAdminCurrency();
+  const eur = useMemo(() => (currency === "eur" ? { order: orderEur(o), lifetime: customerSpentEur(o.createdAt).get(o.customer.id) ?? 0 } : null), [currency, o]);
+  const euro = (cents: number) => formatMoney(cents, "EUR");
   const prints = o.items.filter((i) => i.kind === "print");
   const guides = o.items.filter((i) => i.kind === "guide");
   const support = hasRole(staff.role, "support");
@@ -178,11 +184,39 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
                   <span role="cell">{i.imageUrl && <Artwork src={i.imageUrl} orientation={i.orientation} className="w-40" sizes="40px" />}</span>
                   <span role="cell"><ItemText item={i} /></span>
                   <span role="cell"><OrderStatusChip status={f} /></span>
-                  <span role="cell" className="tabular-nums">{formatPrice(i.unitPriceCents * i.quantity)}</span>
+                  <span role="cell" className="tabular-nums">{eur ? euro(eur.order.lines.get(i.id) ?? 0) : formatPrice(i.unitPriceCents * i.quantity)}</span>
                 </AdminRow>
               );
             })}
           </div>
+          {eur ? (
+            <div className="grid grid-cols-[1fr_90px] justify-items-end gap-y-4 tabular-nums">
+              {o.discountCents > 0 && (
+                <>
+                  <span className="text-fg-muted">Guide + print −{BUNDLE_DISCOUNT_PCT}%</span>
+                  <span>−{euro(eur.order.discountCents)}</span>
+                </>
+              )}
+              {o.shippingMethod && (
+                <>
+                  <span className="text-fg-muted">Shipping · {SHIPPING[o.shippingMethod].label.split(" — ")[0]}</span>
+                  <span>{euro(eur.order.shippingCents)}</span>
+                </>
+              )}
+              <span className="font-medium">Total excl. VAT</span>
+              <span className="font-medium">{euro(eur.order.totalExVatCents)}</span>
+              <span className="text-fg-muted">{o.vatLabel ? o.vatLabel.replace("VAT included", "VAT") : "No VAT"}</span>
+              <span>{euro(eur.order.vatCents)}</span>
+              <span className="text-fg-muted">Paid · {formatPrice(o.totalCents)} at {eur.order.fxRate.toFixed(4)} €/$</span>
+              <span>{euro(eur.order.totalCents)}</span>
+              {refundedCents > 0 && (
+                <>
+                  <span className="text-danger">Refunded · excl. VAT</span>
+                  <span className="text-danger">−{euro(eur.order.refundedExVatCents)}</span>
+                </>
+              )}
+            </div>
+          ) : (
           <div className="grid grid-cols-[1fr_70px] justify-items-end gap-y-4 tabular-nums">
             {o.discountCents > 0 && (
               <>
@@ -212,6 +246,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
               </>
             )}
           </div>
+          )}
         </AdminBox>
 
         {prints.length > 0 && <ShipBox order={o} canShip={hasRole(staff.role, "fulfilment") && (REFUNDABLE_STATUSES.includes(o.status) || isShipped(o))} onCert={(c) => setSent((s) => ({ ...s, cert: c }))} cert={sent.cert} run={run} />}
@@ -259,7 +294,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
             )}
           </span>
           <span className="text-fg-muted">
-            {ordinal(o.customerOrdersCount)} order · {formatPrice(o.customerLifetimeCents)} lifetime
+            {ordinal(o.customerOrdersCount)} order · {eur ? `${euro(eur.lifetime)} excl. VAT` : formatPrice(o.customerLifetimeCents)} lifetime
           </span>
           {o.shippingAddress && (
             <>

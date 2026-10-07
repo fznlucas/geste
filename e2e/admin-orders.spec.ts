@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { formatPrice, getOrders, orderNumber, orderTab } from "./helpers";
+import { customerSpentEur, formatMoney, formatPrice, getOrders, orderMoney, orderNumber, orderTab } from "./helpers";
 
 /** Orders at the e2e clock: numbers in payment order, the phone's "To ship" list (docs/admin-v2/01 §2). */
 const INES = orderNumber("order-2038");
@@ -174,5 +174,34 @@ test("phone: one-tap mark as shipped", async ({ page }) => {
   await page.getByLabel("Tracking number").fill("6A 123 456 789 01");
   await page.getByRole("button", { name: "Mark as shipped" }).click();
   await expect(page.getByRole("button", { name: `Shipped · ${SECOND.customer.fullName.split(" ")[0]} notified` })).toBeVisible();
+  await expectNoAxeViolations(page);
+});
+
+test("money display: EUR excl. VAT by default, USD as charged on demand, on the orders and customers pages", async ({ page }) => {
+  test.skip(isPhone(page), "the switch is in the desktop top bar");
+  const latest = [...(await getOrders())].sort((a, b) => b.paidAt.localeCompare(a.paidAt))[0]!;
+  const eurCents = orderMoney([latest]).get(latest.id)!.totalExVatEurCents;
+  await fresh(page);
+  await adminLogin(page);
+  await page.goto("/admin/orders/");
+  const money = page.getByLabel("Money shown in");
+  await expect(money).toHaveValue("eur");
+  await expect(page.getByText(/totals in EUR excl\. VAT$/)).toBeVisible();
+  const row = ordersTable(page).getByRole("row", { name: new RegExp(`#${latest.number}`) });
+  await expect(row).toContainText(formatMoney(eurCents, "EUR"));
+  await money.selectOption("usd");
+  await expect(row).toContainText(formatMoney(latest.totalCents));
+  await expect(page.getByText(/totals in USD as charged$/)).toBeVisible();
+  // Kept for this viewer.
+  await page.reload();
+  await expect(page.getByLabel("Money shown in")).toHaveValue("usd");
+  // Order detail: in euros, the books' figures.
+  await page.getByLabel("Money shown in").selectOption("eur");
+  await page.goto(`/admin/orders/detail?number=${latest.number}`);
+  await expect(page.getByText("Total excl. VAT")).toBeVisible();
+  await expect(page.getByText(formatMoney(eurCents, "EUR"), { exact: true }).first()).toBeVisible();
+  // Customers: spent in EUR excl. VAT.
+  await page.goto(`/admin/customers/detail/?id=${latest.customer.id}`);
+  await expect(page.getByText(`${formatMoney(customerSpentEur().get(latest.customer.id) ?? 0, "EUR")} excl. VAT`)).toBeVisible();
   await expectNoAxeViolations(page);
 });
