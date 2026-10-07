@@ -465,6 +465,10 @@ export interface OrderDetail extends Order {
   customerPhone: string | null;
   /** "VAT included (FR 20%)", null without VAT. */
   vatLabel: string | null;
+  /** The VAT rate of the sale when it was paid, under the regime in force (20, 21…; 0: export or franchise). */
+  vatRatePct: number;
+  /** The country its VAT follows (billing, else shipping, else the customer's). */
+  country: string;
   supportThreads: SupportThread[];
   /** The payment row: how it was paid and the 3D Secure result ("Card · 3D Secure ✓", "Apple Pay"). */
   payment: { label: string; threeDS: "passed" | "not_required" | "failed" | "unknown" };

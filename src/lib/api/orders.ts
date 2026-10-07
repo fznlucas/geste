@@ -7,7 +7,7 @@ import { SHIPPING, formatLabel } from "@/lib/pricing";
 import type { OrderRow } from "@/data/types";
 import { clone } from "./clone";
 import { customerTotals } from "./customer-totals";
-import { includedVatCents } from "@/data/tax";
+import { includedVatCents, vatableCents } from "@/data/tax";
 import { vatRateAt } from "./vat";
 import { allOrders, allPayments, copiesOfItem, customerById, editionById, workById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
 import { inOrderTab } from "@/lib/metrics/orders";
@@ -164,6 +164,8 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
     customerLifetimeCents: history.spentCents,
     customerPhone: customerById(row.userId)?.phone ?? null,
     vatLabel: vatLabel(row),
+    vatRatePct: Math.round(vatRateAt(orderCountry(row), row.paidAt) * 1000) / 10,
+    country: orderCountry(row),
     supportThreads: threadsOfOrder(row.id).map(mapThread),
     payment: paymentOf(row),
   });
@@ -181,7 +183,7 @@ function paymentOf(row: OrderRow): OrderDetail["payment"] {
 const orderCountry = (row: OrderRow) => row.country ?? row.shippingAddress?.country ?? customerById(row.userId)?.defaultAddress.country ?? "";
 
 /** The VAT part of an order's total, by the rule in force when it was paid (src/lib/api/vat.ts). */
-export const orderVatCents = (row: OrderRow) => includedVatCents(row.totalCents, orderCountry(row), vatRateAt(orderCountry(row), row.paidAt));
+export const orderVatCents = (row: OrderRow) => includedVatCents(vatableCents(row.items, row.totalCents), orderCountry(row), vatRateAt(orderCountry(row), row.paidAt));
 
 /** "VAT included (FR 20%)"; a sale to another EU country under the €10,000 threshold carries French VAT. */
 function vatLabel(row: OrderRow): string | null {

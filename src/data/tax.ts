@@ -17,3 +17,12 @@ export const VAT_RATES: Record<string, number> = {
 export function includedVatCents(totalCents: number, country: string, rate: number = Object.hasOwn(VAT_RATES, country) ? FR_VAT_RATE : 0): number {
   return Math.round(totalCents - totalCents / (1 + rate));
 }
+
+/**
+ * The part of a VAT-inclusive total that carries VAT: everything but the gift cards it sells (a gift
+ * card is a voucher, taxed when it is used, not when it is sold; the books do the same).
+ */
+export function vatableCents(items: ReadonlyArray<{ kind: string; unitPriceCents: number; quantity: number; discountCents?: number }>, totalCents: number): number {
+  const cards = items.filter((i) => i.kind === "gift_card").reduce((s, i) => s + i.unitPriceCents * i.quantity - (i.discountCents ?? 0), 0);
+  return Math.max(0, totalCents - cards);
+}

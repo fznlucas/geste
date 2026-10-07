@@ -5,10 +5,9 @@
  * invoice. Mock: built in the browser from the order (`src/lib/pdf.ts`); Live: the Boxtal label and the
  * invoice service's file. Each download writes the audit line.
  */
-import { copyNumbersLabel, getOrder, orderLineTitle, storeSetting, type OrderDetail } from "@/lib/api";
+import { copyNumbersLabel, getOrder, invoiceLines, storeSetting, type OrderDetail } from "@/lib/api";
 import { vatRegime } from "@/lib/api/vat";
 import { formatTrackingNo } from "@/lib/delivery";
-import { formatPrice } from "@/lib/format";
 import { textPdf, type PdfLine } from "@/lib/pdf";
 import { audit, requireStaff } from "../admin";
 import { downloadFile } from "./download";
@@ -75,24 +74,7 @@ export async function downloadCertificate(number: string): Promise<void> {
 export async function downloadInvoice(number: string): Promise<void> {
   const staff = requireStaff("support");
   const o = await load(number);
-  const franchise = vatRegime() === "franchise";
-  const lines: PdfLine[] = [
-    { text: `Invoice F-${o.number}`, size: 16 },
-    { text: `Date: ${day(o.paidAt)} · paid by card ···${o.cardLast4}` },
-    { text: storeSetting("store.name"), gap: 14 },
-    { text: storeSetting("store.legal_entity") },
-    { text: storeSetting("store.domain") },
-    { text: "Billed to", gap: 14 },
-    { text: o.customer.fullName },
-    { text: o.customer.email },
-    ...(o.shippingAddress ? [{ text: `${o.shippingAddress.line1}, ${o.shippingAddress.postalCode} ${o.shippingAddress.city}, ${o.shippingAddress.country}` }] : []),
-    { text: "Items", gap: 14 },
-    ...o.items.map((i) => ({ text: `${orderLineTitle(i)} · ${i.quantity} × ${formatPrice(i.unitPriceCents)}${i.discountCents ? ` − ${formatPrice(i.discountCents)}` : ""}` })),
-    ...(o.shippingCents ? [{ text: `Shipping · ${formatPrice(o.shippingCents)}` }] : []),
-    { text: `Total · ${formatPrice(o.totalCents)}`, size: 12, gap: 10 },
-    { text: franchise ? "TVA non applicable, art. 293 B du CGI" : (o.vatLabel ? `${o.vatLabel} · ${formatPrice(o.taxCents)}` : "No VAT (export)") },
-    ...(o.refunds.length ? [{ text: `Refunded · ${formatPrice(o.refunds.reduce((s, r) => s + r.amountCents, 0))}`, gap: 6 }] : []),
-  ];
+  const lines = invoiceLines(o, vatRegime());
   downloadFile(`invoice-F-${o.number}.pdf`, textPdf(lines), PDF);
   audit({ action: "order.invoice", target: `order:${o.number}`, summary: `${staff.fullName} downloaded invoice F-${o.number}` });
 }
