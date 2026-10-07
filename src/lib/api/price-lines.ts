@@ -124,7 +124,8 @@ function priceLine(line: StoredCartLine, stockOf: StockReader): PricedCartLine &
     return { ...base, kind: "guide", title, detail: "", shortDetail: "", receiptTitle: title, note: null, href: null, unitPriceCents: 0, maxQuantity: 1, unavailable: "unknown" };
   }
   const level = resolveLevel(line, work.baseLevel);
-  const query = new URLSearchParams({ format: line.format, level: line.level, palette: line.palette });
+  // Plain keys ("60x80", "advanced", "warm"): the same text as URLSearchParams, at a fraction of the cost (the simulation prices every order).
+  const query = `format=${line.format}&level=${line.level}&palette=${line.palette}`;
   const size = formatLabel(line.format, work.orientation);
   return {
     ...base,

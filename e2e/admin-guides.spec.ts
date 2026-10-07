@@ -81,6 +81,8 @@ test("roles: support cannot open the guide editor or the AI pipeline", async ({ 
 });
 
 test("AI pipeline: start a job, approve and reject, the badge follows", async ({ page }) => {
+  // Its last step waits up to 40 s for the simulated worker (wall clock): the test's own budget covers that wait.
+  test.setTimeout(75_000);
   await asStaff(page);
   await page.goto("/admin/ai/");
   await expect(page.getByText(`To validate · ${AI.toValidate}`).first()).toBeVisible();

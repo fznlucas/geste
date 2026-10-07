@@ -96,7 +96,9 @@ async function checkFilters(page: Page, path: string, filters: string[], expecte
   let smallest = Number.POSITIVE_INFINITY;
   for (const q of filters) {
     await page.goto(`${path}${q}`);
-    await page.waitForLoadState("networkidle");
+    // What the measure needs: the grid's images loaded (fonts and transitions are waited for in `measure`).
+    // Not "networkidle": its 500 ms of silence per page, sixteen times, took the test past its timeout.
+    await page.waitForFunction(() => Array.from(document.querySelectorAll<HTMLImageElement>("main [data-grid] img")).every((i) => i.complete));
     // A combination that matches nothing shows no grid.
     if ((await page.locator("main [data-grid]").count()) === 0) continue;
     const { ref, smallestGap } = await checkGrid(page, expected);
@@ -147,7 +149,9 @@ async function checkCaptions(page: Page) {
 
 const content = (page: Page): [number, number] => (isDesktop(page) ? [120, 1320] : [16, 374]);
 
-test("shop: grid by original size, one scale for every filter, captions per card", async ({ page }) => {
+// Two tests: the sixteen filter combinations and the hover over every card each take about 15 s, too
+// close to the 30 s test timeout together (they failed under load).
+test("shop: grid by original size, one scale for every filter", async ({ page }) => {
   const expected = { cols: isDesktop(page) ? 5 : 2, content: content(page), rowSpace: isDesktop(page) ? 64 : 28, minGap: minGap(page) };
   const ref = await checkFilters(page, "/shop/", combos(["", "level=beginner", "level=intermediate", "level=advanced"], ["", "palette=warm", "palette=cool", "palette=earth"]), expected);
   expect(ref).toBeGreaterThan(0);
@@ -156,6 +160,12 @@ test("shop: grid by original size, one scale for every filter, captions per card
   // A work and a turned one of the same size are the same size on screen: N°06 46×61 and N°01 61×46, N°09 40×50 and N°07 50×40.
   expect(Math.abs(longSide(items, "n06") - longSide(items, "n01"))).toBeLessThanOrEqual(0.5);
   expect(Math.abs(longSide(items, "n09") - longSide(items, "n07"))).toBeLessThanOrEqual(0.5);
+});
+
+test("shop: captions per card", async ({ page }) => {
+  const expected = { cols: isDesktop(page) ? 5 : 2, content: content(page), rowSpace: isDesktop(page) ? 64 : 28, minGap: minGap(page) };
+  await page.goto("/shop/");
+  await checkGrid(page, expected);
   if (isDesktop(page)) {
     // The desktop meta line morphs in on hover: check every card with it shown.
     const cards = page.locator("main a[href^='/works/']");

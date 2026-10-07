@@ -151,11 +151,20 @@ export function startOfDayParis(day: string): Date {
   return new Date(utcMidnight - parisOffsetMinutes(first) * 60_000);
 }
 
-/** "2026-10-02" + n days. */
+const added = new Map<string, string>();
+
+/** "2026-10-02" + n days (cached: the simulation asks for the same days hundreds of thousands of times). */
 export function addDays(day: string, n: number): string {
-  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
-  const t = new Date(Date.UTC(y, m - 1, d + n));
-  return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+  const key = `${day}|${n}`;
+  let out = added.get(key);
+  if (out === undefined) {
+    const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+    const t = new Date(Date.UTC(y, m - 1, d + n));
+    out = `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`;
+    if (added.size > 200_000) added.clear();
+    added.set(key, out);
+  }
+  return out;
 }
 
 /** Hour of the day in Paris (the dashboard greeting). */
