@@ -40,15 +40,19 @@ describe("work checklist", () => {
 });
 
 describe("hero picker", () => {
-  it("offers works that pass the checklist (the result photo aside) and keeps the current hero, flagged", async () => {
+  it("offers live works painted by the studio; the hero is N°03 and follows the rule", async () => {
     const { content } = await at("2026-10-02T12:00:00Z");
     const s = await content.getHomeSettings();
-    const current = s.options.find((o) => o.slug === s.heroWork)!;
-    expect(current).toBeDefined();
-    expect(current.ready).toBe(false);
-    expect(current.missing).toEqual(["Not painted by the studio"]);
-    expect(s.options.filter((o) => o.slug !== s.heroWork).every((o) => o.ready)).toBe(true);
-    expect(s.options.some((o) => o.slug === "n09")).toBe(false);
+    expect(s.heroWork).toBe("n03");
+    expect(s.options.every((o) => o.ready)).toBe(true);
+    expect(s.options.some((o) => o.slug === "n06" || o.slug === "n09")).toBe(false);
     expect(s.options.some((o) => o.slug === "n10")).toBe(true);
+    expect(content.homeHero()?.missing).toEqual([]);
+  });
+
+  it("a hero that is not painted is named, so the admin can alert", async () => {
+    const { content, local } = await at("2026-10-02T12:00:00Z");
+    const n06 = local.allWorks().find((w) => w.slug === "n06")!;
+    expect(content.heroMissing(n06.id)).toEqual(["Not painted by the studio"]);
   });
 });

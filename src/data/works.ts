@@ -237,4 +237,5 @@ export const shoppingItems: ShoppingItemRow[] = works.flatMap((w, i) =>
 );
 
 /** site_settings.home.hero_work */
-export const HOME_HERO_WORK = "n06";
+/** Home hero: N°03 (Lucas, Oct 7: the hero must be live and painted by the studio; N°06 is not painted). */
+export const HOME_HERO_WORK = "n03";

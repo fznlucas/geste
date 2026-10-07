@@ -123,7 +123,9 @@ test("content: journal, new article, home, translations, legal", async ({ page }
   await expect(journal).toContainText("Untitled article");
 
   await page.getByRole("button", { name: "Home page", exact: true }).click();
-  await expect(page.getByLabel("Hero work")).toHaveValue("n06");
+  // Lucas, Oct 7: the hero is N°03; the picker offers live works painted by the studio (not N°06 or N°09).
+  await expect(page.getByLabel("Hero work")).toHaveValue("n03");
+  await expect(page.getByLabel("Hero work").locator("option[value=n06]")).toHaveCount(0);
   await page.getByLabel("Hero work").selectOption("n10");
   await page.getByRole("button", { name: "Publish home" }).click();
   await expect(page.getByRole("button", { name: /^Published/ })).toBeVisible();

@@ -38,10 +38,24 @@ export interface HomeSettings {
   headline: string;
   publishedAt: string;
   /**
-   * Works that can lead the home page: live, and passing the checklist (`workChecklist`) except the real
-   * result photo, which the home does not show. The current hero stays listed with what it misses.
+   * Works that can lead the home page: live and painted by the studio (Lucas, Oct 7; no work has a real
+   * result photo yet). The current hero stays listed with what it misses.
    */
   options: Array<{ slug: string; number: string; ready: boolean; missing: string[] }>;
+}
+
+/** What keeps a work from leading the home page: it must be live and painted by the studio. */
+export function heroMissing(workId: string): string[] {
+  const w = allWorks().find((x) => x.id === workId);
+  if (!w) return ["Unknown work"];
+  return [...(w.status === "live" ? [] : ["Not live"]), ...workChecklist(w.id).filter((c) => c.key === "studio" && !c.done).map((c) => c.label)];
+}
+
+/** The home hero now, and what it misses (the admin alert when it no longer follows the rule). */
+export function homeHero(): { slug: string; number: string; missing: string[] } | null {
+  const s = patched<HomeSettingsRow>("site_settings", homeSettings);
+  const w = allWorks().find((x) => x.slug === s.heroWork);
+  return w ? { slug: w.slug, number: w.number, missing: heroMissing(w.id) } : null;
 }
 
 export async function getHomeSettings(): Promise<HomeSettings> {
@@ -53,7 +67,7 @@ export async function getHomeSettings(): Promise<HomeSettings> {
     options: allWorks()
       .filter((w) => w.status === "live")
       .map((w) => {
-        const missing = workChecklist(w.id).filter((c) => !c.done && c.key !== "result").map((c) => c.label);
+        const missing = heroMissing(w.id);
         return { slug: w.slug, number: w.number, ready: missing.length === 0, missing };
       })
       .filter((o) => o.ready || o.slug === s.heroWork),
