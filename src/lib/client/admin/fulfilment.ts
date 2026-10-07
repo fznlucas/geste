@@ -103,6 +103,8 @@ export async function setEditionOpen(editionId: string, open: boolean): Promise<
   if (!edition) throw new Error("Unknown edition.");
   // A sold-out edition closes itself; it reopens only with more copies (`setEditionSize`).
   if (open && edition.soldOut) throw new Error(`${edition.workNumber} ${edition.size} is sold out: raise the edition size to reopen it.`);
+  // Copies held in a checkout that has not paid yet: closing would sell them anyway.
+  if (!open && edition.reserved > 0) throw new Error(`${edition.reserved} ${edition.reserved === 1 ? "copy is" : "copies are"} held in a checkout: close the ${edition.workNumber} ${edition.size} edition once ${edition.reserved === 1 ? "it is" : "they are"} paid or released.`);
   if (!edition.closedByHand === open) return;
   patchRow("print_editions", editionId, { open }, {
     action: open ? "edition.reopen" : "edition.close",

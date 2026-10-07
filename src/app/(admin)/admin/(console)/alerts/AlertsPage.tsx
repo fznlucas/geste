@@ -10,7 +10,7 @@ import { AdminBox, AdminRow, AdminTitle, PillButton } from "@/components";
 import { PUSH_TOPICS, getPushSettings } from "@/lib/api";
 import { alerts as getAlerts, type AdminAlert } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
-import { markAlertRead, setPushTopic } from "@/lib/client/admin/alerts";
+import { markAlertRead, markAlertsRead, setPushTopic } from "@/lib/client/admin/alerts";
 import { cn } from "@/lib/cn";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
@@ -95,7 +95,10 @@ function DesktopAlerts() {
   return (
     <div className="grid grid-cols-12 gap-16">
       <AdminBox className="col-span-8">
-        <AdminTitle>Latest</AdminTitle>
+        <div className="flex items-center justify-between">
+          <AdminTitle>Latest</AdminTitle>
+          {alerts?.some((a) => !a.read) && <PillButton onClick={() => markAlertsRead(alerts.filter((a) => !a.read).map((a) => a.id))}>Mark all read</PillButton>}
+        </div>
         {alerts === null ? (
           <div aria-busy="true" aria-label="Loading" className="h-280 bg-surface-muted" />
         ) : alerts.length === 0 ? (
@@ -105,7 +108,7 @@ function DesktopAlerts() {
             {alerts.map((a) => (
               <li key={a.id}>
                 <AlertRow a={a} cols="1fr 90px auto">
-                  <Link href={a.href} className="hover:text-fg-muted">{a.text}</Link>
+                  <Link href={a.href} onClick={() => !a.read && markAlertRead(a.id)} className="hover:text-fg-muted">{a.text}</Link>
                   <span className="text-fg-muted">{a.when}</span>
                 </AlertRow>
               </li>

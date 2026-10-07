@@ -7,7 +7,8 @@
  * work's real-result photo asks first. "Reply privately" opens the customer's conversation in the support inbox (Support only).
  * Owner, Support and Content. The store is built at deploy time: in the mock it keeps its reviews.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AdminTabs, Button, PillButton, ReviewCard, UnderLink, useToast } from "@/components";
 import { getReviews, type Review, type ReviewStatus } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
@@ -21,9 +22,18 @@ const IN_TAB: Record<Tab, ReviewStatus[]> = { "To moderate": ["pending"], Publis
 const VERDICT: Record<ReviewStatus, string> = { pending: "", published: "Published", featured: "Published · featured on home", hidden: "Hidden" };
 
 export function ReviewsPage() {
-  const [tab, setTab] = useState<Tab>("To moderate");
+  // ?tab=moderate|published|hidden (the sidebar opens To moderate); ?id= a review (Customers › Results).
+  const params = useSearchParams();
+  const PARAM: Record<string, Tab> = { moderate: "To moderate", published: "Published", hidden: "Hidden" };
+  const [tabChoice, setTab] = useState<Tab | null>(null);
+  const focusId = params.get("id");
   const reviews = useAdminQuery(() => getReviews(), []);
+  const focused = focusId ? reviews.data?.find((r) => r.id === focusId) : undefined;
+  const tab: Tab = tabChoice ?? (focused ? (TABS.find((t) => IN_TAB[t].includes(focused.status)) ?? "To moderate") : (PARAM[params.get("tab") ?? ""] ?? "To moderate"));
   const list = (reviews.data ?? []).filter((r) => IN_TAB[tab].includes(r.status));
+  useEffect(() => {
+    if (focused) document.getElementById(`review-${focused.id}`)?.scrollIntoView({ block: "center" });
+  }, [focused]);
 
   const note = <span className="text-fg-muted">Approved results appear on product pages under “Real results”.</span>;
   const grid = (cols: string) =>
@@ -35,7 +45,7 @@ export function ReviewsPage() {
       <p className="text-fg-muted">{tab === "To moderate" ? "Nothing to moderate. New reviews land here first." : tab === "Published" ? "No published review yet." : "No hidden review."}</p>
     ) : (
       <ul className={`grid gap-16 ${cols}`}>
-        {list.map((r) => <Card key={r.id} review={r} />)}
+        {list.map((r) => <Card key={r.id} review={r} focused={r.id === focusId} />)}
       </ul>
     );
 
@@ -63,7 +73,7 @@ export function ReviewsPage() {
   );
 }
 
-function Card({ review: r }: { review: Review }) {
+function Card({ review: r, focused = false }: { review: Review; focused?: boolean }) {
   const { staff } = useAdmin();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -104,6 +114,8 @@ function Card({ review: r }: { review: Review }) {
     );
   return (
     <ReviewCard
+      id={`review-${r.id}`}
+      focused={focused}
       who={r.customer.fullName}
       work={r.work.number}
       rating={r.rating}
@@ -113,7 +125,7 @@ function Card({ review: r }: { review: Review }) {
       actions={actions}
       reply={
         hasRole(staff.role, "support") ? (
-          <UnderLink href={`/admin/support?customer=${r.customer.id}&about=${encodeURIComponent(r.work.number)}`} className="self-start">Reply privately</UnderLink>
+          <UnderLink href={`/admin/support?customer=${r.customer.id}&about=${encodeURIComponent(r.work.number)}&review=${r.id}&new=1`} className="self-start">Reply privately</UnderLink>
         ) : undefined
       }
     />

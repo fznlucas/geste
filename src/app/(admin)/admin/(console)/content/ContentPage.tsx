@@ -7,24 +7,27 @@
  */
 import { useId, useState } from "react";
 import Link from "next/link";
-import { AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, ButtonLink, Input, Select, StatusChip, useToast } from "@/components";
-import { articleDate, getAdminArticles, getHomeSettings, getLegalDocs, getTranslationProgress, type HomeSettings } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, ButtonLink, Input, Modal, PillButton, Select, StatusChip, Textarea, useToast } from "@/components";
+import { articleDate, getAdminArticles, getHomeSettings, getLegalDocs, getTranslationProgress, type HomeSettings, type LegalDoc } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
-import { createArticleDraft, publishHome } from "@/lib/client/admin/content";
+import { createArticleDraft, publishHome, publishLegal, saveLegalDraft } from "@/lib/client/admin/content";
 import { AdminPage } from "../../_admin/AdminPage";
+import { useTabParam } from "../../_admin/useTabParam";
 
 type Tab = "Journal" | "Home page" | "Translations" | "Legal pages";
 const TABS: Tab[] = ["Journal", "Home page", "Translations", "Legal pages"];
 const JOURNAL_COLS = "1.6fr 110px 110px 90px 150px";
 
 export function ContentPage() {
-  const [tab, setTab] = useState<Tab>("Journal");
+  const [tab, setTab] = useTabParam(TABS, "Journal");
   const toast = useToast();
+  const router = useRouter();
   const newArticle = async () => {
     try {
-      await createArticleDraft();
-      setTab("Journal");
+      const id = await createArticleDraft();
       toast.show("Draft created · Untitled article");
+      router.push(`/admin/content/article/?id=${id}`);
     } catch (e) {
       toast.show(e instanceof Error ? e.message : "Could not create the draft.", { tone: "danger" });
     }
@@ -77,8 +80,8 @@ function Journal() {
             const cells = (
               <>
                 <span role="cell">
-                  {/* A link cannot be a table row (axe): the title link is stretched over the row. */}
-                  {a.href ? <Link href={a.href} className="after:absolute after:inset-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg">{a.title}</Link> : a.title}
+                  {/* A link cannot be a table row (axe): the title link (to the editor) is stretched over the row. */}
+                  <Link href={a.editHref} className="after:absolute after:inset-0 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg">{a.title}</Link>
                 </span>
                 <span role="cell">{a.category}</span>
                 <span role="cell" className="text-fg-muted">{a.publishedAt ? articleDate(a.publishedAt) : "—"}</span>
@@ -87,7 +90,7 @@ function Journal() {
               </>
             );
             return (
-              <AdminRow key={a.id} cols={JOURNAL_COLS} className={a.href ? "relative hover:bg-surface-hover" : undefined}>{cells}</AdminRow>
+              <AdminRow key={a.id} cols={JOURNAL_COLS} className="relative hover:bg-surface-hover">{cells}</AdminRow>
             );
           })}
     </div>
@@ -161,16 +164,17 @@ function HomeForm({ settings }: { settings: HomeSettings }) {
 }
 
 function Translations() {
-  const rows = useAdminQuery(getTranslationProgress, []);
+  const q = useAdminQuery(getTranslationProgress, []);
   const cols = "1fr 120px 1fr";
   return (
     <div role="table" aria-label="French translation" className="flex flex-col gap-14 border border-border bg-surface px-20 pb-20">
+      {q.data?.note && <p className="pt-14 text-fg-muted">{q.data.note}</p>}
       <AdminHeadRow cols={cols}>
         <span role="columnheader">Area</span>
         <span role="columnheader">FR done</span>
         <span role="columnheader">Progress</span>
       </AdminHeadRow>
-      {(rows.data ?? []).map((r) => (
+      {(q.data?.areas ?? []).map((r) => (
         <AdminRow key={r.area} cols={cols}>
           <span role="cell">{r.area}</span>
           <span role="cell" className="tabular-nums">{r.frDonePct}%</span>
@@ -185,7 +189,8 @@ function Translations() {
 
 function Legal() {
   const docs = useAdminQuery(getLegalDocs, []);
-  const cols = "1fr 140px 160px";
+  const [editing, setEditing] = useState<LegalDoc | null>(null);
+  const cols = "1fr 140px 200px 70px";
   return (
     <div role="table" aria-label="Legal pages" className="flex flex-col gap-14 border border-border bg-surface p-20">
       {(docs.data ?? []).map((d) => (
@@ -196,10 +201,49 @@ function Legal() {
           </span>
           <span role="cell" className="text-fg-muted">v{d.version} · {articleDate(d.updatedAt)}</span>
           <span role="cell">
-            <StatusChip state={d.status === "blocked" ? "issue" : d.status === "live" ? "done" : "todo"} label={d.note ?? (d.status === "live" ? "Live" : "Draft")} />
+            <StatusChip state={d.status === "blocked" ? "issue" : d.status === "live" ? "done" : "todo"} label={d.hasDraft ? `${d.note ?? (d.status === "live" ? "Live" : "Draft")} · draft saved` : (d.note ?? (d.status === "live" ? "Live" : "Draft"))} />
           </span>
+          <span role="cell"><PillButton aria-label={`Edit ${d.title}`} onClick={() => setEditing(d)}>Edit</PillButton></span>
         </AdminRow>
       ))}
+      {editing && <LegalEditor d={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+/** Edit a legal page: save a draft, or publish it as the next version (blocked ones say what is missing). */
+function LegalEditor({ d, onClose }: { d: LegalDoc; onClose: () => void }) {
+  const toast = useToast();
+  const [body, setBody] = useState(d.bodyMd);
+  const [error, setError] = useState<string | null>(null);
+  const publish = async () => {
+    try {
+      await saveLegalDraft(d.id, body);
+      const v = await publishLegal(d.id);
+      toast.show(`${d.title} published · v${v}`);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not publish.");
+    }
+  };
+  return (
+    <Modal
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={`${d.title} · v${d.version}`}
+      description="“## ” starts a section; [brackets] are facts still to fill in."
+      width={560}
+      placement="admin"
+      actions={
+        <>
+          <Button variant="ghost" className="grow" onClick={() => saveLegalDraft(d.id, body).then(() => { toast.show("Draft saved"); onClose(); }, (e) => setError(e instanceof Error ? e.message : "Could not save."))}>Save draft</Button>
+          <Button className="grow-2" trailing="→" onClick={publish}>Publish v{d.version + 1}</Button>
+        </>
+      }
+    >
+      <label htmlFor="lg-body" className="sr-only">Text</label>
+      <Textarea id="lg-body" value={body} onChange={(e) => setBody(e.target.value)} className="min-h-280 resize-y" />
+      {error && <p role="alert" className="text-danger">{error}</p>}
+    </Modal>
   );
 }

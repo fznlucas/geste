@@ -35,7 +35,7 @@ export async function createJob(params: AiJobParams): Promise<number> {
   );
   insertRow(
     "ai_jobs",
-    { id: `job-${number}`, number, params, label: aiJobLabel(params), status: "queued", progress: 3, costCents: cost, createdAt: adminNow(), callId },
+    { id: `job-${number}`, number, params, label: aiJobLabel(params), status: "queued", progress: 3, costCents: cost, createdAt: adminNow(), callId, startedAtMs: Date.now() },
     { action: "ai.job_create", target: `ai_job:${number}`, summary: `${staff.fullName} started AI job ${number} · ${params.candidates} candidates` },
   );
   return number;
@@ -54,7 +54,11 @@ const IMAGES = [1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 2, 7];
 export function advanceJobs() {
   for (const job of allAiJobs()) {
     if (job.status !== "queued" && job.status !== "running") continue;
-    const progress = Math.min(100, job.progress + (job.number <= 118 ? 1 : 3));
+    // A job started here runs on the wall clock (3 % every 2 s, also while no admin page is open);
+    // the board's jobs move 1 % per tick.
+    const started = (job as { startedAtMs?: number }).startedAtMs;
+    const progress = started ? Math.min(100, 3 + Math.floor((Date.now() - started) / 2000) * 3) : Math.min(100, job.progress + 1);
+    if (progress === job.progress) continue;
     if (progress < 100) {
       patchRow("ai_jobs", job.id, { progress, status: "running" });
       continue;

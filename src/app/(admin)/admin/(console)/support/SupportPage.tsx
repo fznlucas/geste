@@ -12,7 +12,7 @@ import { AdminTabs, Button, Input, MessageList, PillButton, Select, Textarea, Th
 import { getCustomer, getOrder, getSavedReplies, getSupportThread, getSupportThreads, getWorkGuides, storeSetting, type FormatKey, type SupportThread } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { durationLabel, firstReplyMinutes } from "@/lib/metrics";
-import { deleteReply, markThreadRead, reply, saveReply, setThreadStatus, startThread, swapGuideFormat } from "@/lib/client/admin/support";
+import { deleteReply, draftWithClaude, markThreadRead, reply, saveReply, setThreadStatus, startThread, swapGuideFormat } from "@/lib/client/admin/support";
 import { cn } from "@/lib/cn";
 import { simNow } from "@/lib/clock";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -51,19 +51,36 @@ export function SupportPage() {
   const threads = useAdminQuery(() => getSupportThreads(), []);
   const all = useMemo(() => threads.data ?? [], [threads.data]);
 
-  // ?customer=&about= (Reviews › "Reply privately"): that customer's latest thread, or a first message to them.
+  // ?customer=&about= (Reviews › "Reply privately", an order's email): that customer's latest thread, or
+  // a first message to them; `new=1` (Customers › "Write to") always starts a new one; `review=` quotes it.
   const customerId = params.get("customer");
   const about = params.get("about");
+  const fresh = params.get("new") === "1";
+  const reviewId = params.get("review");
   const customer = useAdminQuery(() => (customerId ? getCustomer(customerId) : Promise.resolve(null)), [customerId]);
-  const arrivalThread = !arrived && customerId ? all.find((t) => t.customerId === customerId) : undefined;
+  const arrivalThread = !arrived && customerId && !fresh ? all.find((t) => t.customerId === customerId) : undefined;
+  const review = reviewId ? customer.data?.reviews.find((r) => r.id === reviewId) : undefined;
   const compose =
     !arrived && customerId && threads.status === "ready" && !arrivalThread && customer.data
-      ? { customerId: customer.data.id, name: customer.data.fullName, subject: about ? `Your review of ${about}` : "A note from Geste" }
+      ? {
+          customerId: customer.data.id,
+          name: customer.data.fullName,
+          subject: about?.startsWith("#") ? `About your order ${about}` : about ? `Your review of ${about}` : "A note from Geste",
+          draft: review ? `Hi ${customer.data.fullName.split(" ")[0]},\n\nThank you for your review of ${review.work.number}: “${review.body}”\n\n` : "",
+        }
       : null;
 
   const target = cur ? all.find((t) => t.id === cur) : arrivalThread;
-  const tab: Tab = tabChoice ?? (target?.status === "done" ? "Done" : "Open");
-  const list = all.filter((t) => (tab === "Open" ? t.status === "open" : t.status === "done"));
+  // ?status=unread (the sidebar's count: threads not opened since the customer wrote), open, done.
+  const status = params.get("status");
+  const [showAll, setShowAll] = useState(false);
+  const unreadOnly = status === "unread" && !showAll && !tabChoice;
+  const tab: Tab = tabChoice ?? (target?.status === "done" || status === "done" ? "Done" : "Open");
+  // Open threads: the longest waiting first (overdue ones on top).
+  const list = all
+    .filter((t) => (tab === "Open" ? t.status === "open" : t.status === "done"))
+    .filter((t) => !unreadOnly || t.unread)
+    .sort((a, b) => (tab === "Open" ? (a.lastCustomerMessage?.at ?? a.createdAt).localeCompare(b.lastCustomerMessage?.at ?? b.createdAt) : 0));
   // Nothing chosen yet: the first thread of the list (not marked read until clicked).
   const currentId = compose ? null : (cur ?? arrivalThread?.id ?? list[0]?.id ?? null);
 
@@ -81,6 +98,12 @@ export function SupportPage() {
       <div className="flex gap-16 px-14 py-10">
         <AdminTabs label="Threads" tabs={["Open", "Done"] as const} value={tab} onChange={setTab} />
       </div>
+      {unreadOnly && (
+        <p role="status" className="flex gap-8 px-14 pb-10">
+          <span>New messages only.</span>
+          <button type="button" onClick={() => setShowAll(true)} className="cursor-pointer underline underline-offset-3 hover:text-fg-muted">Show every open thread</button>
+        </p>
+      )}
       {threads.status === "loading" ? (
         <div aria-busy="true" className="flex flex-col">
           {[0, 1, 2, 3].map((i) => <div key={i} className="min-h-97 border-b border-border bg-surface-muted" />)}
@@ -184,6 +207,20 @@ function Conversation({ id, onStatusChange }: { id: string; onStatusChange: () =
           <PillButton onClick={() => { onStatusChange(); setThreadStatus(t.id, t.status === "open" ? "done" : "open"); }}>{t.status === "open" ? "Mark as done" : "Reopen"}</PillButton>
         </div>
         <MessageList messages={t.messages} />
+        <PillButton
+          className="self-start"
+          onClick={() =>
+            draftWithClaude(t.id).then(
+              (text) => {
+                setDraft(text);
+                toast.show("Draft written · read it before sending");
+              },
+              (e) => toast.show(e instanceof Error ? e.message : "Claude could not draft.", { tone: "danger" }),
+            )
+          }
+        >
+          Draft with Claude
+        </PillButton>
         <ReplyBox
           draft={draft}
           setDraft={(v) => {
@@ -247,6 +284,7 @@ function ReplyBox({ draft, setDraft, error, busy, onSend, replies, onSaveReply, 
             ),
           )}
           {onDeleteReply && <PillButton pressed={managing} onClick={() => setManaging((m) => !m)}>{managing ? "Done" : "Edit"}</PillButton>}
+          {managing && <span className="w-full text-fg-muted">Click a saved reply to remove it.</span>}
         </div>
       )}
       <label htmlFor={id} className="sr-only">Reply</label>
@@ -329,10 +367,10 @@ function GuideSwap({ orderNumber }: { orderNumber: string }) {
 }
 
 /** First message to a customer with no thread yet. */
-function Compose({ customerId, name, subject, onSent }: { customerId: string; name: string; subject: string; onSent: (threadId: string) => void }) {
+function Compose({ customerId, name, subject, draft: initial = "", onSent }: { customerId: string; name: string; subject: string; draft?: string; onSent: (threadId: string) => void }) {
   const { desktop } = useAdmin();
   const toast = useToast();
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const send = async () => {

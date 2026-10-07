@@ -1,6 +1,8 @@
 /** Settings & team (owner only). Store values changed in this browser come from the admin overlay ("site_settings"). */
 import { integrations, pastAudit, paymentProviders, securitySettings, shippingZones, storeSettings } from "@/data/settings";
 import { staff } from "@/data/staff";
+import { formatPrice } from "@/lib/format";
+import { SHIPPING } from "@/lib/pricing";
 import { clone } from "./clone";
 import { staffInvites } from "./staff";
 import { orderNumberOf, patched } from "./local";
@@ -24,8 +26,14 @@ export async function getStoreSettings(): Promise<StoreSetting[]> {
   return clone(storeSettings.map((s) => ({ key: s.key, label: s.label, value: patched("site_settings", { id: s.key, value: s.value }).value })));
 }
 
+/** Shipping zones with the prices checkout charges (`pricing.SHIPPING`): "from" is the cheapest carrier of the zone. */
 export async function getShippingZones() {
-  return clone(shippingZones);
+  const from: Record<string, string> = {
+    France: formatPrice(Math.min(SHIPPING.mondial_relay.cents, SHIPPING.colissimo.cents, SHIPPING.chronopost_express.cents)),
+    Europe: formatPrice(SHIPPING.international.cents),
+    Switzerland: formatPrice(SHIPPING.international.cents),
+  };
+  return clone(shippingZones.map((z) => ({ ...z, from: from[z.zone] ?? z.from })));
 }
 export async function getPaymentProviders() {
   return clone(paymentProviders);

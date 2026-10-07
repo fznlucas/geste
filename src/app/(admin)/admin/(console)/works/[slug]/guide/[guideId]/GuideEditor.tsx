@@ -9,11 +9,11 @@
  */
 import * as P from "@radix-ui/react-popover";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminBox, AdminTitle, Button, CanvasDiagram, Field, Input, Modal, PillButton, Select, StepCard, Textarea, useToast } from "@/components";
-import { getGuideEditor, type GuideContentLayer, type GuideEditorData } from "@/lib/api";
+import { allAiCandidates, getGuideEditor, gestureVideo, type GuideContentLayer, type GuideEditorData } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
-import { GuideInvalidError, MAX_STEPS, addLayer, addStep, publishGuide, saveLayer, saveStep } from "@/lib/client/admin/guides";
+import { BRUSH_WIDTHS, GuideInvalidError, MAX_STEPS, addLayer, addStep, deleteStep, importStrokesFromAi, moveStep, publishGuide, restoreVersion, saveLayer, saveStep, saveStrokes, uploadGestureVideo } from "@/lib/client/admin/guides";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
 import { AdminPage } from "@/app/(admin)/admin/_admin/AdminPage";
@@ -74,6 +74,7 @@ function Editor({ guideId, heading, data }: { guideId: string; heading: string; 
   const router = useRouter();
   const toast = useToast();
   const [preview, setPreview] = useState(false);
+  const [strokesOpen, setStrokesOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const layers = data.draft.layers;
   const sel = parseSelection(new URLSearchParams(params.toString()), layers);
@@ -156,8 +157,8 @@ function Editor({ guideId, heading, data }: { guideId: string; heading: string; 
         <div className="flex w-full flex-wrap justify-between gap-y-8">
           <span className="text-fg-muted">Canvas after this layer</span>
           <div className="flex gap-6">
-            <PillButton onClick={() => toast.show("Done · demo action")}>Edit strokes</PillButton>
-            <PillButton onClick={() => toast.show("Done · demo action")}>Import from AI</PillButton>
+            <PillButton onClick={() => setStrokesOpen(true)}>Edit strokes</PillButton>
+            <ImportFromAi guideId={guideId} fail={fail} />
           </div>
         </div>
         <div className="flex h-480 w-full items-center justify-center bg-surface-muted">
@@ -169,7 +170,7 @@ function Editor({ guideId, heading, data }: { guideId: string; heading: string; 
       {/* Form */}
       <AdminBox>
         {sel.kind === "step" ? (
-          <StepForm key={`${layer.position}${letter}-${data.published.version}`} guideId={guideId} layer={layer} step={stepData.position} fail={fail} />
+          <StepForm key={`${layer.position}${letter}-${data.published.version}-${layer.steps.length}`} guideId={guideId} layer={layer} step={stepData.position} fail={fail} go={go} />
         ) : (
           <LayerForm key={`${layer.position}-${data.published.version}`} guideId={guideId} layer={layer} fail={fail} />
         )}
@@ -180,9 +181,11 @@ function Editor({ guideId, heading, data }: { guideId: string; heading: string; 
           <Button variant="ghost" onClick={() => setPreview(true)}>Preview</Button>
         </div>
         <p id="ge-version" className="text-fg-muted">
-          Version {data.published.version} · autosaved · <History data={data} />
+          Version {data.published.version} · autosaved · <History data={data} guideId={guideId} fail={fail} />
         </p>
       </AdminBox>
+
+      {strokesOpen && <StrokesModal guideId={guideId} layer={layer} onClose={() => setStrokesOpen(false)} fail={fail} />}
 
       <Modal
         open={preview}
@@ -227,20 +230,26 @@ function Plate({ layer }: { layer: GuideContentLayer }) {
   );
 }
 
-function StepForm({ guideId, layer, step, fail }: { guideId: string; layer: GuideContentLayer; step: number; fail: (e: unknown) => void }) {
+function StepForm({ guideId, layer, step, fail, go }: { guideId: string; layer: GuideContentLayer; step: number; fail: (e: unknown) => void; go: (query: string) => void }) {
   const s = layer.steps.find((x) => x.position === step)!;
   const letter = LETTERS[step - 1]!;
   const last = step === layer.steps.length;
   const [text, setText] = useState(s.text);
   const [brush, setBrush] = useState(s.brush ?? "");
-  const [tip, setTip] = useState(layer.tip);
-  const [dry, setDry] = useState(minutesLabel(layer.drySeconds));
-  const [dryError, setDryError] = useState<string>();
   const brushes = BRUSHES.includes(brush) || !brush ? BRUSHES : [brush, ...BRUSHES];
+  const first = step === 1;
 
   return (
     <>
-      <AdminTitle>Step {letter} · layer {two(layer.position)}</AdminTitle>
+      <div className="flex items-center justify-between gap-8">
+        <AdminTitle>Step {letter} · layer {two(layer.position)}</AdminTitle>
+        {/* Reorder with buttons (keyboard) and delete; the ids follow the new order. */}
+        <div className="flex gap-6">
+          <PillButton disabled={first} aria-label={`Move step ${layer.position}${letter} up`} onClick={() => moveStep(guideId, layer.position, step, -1).then((id) => go(`step=${id}`), fail)}>↑</PillButton>
+          <PillButton disabled={last} aria-label={`Move step ${layer.position}${letter} down`} onClick={() => moveStep(guideId, layer.position, step, 1).then((id) => go(`step=${id}`), fail)}>↓</PillButton>
+          <PillButton disabled={layer.steps.length <= 1} aria-label={`Delete step ${layer.position}${letter}`} onClick={() => deleteStep(guideId, layer.position, step).then(() => go(`step=${layer.position}${LETTERS[Math.max(0, step - 2)]}`), fail)}>Delete</PillButton>
+        </div>
+      </div>
       {/* The board's textarea is inline: its line box leaves 6 px under it. */}
       <Field label="Instruction" className="mb-6">
         <Textarea
@@ -268,33 +277,19 @@ function StepForm({ guideId, layer, step, fail }: { guideId: string; layer: Guid
         </Select>
       </Field>
       <Plate layer={layer} />
+      {/* Tip and drying belong to the layer: shown here, edited once on the layer. */}
       <Field label="Tip">
-        <Input
-          value={tip}
-          onChange={(e) => {
-            setTip(e.target.value);
-            saveLayer(guideId, layer.position, { tip: e.target.value }).catch(fail);
-          }}
-        />
+        <Input value={layer.tip || "—"} readOnly />
       </Field>
       <div className="grid grid-cols-2 gap-10">
-        <Field label="Drying timer" error={dryError} hint={last ? undefined : undefined}>
-          <Input
-            value={last ? dry : "—"}
-            readOnly={!last}
-            title={last ? undefined : "The drying time is set on the layer’s last step"}
-            onChange={(e) => {
-              setDry(e.target.value);
-              const seconds = parseMinutes(e.target.value);
-              setDryError(seconds === null ? "Minutes, e.g. 45" : undefined);
-              if (seconds !== null) saveLayer(guideId, layer.position, { drySeconds: seconds }).catch(fail);
-            }}
-          />
+        <Field label="Drying timer">
+          <Input value={last ? minutesLabel(layer.drySeconds) : "—"} readOnly />
         </Field>
-        <Field label="Gesture video">
-          <Input value={`step-${letter}.mp4 · DRM`} readOnly title="Uploaded with the video host (signed playback)" />
-        </Field>
+        <GestureVideo guideId={guideId} stepId={`${layer.position}${letter}`} fail={fail} />
       </div>
+      <button type="button" onClick={() => go(`layer=${layer.position}`)} className="-mt-4 self-start text-fg-muted underline underline-offset-3 hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg">
+        Edit the tip and the drying time on layer {two(layer.position)}
+      </button>
     </>
   );
 }
@@ -348,22 +343,158 @@ function LayerForm({ guideId, layer, fail }: { guideId: string; layer: GuideCont
   );
 }
 
-/** "history": the published versions, newest first. */
-function History({ data }: { data: GuideEditorData }) {
+/** "history": the published versions, newest first; "Restore" makes one the draft. */
+function History({ data, guideId, fail }: { data: GuideEditorData; guideId: string; fail: (e: unknown) => void }) {
+  const toast = useToast();
   return (
     <P.Root>
       <P.Trigger className="cursor-pointer text-fg underline underline-offset-3 hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg">history</P.Trigger>
       <P.Portal>
-        <P.Content align="start" sideOffset={8} className="z-popover flex w-280 flex-col bg-surface py-8 shadow-pop outline-none" aria-label="Versions">
+        <P.Content align="start" sideOffset={8} className="z-popover flex w-320 flex-col bg-surface py-8 shadow-pop outline-none" aria-label="Versions">
           {data.hasChanges && <p className="flex min-h-36 items-center justify-between px-16"><span>Draft</span><span className="text-fg-muted">autosaved</span></p>}
           {data.versions.map((v) => (
-            <p key={v.version} className="flex min-h-36 items-center justify-between gap-12 px-16">
-              <span>Version {v.version}{v.version === data.published.version ? " · live" : ""}</span>
-              <span className="text-fg-muted">{shortDate(v.publishedAt)}{v.publishedBy ? ` · ${v.publishedBy}` : ""}</span>
-            </p>
+            <div key={v.version} className="flex min-h-44 items-center justify-between gap-12 px-16">
+              <span>
+                Version {v.version}{v.version === data.published.version ? " · live" : ""}
+                <br />
+                <span className="text-fg-muted">{shortDate(v.publishedAt)}{v.publishedBy ? ` · ${v.publishedBy}` : ""}</span>
+              </span>
+              <PillButton
+                aria-label={`Restore version ${v.version} as the draft`}
+                onClick={() => restoreVersion(guideId, v.version, v.content).then(() => toast.show(`Version ${v.version} restored as the draft · publish to make it live`), fail)}
+              >
+                Restore
+              </PillButton>
+            </div>
           ))}
         </P.Content>
       </P.Portal>
     </P.Root>
+  );
+}
+
+/** "Edit strokes": the layer's strokes in painting order; add, remove, reorder, width from the brush kit. */
+function StrokesModal({ guideId, layer, onClose, fail }: { guideId: string; layer: GuideContentLayer; onClose: () => void; fail: (e: unknown) => void }) {
+  const toast = useToast();
+  const [list, setList] = useState(() => layer.diagram.filter((s) => s.layer === layer.position));
+  const colours = layer.plate.length ? layer.plate : [{ hex: "#1F2433", name: "Payne's grey" }];
+  const move = (i: number, by: -1 | 1) => setList((l) => {
+    const n = [...l];
+    const j = i + by;
+    if (j < 0 || j >= n.length) return l;
+    [n[i], n[j]] = [n[j]!, n[i]!];
+    return n;
+  });
+  const save = () =>
+    saveStrokes(guideId, layer.position, list).then(() => {
+      toast.show(`Layer ${two(layer.position)}: ${list.length} strokes saved`);
+      onClose();
+    }, fail);
+  return (
+    <Modal
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={`Strokes · layer ${two(layer.position)}`}
+      description="In painting order. The diagram follows."
+      width={560}
+      actions={
+        <>
+          <Button variant="ghost" className="grow" onClick={onClose}>Cancel</Button>
+          <Button className="grow-2" trailing="→" onClick={save}>Save strokes</Button>
+        </>
+      }
+    >
+      <CanvasDiagram strokes={[...layer.diagram.filter((s) => s.layer < layer.position), ...list]} upTo={layer.position} current={layer.position} width={160} className="h-213 w-160 self-center" />
+      <ol aria-label="Strokes" className="flex max-h-280 flex-col gap-6 overflow-y-auto">
+        {list.map((s, i) => (
+          <li key={i} className="flex items-center gap-8">
+            <span className="w-24 text-fg-muted">{i + 1}</span>
+            {/* Paint colour: content, not a UI token. */}
+            <span aria-hidden="true" className="size-14 outline outline-1 -outline-offset-1 outline-border-field" style={{ background: s.color }} />
+            <span className="grow">{s.kind === "rect" ? "Ground" : "Stroke"}</span>
+            <label className="sr-only" htmlFor={`st-w-${i}`}>Width of stroke {i + 1}</label>
+            <Select id={`st-w-${i}`} value={String(s.width ?? 0)} onChange={(e) => setList((l) => l.map((x, k) => (k === i ? { ...x, width: Number(e.target.value) } : x)))} className="w-150">
+              {s.kind === "rect" && <option value="0">Whole canvas</option>}
+              {BRUSH_WIDTHS.map(([b, w]) => <option key={b} value={w}>{b}</option>)}
+            </Select>
+            <PillButton aria-label={`Move stroke ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</PillButton>
+            <PillButton aria-label={`Move stroke ${i + 1} down`} disabled={i === list.length - 1} onClick={() => move(i, 1)}>↓</PillButton>
+            <PillButton aria-label={`Remove stroke ${i + 1}`} onClick={() => setList((l) => l.filter((_, k) => k !== i))}>✕</PillButton>
+          </li>
+        ))}
+      </ol>
+      <PillButton
+        className="self-start"
+        onClick={() => setList((l) => [...l, { layer: layer.position, kind: "path", d: `M${120 + l.length * 20} ${300 + l.length * 30} Q300 ${260 + l.length * 30} ${480 - l.length * 10} ${320 + l.length * 30}`, color: colours[l.length % colours.length]!.hex, width: (BRUSH_WIDTHS.find(([b]) => b === layer.brush) ?? BRUSH_WIDTHS[1]!)[1], opacity: 0.9 }])}
+      >
+        + Add a stroke
+      </PillButton>
+    </Modal>
+  );
+}
+
+/** "Import from AI": an approved candidate's stroke plan for this guide. */
+function ImportFromAi({ guideId, fail }: { guideId: string; fail: (e: unknown) => void }) {
+  const toast = useToast();
+  const approved = allAiCandidates().filter((c) => c.status === "approved");
+  return (
+    <P.Root>
+      <P.Trigger asChild>
+        <PillButton>Import from AI</PillButton>
+      </P.Trigger>
+      <P.Portal>
+        <P.Content align="end" sideOffset={8} className="z-popover flex w-300 flex-col bg-surface py-8 shadow-pop outline-none" aria-label="Approved candidates">
+          {approved.length === 0 ? (
+            <p className="px-16 py-8 text-fg-muted">No approved candidate yet: approve one in the AI pipeline.</p>
+          ) : (
+            approved.slice(0, 8).map((c) => (
+              <P.Close asChild key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => importStrokesFromAi(guideId, c).then((n) => toast.show(`${n} strokes imported from ${c.id}`), fail)}
+                  className="flex min-h-44 cursor-pointer items-center justify-between px-16 text-left hover:bg-surface-hover focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg"
+                >
+                  <span>{c.id}</span>
+                  <span className="text-fg-muted">{c.strokes} strokes · {c.layers} layers</span>
+                </button>
+              </P.Close>
+            ))
+          )}
+        </P.Content>
+      </P.Portal>
+    </P.Root>
+  );
+}
+
+/** "Gesture video": upload to the video host (mock: processing for a few seconds, then ready). */
+function GestureVideo({ guideId, stepId, fail }: { guideId: string; stepId: string; fail: (e: unknown) => void }) {
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [, tick] = useState(0);
+  const video = gestureVideo(guideId, stepId);
+  useEffect(() => {
+    if (video?.status !== "processing") return;
+    const t = setTimeout(() => tick((n) => n + 1), 1000);
+    return () => clearTimeout(t);
+  });
+  return (
+    <Field label="Gesture video">
+      <div className="flex items-center gap-8">
+        <span className="grow text-fg-muted">{video ? `${video.name} · ${video.status === "ready" ? "ready" : "processing…"}` : "No video yet"}</span>
+        <PillButton onClick={() => input.current?.click()}>{video ? "Replace" : "Upload"}</PillButton>
+        <input
+          ref={input}
+          type="file"
+          accept="video/*"
+          hidden
+          aria-label={`Gesture video of step ${stepId}`}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) uploadGestureVideo(guideId, stepId, file.name).then(() => toast.show(`${file.name} uploaded · processing`), fail);
+          }}
+        />
+      </div>
+    </Field>
   );
 }

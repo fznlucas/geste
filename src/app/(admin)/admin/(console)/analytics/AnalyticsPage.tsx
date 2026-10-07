@@ -5,22 +5,40 @@
  * drop-offs in Signal, devices, level mix, repeat rate. Mock: the board's figures (`getAnalytics`);
  * later the PostHog query API. The range tabs change the funnel and the sources.
  */
-import { useState } from "react";
-import { AdminBox, AdminTabs, AdminTitle, GUIDE_EDITOR_HREF, HBar, UnderLink } from "@/components";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AdminBox, AdminTabs, AdminTitle, HBar, Select, UnderLink } from "@/components";
+import { formatPrice } from "@/lib/format";
 import { ANALYTICS_RANGES, analytics, type Analytics, type AnalyticsRange, SMALL_SAMPLE_READERS } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
 import { AdminPage } from "../../_admin/AdminPage";
 
+const RANGE_PARAM: Record<string, AnalyticsRange> = { "7": "7 days", "30": "30 days", "90": "90 days", year: "Year" };
+const PARAM_OF: Record<AnalyticsRange, string> = { "7 days": "7", "30 days": "30", "90 days": "90", Year: "year" };
+
 export function AnalyticsPage() {
-  const [range, setRange] = useState<AnalyticsRange>("30 days");
-  const q = useAdminQuery(() => analytics(range), [range]);
+  // ?range=7|30|90|year and ?work=N°05 in the URL (the dashboard's tiles open a range and a block: #funnel, #basket, #completion).
+  const params = useSearchParams();
+  const router = useRouter();
+  const range = RANGE_PARAM[params.get("range") ?? ""] ?? "30 days";
+  const work = params.get("work") ?? "N°03";
+  const set = (changes: Record<string, string>) => {
+    const next = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(changes)) next.set(k, v);
+    router.replace(`/admin/analytics/?${next}`, { scroll: false });
+  };
+  const setRange = (r: AnalyticsRange) => set({ range: PARAM_OF[r] });
+  const q = useAdminQuery(() => analytics(range, work), [range, work]);
+  useEffect(() => {
+    if (q.status === "ready" && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "start" });
+  }, [q.status]);
   return (
     <AdminPage title="Analytics" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/analytics">
       <div className="flex flex-wrap justify-between gap-12">
         <AdminTabs label="Range" tabs={ANALYTICS_RANGES} value={range} onChange={setRange} className="whitespace-nowrap" />
         <span className="text-fg-muted">Store + app · all devices</span>
       </div>
-      {q.status === "loading" ? <Skeleton /> : <Boards a={q.data} />}
+      {q.status === "loading" ? <Skeleton /> : <Boards a={q.data} onWork={(w) => set({ work: w })} />}
     </AdminPage>
   );
 }
@@ -37,11 +55,11 @@ function Skeleton() {
 
 const pctLabel = (n: number) => `${n}%`;
 
-function Boards({ a }: { a: Analytics }) {
+function Boards({ a, onWork }: { a: Analytics; onWork: (work: string) => void }) {
   const span = (n: 4 | 6 | 12) => (n === 12 ? "md:col-span-12" : n === 6 ? "md:col-span-6" : "md:col-span-4");
   return (
     <div className="grid grid-cols-1 gap-16 md:grid-cols-12">
-      <AdminBox className={span(6)}>
+      <AdminBox id="funnel" className={`${span(6)} scroll-mt-16`}>
         <AdminTitle>Funnel · last {a.range.toLowerCase()}</AdminTitle>
         <HBar label="Funnel" rows={a.funnel} />
         <span className="text-fg-muted">
@@ -52,8 +70,8 @@ function Boards({ a }: { a: Analytics }) {
         <AdminTitle>Where buyers come from</AdminTitle>
         <HBar label="Orders by source" rows={a.sources.map((s) => ({ label: s.label, value: s.orders, display: `${s.orders} orders` }))} />
       </AdminBox>
-      <AdminBox className={span(12)}>
-        <Completion a={a} />
+      <AdminBox id="completion" className={`${span(12)} scroll-mt-16`}>
+        <Completion a={a} onWork={onWork} />
       </AdminBox>
       <AdminBox className={span(4)}>
         <AdminTitle>Devices</AdminTitle>
@@ -68,6 +86,11 @@ function Boards({ a }: { a: Analytics }) {
         <span className="text-lg">{a.repeat.pct}%</span>
         <span className="text-fg-muted">{a.repeat.context}</span>
       </AdminBox>
+      <AdminBox id="basket" className={`${span(12)} scroll-mt-16`}>
+        <AdminTitle>Average order · last {a.range.toLowerCase()}</AdminTitle>
+        <span className="text-lg tabular-nums">{formatPrice(a.basket.avgOrderCents, "en", "EUR")} <span className="text-xs text-fg-muted">excl. VAT</span></span>
+        <span className="text-fg-muted">{a.basket.orders} paid orders · {a.basket.linesPerOrder} lines per order · {a.basket.withPrintPct}% with a print</span>
+      </AdminBox>
     </div>
   );
 }
@@ -76,7 +99,7 @@ function Boards({ a }: { a: Analytics }) {
  * 15 columns, one per step, 180 px + the Ink baseline. The bar is 85 % of the column at 100 % so the labels (first, drops, last)
  * fit above it. The two drops are Signal bars with their label; the sentence under the chart says why.
  */
-function Completion({ a }: { a: Analytics }) {
+function Completion({ a, onWork }: { a: Analytics; onWork: (work: string) => void }) {
   const steps = a.completion.steps;
   const drops = steps.filter((s) => s.drop);
   const labelled = (i: number) => i === 0 || i === steps.length - 1 || !!steps[i]!.drop;
@@ -84,7 +107,12 @@ function Completion({ a }: { a: Analytics }) {
     <>
       <div className="flex flex-wrap justify-between gap-x-12">
         <AdminTitle>Guide completion · {a.completion.workNumber} · % of buyers reaching each step</AdminTitle>
-        <span className="text-fg-muted">Where people stop is where the guide needs work</span>
+        <span className="flex items-center gap-8 text-fg-muted">
+          <label htmlFor="an-work">Work</label>
+          <Select id="an-work" value={a.completion.workNumber} onChange={(e) => onWork(e.target.value)} className="w-100">
+            {a.works.map((w) => <option key={w}>{w}</option>)}
+          </Select>
+        </span>
       </div>
       <div aria-hidden="true" className="flex h-181 items-end gap-6 border-b border-fg">
         {steps.map((s, i) => (
@@ -113,12 +141,17 @@ function Completion({ a }: { a: Analytics }) {
           </tbody>
         </table>
       </div>
-      <span>
-        <span className="text-danger">Drops at {drops.map((d) => `${d.step} (−${d.drop!.points} pts)`).join(" and ")}</span>{" "}
-        <span className="text-fg-muted">
-          · {drops.map((d) => d.drop!.reason).join("; ")}. <UnderLink href={GUIDE_EDITOR_HREF} className="text-fg">Edit these steps</UnderLink>
+      {drops.length ? (
+        <span>
+          <span className="text-danger">Drops at {drops.map((d) => `${d.step} (−${d.drop!.points} pts)`).join(" and ")}</span>{" "}
+          <span className="text-fg-muted">
+            · {drops.map((d) => d.drop!.reason).join("; ")}.{" "}
+            {a.completion.editHref && <UnderLink href={a.completion.editHref} className="text-fg">Edit these steps</UnderLink>}
+          </span>
         </span>
-      </span>
+      ) : (
+        <span className="text-fg-muted">Where people stop is where the guide needs work: no drop for {a.completion.workNumber} yet.</span>
+      )}
       {a.completion.readers < SMALL_SAMPLE_READERS && <span className="text-fg-muted">Small sample ({a.completion.readers} readers)</span>}
     </>
   );

@@ -14,7 +14,7 @@ import { getOrders } from "@/lib/api/orders";
 import { getReviews } from "@/lib/api/reviews";
 import { getSupportThreads } from "@/lib/api/support";
 import type { StaffRole } from "@/lib/api/types";
-import { parisDay, parisHour, simNow, simNowIso, simToday } from "@/lib/clock";
+import { addDays, parisDay, parisHour, simNow, simNowIso, simToday } from "@/lib/clock";
 import { euThresholdCrossings } from "@/lib/api/vat";
 import { formatPrice } from "@/lib/format";
 import { books } from "@/lib/ledger";
@@ -228,19 +228,30 @@ export function nextPickupLabel(): string | null {
  * something waiting, never at 0, from `todoCounts` (the sidebar badges).
  */
 export const todoItems = metric("One line per module with something waiting today, for the roles that can act on it.", async function todoItems(): Promise<TodoItem[]> {
-  const [counts, low] = await Promise.all([todoCounts(), lowEdition()]);
+  const [counts, low, toPrint, open] = await Promise.all([todoCounts(), lowEdition(), getPrintCopies({ fulfilment: ["to_print", "printed"] }), getSupportThreads({ status: "open" })]);
   const draft = allCampaigns().filter((c) => !c.sentAt && !c.scheduledAt).sort((a, b) => b.id.localeCompare(a.id))[0];
   const due = pickup()?.time;
+  const now = simNow().getTime();
+  // Late: paid more than 3 days ago and not packed yet (the delivery promise starts at payment).
+  const late = toPrint.filter((c) => c.orderPaidAt && now - Date.parse(c.orderPaidAt) > 3 * 86_400_000).length;
+  const overdue = open.filter((t) => t.overdue).length;
+  // URSSAF and VAT returns due within 14 days, not paid yet.
+  const b = books();
+  const soon = [...b.declarations.map((d) => ({ ...d, what: "URSSAF" })), ...b.vatReturns.map((d) => ({ ...d, what: "VAT return" }))]
+    .filter((d) => d.status !== "paid" && d.status !== "in_progress" && d.dueDate <= addDays(simToday(), 14));
   const list: Array<TodoItem | null> = [
     counts.fulfilment ? {
-      key: "ship", text: `${plural(counts.fulfilment, "print", "prints")} to pack and ship`, issue: true, href: "/admin/fulfilment", roles: ["owner", "fulfilment"],
+      key: "ship", text: `${plural(counts.fulfilment, "print", "prints")} to pack and ship`, issue: true, href: "/admin/fulfilment/?col=to_print", roles: ["owner", "fulfilment"],
       phone: { text: `${plural(counts.fulfilment, "print", "prints")} to ship${due ? ` before ${due}` : ""}`, href: "/admin/orders/" },
     } : null,
-    counts.support ? { key: "support", text: plural(counts.support, "support message", "support messages"), issue: false, href: "/admin/support", roles: ["owner", "support"], phone: { text: plural(counts.support, "support message", "support messages"), href: "/admin/alerts/" } } : null,
-    counts.reviews ? { key: "reviews", text: `${plural(counts.reviews, "review", "reviews")} to moderate`, issue: false, href: "/admin/reviews", roles: ["owner", "support", "content"], phone: { text: `${plural(counts.reviews, "review", "reviews")} to moderate`, href: "/admin/alerts/" } } : null,
-    counts.ai ? { key: "ai", text: `${plural(counts.ai, "AI work", "AI works")} to validate`, issue: false, href: "/admin/ai", roles: ["owner", "content"], phone: null } : null,
-    low ? { key: "edition", text: low.label, issue: true, href: "/admin/editions", roles: ["owner", "fulfilment"], phone: null } : null,
-    draft ? { key: "newsletter", text: `${draft.month ?? "Next"} newsletter draft`, issue: false, href: "/admin/marketing", roles: ["owner"], phone: null } : null,
+    late ? { key: "late", text: `${plural(late, "print", "prints")} late (paid over 3 days ago)`, issue: true, href: "/admin/fulfilment/?col=to_print", roles: ["owner", "fulfilment"], phone: { text: `${plural(late, "print", "prints")} late`, href: "/admin/orders/" } } : null,
+    counts.support ? { key: "support", text: plural(counts.support, "support message", "support messages"), issue: false, href: "/admin/support/?status=unread", roles: ["owner", "support"], phone: { text: plural(counts.support, "support message", "support messages"), href: "/admin/support/?status=unread" } } : null,
+    overdue ? { key: "overdue", text: `${plural(overdue, "reply", "replies")} overdue (over 24 h)`, issue: true, href: "/admin/support/?status=open", roles: ["owner", "support"], phone: null } : null,
+    counts.reviews ? { key: "reviews", text: `${plural(counts.reviews, "review", "reviews")} to moderate`, issue: false, href: "/admin/reviews/?tab=moderate", roles: ["owner", "support", "content"], phone: { text: `${plural(counts.reviews, "review", "reviews")} to moderate`, href: "/admin/reviews/?tab=moderate" } } : null,
+    counts.ai ? { key: "ai", text: `${plural(counts.ai, "AI work", "AI works")} to validate`, issue: false, href: "/admin/ai/#to-validate", roles: ["owner", "content"], phone: null } : null,
+    low ? { key: "edition", text: low.label, issue: true, href: "/admin/editions/?low=1", roles: ["owner", "fulfilment"], phone: null } : null,
+    draft ? { key: "newsletter", text: `${draft.month ?? "Next"} newsletter draft`, issue: false, href: `/admin/marketing/?tab=newsletter&id=${draft.id}`, roles: ["owner"], phone: null } : null,
+    ...soon.map((d) => ({ key: `due-${d.what}-${d.key}`, text: `${d.what} ${d.label} due ${d.dueDate.slice(5).replace("-", "/")}${d.status === "late" ? " · late" : ""}`, issue: d.status === "late", href: "/admin/finance/?tab=taxes", roles: ["owner"] as StaffRole[], phone: null })),
   ];
   return list.filter((t): t is TodoItem => t !== null);
 });

@@ -5,13 +5,13 @@
  * reader of this browser follows a publish. On Supabase: guide_versions, guide_layers/steps, guide_print.
  */
 import { asset } from "@/lib/asset";
-import { LEVELS, estimatedTime, formatLabel, type FormatKey, type LevelKey } from "@/lib/pricing";
+import { LEVELS, estimatedTime, formatLabel, formatsOf, type FormatKey, type LevelKey } from "@/lib/pricing";
 import type { GuideStep } from "@/lib/types";
 import { N03_GUIDE_ID, guideVersions, guides } from "@/data/guides";
 import type { GuideRow, GuideVersionContent } from "@/data/types";
 import { works } from "@/data/works";
 import { clone } from "./clone";
-import { merged, patched } from "./local";
+import { inserted, merged, patched } from "./local";
 import type { Guide } from "./types";
 
 /** A guide's layers and steps as stored in a version (and in the editor's draft). */
@@ -109,6 +109,8 @@ export interface GuideVersionInfo {
   version: number;
   publishedAt: string;
   publishedBy: string | null;
+  /** What that version said (History › Restore). */
+  content: GuideContent;
 }
 
 export interface GuideEditorData {
@@ -146,14 +148,14 @@ export async function getGuideEditor(guideId: string): Promise<GuideEditorData |
   if (!row) return null;
   const published = mapGuide(row);
   const draft = patched<DraftPatch>("guide_drafts", { id: guideId, content: null, savedAt: null });
-  const versions = versionsOf(guideId).map((v) => ({ version: v.version, publishedAt: v.publishedAt, publishedBy: v.publishedBy ?? null }));
+  const versions = versionsOf(guideId).map((v) => ({ version: v.version, publishedAt: v.publishedAt, publishedBy: v.publishedBy ?? null, content: v.content }));
   const current = publishedContent(guideRow(row));
   return clone({
     published,
     draft: draft.content ?? current.content,
     hasChanges: !!draft.content && JSON.stringify(draft.content.layers) !== JSON.stringify(current.content.layers),
     savedAt: draft.savedAt,
-    versions: versions.length ? versions : [{ version: published.version, publishedAt: "2026-09-01T09:00:00Z", publishedBy: null }],
+    versions: versions.length ? versions : [{ version: published.version, publishedAt: "2026-09-01T09:00:00Z", publishedBy: null, content: current.content }],
   });
 }
 
@@ -170,5 +172,52 @@ export async function getWorkGuides(workId: string): Promise<Array<{ id: string;
       .filter((g) => g.workId === workId)
       .map(guideRow)
       .map((g) => ({ id: g.id, format: g.format, level: g.level, label: `${formatLabel(g.format, work?.orientation)} · ${LEVELS[g.level].label}`, version: g.currentVersion })),
+  );
+}
+
+/**
+ * A step's gesture video uploaded in this browser (video host mock: "processing" for 5 seconds of wall
+ * clock after the upload, then "ready"; Live: the host's webhook says when it is ready).
+ */
+export function gestureVideo(guideId: string, stepId: string): { name: string; status: "processing" | "ready" } | null {
+  const row = inserted<{ guideId: string; stepId: string; name: string; uploadedAtMs: number }>("step_videos").find((v) => v.guideId === guideId && v.stepId === stepId);
+  if (!row) return null;
+  return { name: row.name, status: Date.now() - row.uploadedAtMs < 5000 ? "processing" : "ready" };
+}
+
+export interface GuideIndexRow {
+  id: string;
+  workId: string;
+  workNumber: string;
+  workSlug: string;
+  format: FormatKey;
+  formatLabel: string;
+  /** "small" | "medium" | "large" canvas of the work's proportion. */
+  canvas: "small" | "medium" | "large";
+  level: LevelKey;
+  levelLabel: string;
+  version: number;
+  steps: number;
+  /** Published with its own content, N°03's stand-in content, or with unpublished changes. */
+  status: "published" | "stand_in" | "draft";
+  href: string;
+}
+
+/** /admin/guides: every guide of every work (three canvases × three levels), in catalog order. */
+export async function getGuideIndex(): Promise<GuideIndexRow[]> {
+  const sizes = ["small", "medium", "large"] as const;
+  return clone(
+    guides.map((raw) => {
+      const g = mapGuide(raw);
+      const draft = patched<DraftPatch>("guide_drafts", { id: raw.id, content: null, savedAt: null });
+      const work = works.find((w) => w.id === raw.workId)!;
+      const order = formatsOf(work.proportion).indexOf(raw.format);
+      return {
+        id: raw.id, workId: raw.workId, workNumber: g.workNumber, workSlug: g.workSlug, format: raw.format, formatLabel: g.formatLabel,
+        canvas: sizes[Math.max(0, order)]!, level: raw.level, levelLabel: g.levelLabel, version: g.version, steps: g.stepCount,
+        status: draft.content ? "draft" : g.isStandIn ? "stand_in" : "published",
+        href: `/admin/works/${g.workSlug}/guide/${raw.id}`,
+      } satisfies GuideIndexRow;
+    }),
   );
 }

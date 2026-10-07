@@ -10,8 +10,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
+import { downloadCertificate, downloadInvoice, downloadLabel } from "@/lib/client/admin/documents";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, Tooltip, UnderLink,
+  AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Field, Input, OrderStatusChip, RefundModal, Select, StatusChip, UnderLink, canOpenAdmin,
   fulfilmentLabel, useToast,
 } from "@/components";
 import { REFUNDABLE_STATUSES, copyNumbersLabel, getOrder, getOrderNotes, getRefundOptions, type OrderDetail, type OrderItem } from "@/lib/api";
@@ -133,6 +134,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
   const [refundOpen, setRefundOpen] = useState(false);
   const [sent, setSent] = useState<{ access?: boolean; receipt?: boolean; cert?: string }>({});
   const [note, setNote] = useState("");
+  const [noteErr, setNoteErr] = useState<string | null>(null);
   const refundedCents = o.refunds.reduce((s, r) => s + r.amountCents, 0);
   const prints = o.items.filter((i) => i.kind === "print");
   const guides = o.items.filter((i) => i.kind === "guide");
@@ -160,7 +162,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
         <AdminBox>
           <div className="flex justify-between gap-12">
             <OrderStatusChip status={o.displayStatus} label={`${statusLabel(o)} · paid ${adminDateTime(o.paidAt)}`} />
-            <span>Stripe · {shortIntent(o.paymentIntent)} · 3D Secure ✓</span>
+            <span>Stripe · {shortIntent(o.paymentIntent)} · {o.payment.label}{o.payment.threeDS === "passed" ? " · 3D Secure ✓" : o.payment.threeDS === "failed" ? " · 3D Secure failed" : ""}</span>
           </div>
           <div role="table" aria-label="Items" className="contents">
             <AdminHeadRow cols={ITEM_COLS}>
@@ -228,23 +230,27 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
             className="flex gap-10"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!note.trim()) return;
+              if (!note.trim()) {
+                setNoteErr("Write the note first.");
+                return;
+              }
               run(() => addOrderNote(o.number, note), "Note added").then(() => setNote(""));
             }}
           >
             <label htmlFor="od-note" className="sr-only">Internal note</label>
-            <Input id="od-note" placeholder="Add an internal note…" value={note} onChange={(e) => setNote(e.target.value)} />
+            <Input id="od-note" placeholder="Add an internal note…" value={note} invalid={!!noteErr} aria-invalid={!!noteErr || undefined} aria-describedby={noteErr ? "od-note-err" : undefined} onChange={(e) => { setNote(e.target.value); setNoteErr(null); }} />
             <Button type="submit" variant="ghost">Add</Button>
           </form>
+          {noteErr && <p id="od-note-err" role="alert" className="text-danger">{noteErr}</p>}
         </AdminBox>
       </div>
 
       <div className="col-span-4 flex flex-col gap-16">
         <AdminBox>
           <AdminTitle>Customer</AdminTitle>
-          <UnderLink href={`/admin/customers/detail/?id=${o.customer.id}`} className="self-start">{o.customer.fullName}</UnderLink>
+          {canOpenAdmin(staff.role, "/admin/customers") ? <UnderLink href={`/admin/customers/detail/?id=${o.customer.id}`} className="self-start">{o.customer.fullName}</UnderLink> : <span>{o.customer.fullName}</span>}
           <span>
-            {o.customer.email}
+            {hasRole(staff.role, "support") ? <UnderLink href={`/admin/support?customer=${o.customer.id}&about=${encodeURIComponent(`#${o.number}`)}`} className="self-start" aria-label={`Write to ${o.customer.fullName} · ${o.customer.email}`}>{o.customer.email}</UnderLink> : o.customer.email}
             {o.customerPhone && (
               <>
                 <br />
@@ -279,11 +285,7 @@ function DesktopOrder({ order: o }: { order: OrderDetail }) {
               {sent.receipt ? "Receipt sent" : "Resend receipt"}
             </Button>
           )}
-          <Tooltip content="Available after launch">
-            <span className="flex" tabIndex={0} aria-label="Invoice PDF, available after launch">
-              <Button variant="ghost" disabled fullWidth tabIndex={-1}>Invoice PDF</Button>
-            </span>
-          </Tooltip>
+          {support && <Button variant="ghost" onClick={() => run(() => downloadInvoice(o.number), `Invoice F-${o.number} downloaded`)}>Invoice PDF</Button>}
           {limit > 0 && (
             <Button variant="danger" disabled={!canRefund(o) || !options.data?.length} onClick={() => setRefundOpen(true)}>
               {canRefund(o) ? "Refund…" : "Refunded"}
@@ -360,10 +362,10 @@ function ShipBox({ order: o, canShip, cert, onCert, run }: { order: OrderDetail;
               {NEXT_STEP_LABEL[step]}
             </Button>
           )}
-          <Button variant="ghost" aria-disabled={(!labelReady && !packed) || undefined} onClick={() => !labelReady && packed && run(async () => setTracking(await createLabel({ number: o.number, carrier, parcel })), "Shipping label created")}>
+          <Button variant="ghost" aria-disabled={(!labelReady && !packed) || undefined} onClick={() => (labelReady ? run(() => downloadLabel(o.number), "Label downloaded") : packed && run(async () => setTracking(await createLabel({ number: o.number, carrier, parcel })), "Shipping label created"))}>
             {labelReady ? "Label ready · PDF" : "Create shipping label"}
           </Button>
-          <Button variant="ghost" aria-disabled={!signed || undefined} onClick={() => signed && run(async () => onCert(await generateCertificate(o.number)), "Certificate ready")}>
+          <Button variant="ghost" aria-disabled={!signed || undefined} onClick={() => signed && run(async () => { onCert(await generateCertificate(o.number)); await downloadCertificate(o.number); }, "Certificate downloaded")}>
             {cert ? `Certificate ${cert} ready` : "Generate certificate"}
           </Button>
           <Button className="min-w-260" trailing="→" aria-disabled={shipped || !packed || undefined} onClick={() => !shipped && packed && run(() => markShipped({ number: o.number, trackingNo: tracking, carrier, parcel }), "Marked as shipped · email sent")}>

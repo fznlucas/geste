@@ -3,7 +3,7 @@ import { asset } from "@/lib/asset";
 import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
 import { clone } from "./clone";
-import { allPrintCopies, allPrintEditions, customerById, editionStock, workById, orderOfItem } from "./local";
+import { allPrintCopies, allPrintEditions, customerById, editionStock, workById, orderOfItem, shipmentOfOrder } from "./local";
 import type { FulfilmentStatus, PrintCopy, PrintEdition } from "./types";
 
 function mapEdition(row: PrintEditionRow): PrintEdition {
@@ -76,6 +76,7 @@ export async function getPrintCopies(query: { fulfilment?: FulfilmentStatus | Fu
           orientation: work.orientation,
           orderNumber: order?.number ?? null,
           orderPaidAt: order?.paidAt ?? null,
+          deliveredAt: order ? (shipmentOfOrder(order.id)?.deliveredAt ?? null) : null,
           customerId: customer?.id ?? null,
           customerName: customer?.fullName ?? null,
           city: order?.shippingAddress?.city ?? null,

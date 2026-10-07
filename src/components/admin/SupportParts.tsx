@@ -69,6 +69,9 @@ export function MessageList({ messages }: { messages: MessageItem[] }) {
 }
 
 export interface ReviewCardProps {
+  /** DOM id (`?id=` scrolls to it) and the highlighted state (opened from Customers › Results). */
+  id?: string;
+  focused?: boolean;
   who: string;
   /** "N°01" */
   work: string;
@@ -83,9 +86,9 @@ export interface ReviewCardProps {
 }
 
 /** Review card (AdminReviews): 4:5 photo, name · work and stars, the quote, then actions or verdict, then "Reply privately". */
-export function ReviewCard({ who, work, rating, body, photoUrl, actions, verdict, reply }: ReviewCardProps) {
+export function ReviewCard({ id, focused, who, work, rating, body, photoUrl, actions, verdict, reply }: ReviewCardProps) {
   return (
-    <li className="flex flex-col gap-14 border border-border bg-surface p-14">
+    <li id={id} aria-current={focused || undefined} className={cn("flex flex-col gap-14 border bg-surface p-14", focused ? "border-fg" : "border-border")}>
       {photoUrl && (
         <Image src={photoUrl} alt={`${who}’s painting of ${work}`} width={400} height={500} sizes="(min-width: 768px) 25vw, 100vw" className="block aspect-[4/5] w-full object-cover" />
       )}

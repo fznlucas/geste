@@ -9,7 +9,7 @@ import { clone } from "./clone";
 import { customerTotals } from "./customer-totals";
 import { includedVatCents } from "@/data/tax";
 import { vatRateAt } from "./vat";
-import { allOrders, copiesOfItem, customerById, editionById, workById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
+import { allOrders, allPayments, copiesOfItem, customerById, editionById, workById, entitlementOfItem, orderByNumber, refundsOfOrder, shipmentOfOrder, threadsOfOrder } from "./local";
 import { inOrderTab } from "@/lib/metrics/orders";
 import { mapThread } from "./support";
 import type { FulfilmentStatus, Order, OrderDetail, OrderDisplayStatus, OrderEvent, OrderItem, OrdersQuery, OrderTracking, RefundOption, TrackingStep } from "./types";
@@ -165,7 +165,16 @@ export async function getOrder(number: string): Promise<OrderDetail | null> {
     customerPhone: customerById(row.userId)?.phone ?? null,
     vatLabel: vatLabel(row),
     supportThreads: threadsOfOrder(row.id).map(mapThread),
+    payment: paymentOf(row),
   });
+}
+
+/** How the order was paid, from its payment row (an order of this browser: the test card, 3DS unknown). */
+function paymentOf(row: OrderRow): OrderDetail["payment"] {
+  const p = allPayments().find((x) => x.orderId === row.id && x.status === "succeeded");
+  if (!p) return { label: row.cardLast4 ? `Card ···${row.cardLast4}` : "Card", threeDS: "unknown" };
+  const label = p.method === "paypal" ? "PayPal" : p.wallet === "apple_pay" ? "Apple Pay" : p.wallet === "google_pay" ? "Google Pay" : `Card ···${row.cardLast4}`;
+  return { label, threeDS: p.threeDS };
 }
 
 /** The country the VAT of an order follows: billing country, else shipping address, else the customer's. */

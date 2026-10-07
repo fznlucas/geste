@@ -265,6 +265,8 @@ export interface PrintCopy {
   orderNumber: string | null;
   /** Payment date of the order: cards of a fulfilment column, newest first. */
   orderPaidAt: string | null;
+  /** The carrier's delivery scan of its parcel. */
+  deliveredAt: string | null;
   customerId: string | null;
   customerName: string | null;
   city: string | null;
@@ -464,6 +466,8 @@ export interface OrderDetail extends Order {
   /** "VAT included (FR 20%)", null without VAT. */
   vatLabel: string | null;
   supportThreads: SupportThread[];
+  /** The payment row: how it was paid and the 3D Secure result ("Card · 3D Secure ✓", "Apple Pay"). */
+  payment: { label: string; threeDS: "passed" | "not_required" | "failed" | "unknown" };
 }
 
 /** AdminOrderDetail refund modal: "Print only (returned) $51", "Guide only (revokes library access) $19", "Full order $70". */
@@ -505,6 +509,12 @@ export interface CustomerDetail extends CustomerSummary {
   source: string | null;
   /** Account box of AdminCustomerDetail: "Password set · Face ID on iPhone". */
   passkeyDevices: string[];
+  /** A password was set (else they sign in with email codes). */
+  passwordSet: boolean;
+  /** The email answered a code once (every buyer did at checkout). */
+  emailVerified: boolean;
+  /** GDPR deletion: when the account is anonymised (30 days after the request). */
+  deletionAt: string | null;
 }
 
 export interface LibraryItem {

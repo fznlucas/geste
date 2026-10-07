@@ -6,9 +6,9 @@
  * "New work" creates a draft in the admin overlay and opens its editor.
  */
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, ButtonLink, FitLine, PillButton, ProportionalGrid, StatusChip, useToast } from "@/components";
+import { AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, ButtonLink, FitLine, PillButton, ProportionalGrid, StatusChip, UnderLink, useToast } from "@/components";
 import { getAdminWorks, type AdminWork } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
 import { createWork } from "@/lib/client/admin/catalog";
@@ -52,7 +52,10 @@ export function CatalogPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [creating, setCreating] = useState(false);
   const q = useAdminQuery(getAdminWorks, []);
-  const works = q.data ? filter(q.data, tab) : [];
+  // ?sort=sales (the dashboard's "Catalog"): most guides sold first.
+  const bySales = useSearchParams().get("sort") === "sales";
+  const works = q.data ? filter(q.data, tab).sort((a, b) => (bySales ? b.soldCount - a.soldCount : 0)) : [];
+  const tabs = TABS.map((t) => ({ value: t, label: q.data ? `${t} · ${filter(q.data, t).length}` : t }));
   // Grid by original size: the largest reference canvas of the whole catalog fills a column, whatever the tab.
   const maxArea = q.data?.length ? Math.max(...q.data.map((w) => w.originalArea)) : 1;
   // One scale for every tab: the reference size fits the widest row any tab can show.
@@ -80,7 +83,8 @@ export function CatalogPage() {
   return (
     <AdminPage title="Works" breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} actions={actions} desktopHref="/admin/works">
       <div className={cn("flex justify-between gap-12", desktop ? "items-center" : "flex-col")}>
-        <AdminTabs label="Filter works" tabs={TABS} value={tab} onChange={setTab} className="self-start" />
+        <AdminTabs label="Filter works" tabs={tabs} value={tab} onChange={setTab} className="self-start" />
+        {bySales && <span className="flex gap-8 text-fg-muted">Most sold first · <UnderLink href="/admin/works/">Catalog order</UnderLink></span>}
         <div role="group" aria-label="View" className="flex gap-8">
           <PillButton pressed={view === "grid"} onClick={() => setView("grid")}>Grid</PillButton>
           <PillButton pressed={view === "list"} onClick={() => setView("list")}>List</PillButton>

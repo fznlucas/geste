@@ -5,19 +5,19 @@
  * and main on desktop; the phone header + bottom tabs below 768 px. A role that cannot open the
  * page sees a short notice instead (the sidebar already hides the link).
  */
-import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useState, type ReactNode } from "react";
 import {
   AdminMain, AdminPhoneHeader, AdminSearch, AdminTabBar, AdminTopBar, AlertsPopover, canOpenAdmin, ButtonLink, DemoRoleMenu, ROLE_LABEL,
   useToast, type AdminPhoneTab, type Crumb,
 } from "@/components";
-import { getCustomers, getOrders, getWorks } from "@/lib/api";
+import { adminSearch } from "@/lib/api";
 import { alerts as getAlerts, simulationStatus } from "@/lib/metrics";
 import { asset } from "@/lib/asset";
 import { clockOverride, setClockOverride } from "@/lib/clock";
 import { purchasesStore } from "@/lib/client/purchases";
 import { adminStore, hasRole, setDemoRole, useAdminQuery } from "@/lib/client";
-import { markAlertRead } from "@/lib/client/admin/alerts";
+import { markAlertRead, markAlertsRead } from "@/lib/client/admin/alerts";
 import type { StaffRole } from "@/lib/types";
 import { useAdmin } from "./AdminFrame";
 
@@ -42,6 +42,7 @@ export interface AdminPageProps {
 
 export function AdminPage({ title, breadcrumbs, actions, roles, children, phone, phoneTab = null, desktopHref = "/admin", mainClassName }: AdminPageProps) {
   const { staff, desktop } = useAdmin();
+  const pathname = usePathname();
   const allowed = !roles || hasRole(staff.role, roles);
   const body = allowed ? children : <NoAccess role={staff.role} />;
 
@@ -63,7 +64,8 @@ export function AdminPage({ title, breadcrumbs, actions, roles, children, phone,
   return (
     <>
       <AdminTopBar
-        breadcrumbs={breadcrumbs.map((b) => (b.href && !canOpenAdmin(staff.role, b.href) ? { label: b.label } : b))}
+        // A crumb is a link only to another page the role can open.
+        breadcrumbs={breadcrumbs.map((b) => (b.href && (!canOpenAdmin(staff.role, b.href) || samePage(b.href, pathname)) ? { label: b.label } : b))}
         title={title}
         search={<TopSearch />}
         demo={<DemoMenu />}
@@ -74,6 +76,8 @@ export function AdminPage({ title, breadcrumbs, actions, roles, children, phone,
     </>
   );
 }
+
+const samePage = (href: string, path: string) => href.replace(/[?#].*$/, "").replace(/\/$/, "") === path.replace(/\/$/, "");
 
 function NoAccess({ role }: { role: StaffRole }) {
   return (
@@ -133,29 +137,17 @@ function Alerts() {
   const { staff } = useAdmin();
   const alerts = useAdminQuery(getAlerts, []);
   const list = (alerts.data ?? []).filter((a) => a.desktop && hasRole(staff.role, a.roles));
-  return <AlertsPopover alerts={list} onOpen={(id) => markAlertRead(id)} />;
+  return <AlertsPopover alerts={list} onOpen={(id) => markAlertRead(id)} onMarkAll={markAlertsRead} />;
 }
 
 /** Order number → the order; customer name or email → the customer; "N°03" → the work; otherwise the orders list. */
 function TopSearch() {
   const router = useRouter();
   const { staff } = useAdmin();
-  const search = async (q: string) => {
-    const low = q.toLowerCase();
-    if (hasRole(staff.role, ["support", "fulfilment"])) {
-      const order = (await getOrders({ search: q })).find((o) => o.number.toLowerCase().includes(low.replace(/^#/, "")));
-      if (order) return router.push(`/admin/orders/detail?number=${order.number}`);
-    }
-    if (hasRole(staff.role, "support")) {
-      const customer = (await getCustomers({ search: q }))[0];
-      if (customer) return router.push(`/admin/customers/detail/?id=${customer.id}`);
-    }
-    if (hasRole(staff.role, "content")) {
-      const digits = low.replace(/[^0-9]/g, "");
-      const work = digits ? (await getWorks({ status: "all" })).find((w) => Number(w.number.slice(2)) === Number(digits)) : undefined;
-      if (work) return router.push(`/admin/works/${work.slug}`);
-    }
-    if (hasRole(staff.role, ["support", "fulfilment"])) router.push(`/admin/orders?q=${encodeURIComponent(q)}`);
-  };
-  return <AdminSearch onSearch={search} />;
+  // Grouped results across the admin; a role only sees what it can open (docs/admin-v2/04 Shell).
+  const search = useCallback(
+    async (q: string) => (await adminSearch(q)).map((g) => ({ ...g, hits: g.hits.filter((h) => canOpenAdmin(staff.role, h.href)) })).filter((g) => g.hits.length),
+    [staff.role],
+  );
+  return <AdminSearch search={search} onOpen={(href) => router.push(href)} />;
 }

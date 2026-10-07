@@ -6,10 +6,11 @@
  * Owner and Support. Nothing is emailed or deleted in the mock; every action is audited.
  */
 import { useState, type ReactNode } from "react";
-import { AdminBox, AdminRow, AdminTitle, Artwork, Button, ButtonLink, StatusChip, UnderLink, useToast } from "@/components";
+import { AdminBox, AdminRow, AdminTitle, Artwork, Button, ButtonLink, Select, StatusChip, UnderLink, useToast } from "@/components";
 import { getCustomer, libraryProgress, type CustomerDetail, type LibraryItem, type Order } from "@/lib/api";
 import { useAdminQuery, useLibraryProgress } from "@/lib/client";
-import { exportCustomerData, resetPrintCredits, scheduleDeletion, sendLoginLink } from "@/lib/client/admin/customers";
+import { cancelDeletion, exportCustomerData, resetPrintCredits, scheduleDeletion, sendLoginLink } from "@/lib/client/admin/customers";
+import { simNow } from "@/lib/clock";
 import { downloadFile } from "@/lib/client/admin/download";
 import { adminDate, shortDate } from "@/lib/dates";
 import type { StatusState } from "@/lib/types";
@@ -89,7 +90,7 @@ function Detail({ c }: { c: CustomerDetail }) {
                 <div className="flex flex-col gap-6">
                   <span>{r.work.number}, signed {shortDate(done ?? r.createdAt)}</span>
                   <span className="text-fg-muted">“{r.body}”</span>
-                  <UnderLink href="/admin/reviews" className="self-start">Open in moderation</UnderLink>
+                  <UnderLink href={`/admin/reviews/?id=${r.id}`} className="self-start">Open in moderation</UnderLink>
                 </div>
               </div>
             );
@@ -105,6 +106,7 @@ function Account({ c }: { c: CustomerDetail }) {
   const toast = useToast();
   const [sent, setSent] = useState(false);
   const [reset, setReset] = useState(false);
+  const [quotaFor, setQuotaFor] = useState(c.library[0]?.entitlementId ?? "");
   const run = (action: () => Promise<void>, done: () => void) => async () => {
     try {
       await action();
@@ -116,11 +118,22 @@ function Account({ c }: { c: CustomerDetail }) {
   return (
     <AdminBox>
       <AdminTitle>Account</AdminTitle>
-      <StatusChip state="done" label={`Password set${c.passkeyDevices.length ? ` · Face ID on ${c.passkeyDevices[0]}` : ""}`} />
-      <StatusChip state="done" label="Email verified" />
-      <Button variant="ghost" aria-live="polite" onClick={run(() => sendLoginLink(c.id), () => setSent(true))}>{sent ? "Login link sent" : "Send a login link"}</Button>
-      <Button variant="ghost" aria-live="polite" onClick={run(() => resetPrintCredits(c.id), () => setReset(true))}>{reset ? "Print quota reset to 3" : "Reset print quota"}</Button>
-      <ButtonLink href="/admin/support" variant="ghost">Write to {firstName(c)}</ButtonLink>
+      {/* From the account's rows: password, email code, passkeys. */}
+      <StatusChip state={c.passwordSet || c.passkeyDevices.length ? "done" : "todo"} label={`${c.passwordSet ? "Password set" : "No password · email codes"}${c.passkeyDevices.length ? ` · Face ID on ${c.passkeyDevices[0]}` : ""}`} />
+      <StatusChip state={c.emailVerified ? "done" : "todo"} label={c.emailVerified ? "Email verified" : "Email not verified yet"} />
+      <Button variant="ghost" aria-live="polite" onClick={run(() => sendLoginLink(c.id), () => setSent(true))}>{sent ? "Login link sent · in the Outbox" : "Send a login link"}</Button>
+      {c.library.length > 0 && (
+        <div className="flex items-end gap-8">
+          <label className="flex grow flex-col gap-6">
+            <span className="text-fg-muted">Print quota of</span>
+            <Select value={quotaFor} onChange={(e) => setQuotaFor(e.target.value)}>
+              {c.library.map((l) => <option key={l.entitlementId} value={l.entitlementId}>{l.work.number} · {l.printsLeft} left</option>)}
+            </Select>
+          </label>
+          <Button variant="ghost" aria-live="polite" onClick={run(() => resetPrintCredits(c.id, quotaFor), () => setReset(true))}>{reset ? "Reset to 3" : "Reset"}</Button>
+        </div>
+      )}
+      <ButtonLink href={`/admin/support/?customer=${c.id}&new=1`} variant="ghost">Write to {firstName(c)}</ButtonLink>
     </AdminBox>
   );
 }
@@ -145,17 +158,24 @@ function Privacy({ c }: { c: CustomerDetail }) {
     if (!confirming) return setConfirming(true);
     try {
       await scheduleDeletion(c.id);
+      setConfirming(false);
     } catch (e) {
       toast.show(e instanceof Error ? e.message : "Could not schedule the deletion.", { tone: "danger" });
     }
   };
+  const daysLeft = c.deletionAt ? Math.max(0, Math.round((Date.parse(c.deletionAt) - simNow().getTime()) / 86_400_000)) : null;
   return (
     <AdminBox>
       <AdminTitle>Privacy (GDPR)</AdminTitle>
-      <Button variant="ghost" aria-live="polite" onClick={onExport}>{exported ? `Export emailed to ${firstName(c)}` : `Export ${firstName(c)}’s data`}</Button>
+      <Button variant="ghost" aria-live="polite" onClick={onExport}>{exported ? "Data downloaded (JSON)" : `Export ${firstName(c)}’s data`}</Button>
       <Button variant="danger" aria-live="polite" aria-disabled={scheduled || undefined} onClick={onDelete} onBlur={() => setConfirming(false)}>
-        {scheduled ? "Deletion scheduled (30 days)" : confirming ? "Click again to confirm" : "Delete account…"}
+        {scheduled ? `Deletion on ${adminDate(c.deletionAt!)} · ${daysLeft} days left` : confirming ? "Click again to confirm" : "Delete account…"}
       </Button>
+      {scheduled && (
+        <Button variant="ghost" onClick={() => cancelDeletion(c.id).then(() => toast.show("Deletion cancelled"), (e) => toast.show(e instanceof Error ? e.message : "Could not cancel.", { tone: "danger" }))}>
+          Cancel the deletion
+        </Button>
+      )}
     </AdminBox>
   );
 }

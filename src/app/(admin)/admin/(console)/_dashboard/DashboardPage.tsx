@@ -6,8 +6,9 @@
  * to-do list shows the modules the role can open, with the sidebar's live counts; latest orders come
  * from getOrders, so an order paid at checkout in this browser tops the list and moves the numbers.
  */
-import { useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, ButtonLink, KpiTile, PillButton, StatusChip, UnderLink } from "@/components";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, Button, KpiTile, PillButton, StatusChip, UnderLink, useToast } from "@/components";
+import { createWork } from "@/lib/client/admin/catalog";
 import { getOrders, type Order } from "@/lib/api";
 import { dashboard, modeCounts, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
@@ -56,8 +57,19 @@ function useTodos(): TodoItem[] | null {
 
 export function DashboardPage() {
   const { staff } = useAdmin();
+  const router = useRouter();
+  const toast = useToast();
+  // "New work +": a draft, then its editor (the same as the Catalog's).
+  const newWork = async () => {
+    try {
+      const slug = await createWork();
+      router.push(`/admin/works/draft?slug=${slug}`);
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Could not create the work.", { tone: "danger" });
+    }
+  };
   return (
-    <AdminPage title={greeting(staff.fullName)} breadcrumbs={[{ label: "Overview", href: "/admin" }]} actions={hasRole(staff.role, "content") ? <ButtonLink href="/admin/works/" size="sm" trailing="+" className="min-h-36 min-w-140">New work</ButtonLink> : undefined} phone={<PhoneToday />} phoneTab="today" desktopHref="/admin/">
+    <AdminPage title={greeting(staff.fullName)} breadcrumbs={[{ label: "Overview", href: "/admin" }]} actions={hasRole(staff.role, "content") ? <Button size="sm" trailing="+" onClick={newWork} className="min-h-36 min-w-140">New work</Button> : undefined} phone={<PhoneToday />} phoneTab="today" desktopHref="/admin/">
       <DesktopDashboard />
     </AdminPage>
   );
@@ -65,9 +77,19 @@ export function DashboardPage() {
 
 // ── Desktop ──────────────────────────────────────────────────────────────────
 
+/** ?range=7|30|90: the tiles and the chart (30 days by default). */
+function useRange(): [Range, (r: Range) => void] {
+  const params = useSearchParams();
+  const router = useRouter();
+  const r = Number(params.get("range"));
+  const range: Range = r === 7 || r === 90 ? r : 30;
+  return [range, (next) => router.replace(next === 30 ? "/admin/" : `/admin/?range=${next}`, { scroll: false })];
+}
+
 function DesktopDashboard() {
   const { staff } = useAdmin();
-  const data = useAdminQuery(dashboard, []);
+  const [range, setRange] = useRange();
+  const data = useAdminQuery(() => dashboard(range), [range]);
   const orders = useAdminQuery(() => getOrders(), []);
   const todos = useTodos();
   const owner = staff.role === "owner";
@@ -76,13 +98,16 @@ function DesktopDashboard() {
   if (data.status === "loading" || orders.status === "loading" || !todos) return <Skeleton />;
   const d = data.data;
   const k = d.last30d;
+  const span = `${d.period.from}..${d.period.to}`;
+  const analytics = `/admin/analytics/?range=${range === 90 ? 90 : range === 7 ? 7 : 30}`;
+  // Each tile opens the place its number comes from, for the same days (docs/admin-v2/04 Dashboard).
   const tiles = [
-    owner && { label: "Revenue · 30 d", value: eur(k.revenueCents), context: k.revenueDelta, href: "/admin/finance/" },
-    { label: "Orders · 30 d", value: String(k.orders), context: k.ordersDelta, href: seesOrders ? "/admin/orders/" : undefined },
-    owner && { label: "Avg. order", value: `€${(k.avgOrderCents / 100).toFixed(1)}`, context: k.avgOrderDelta, href: "/admin/analytics/" },
-    { label: "Conversion", value: `${k.conversionPct}%`, context: k.conversionDelta, href: owner ? "/admin/analytics/" : undefined },
-    { label: "Guides finished", value: `${k.guidesFinishedPct}%`, context: "of guides started", href: owner ? "/admin/analytics/" : undefined },
-    owner && { label: "Affiliate · 30 d", value: eur(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/" },
+    owner && { label: `Revenue · ${range} d`, value: eur(k.revenueCents), context: k.revenueDelta, href: `/admin/finance/?period=${span}` },
+    { label: `Orders · ${range} d`, value: String(k.orders), context: k.ordersDelta, href: seesOrders ? `/admin/orders/?from=${d.period.from}&to=${d.period.to}` : undefined },
+    owner && { label: "Avg. order", value: `€${(k.avgOrderCents / 100).toFixed(1)}`, context: k.avgOrderDelta, href: `${analytics}#basket` },
+    { label: "Conversion", value: `${k.conversionPct}%`, context: k.conversionDelta, href: owner ? `${analytics}#funnel` : undefined },
+    { label: "Guides finished", value: `${k.guidesFinishedPct}%`, context: "of guides started", href: owner ? `${analytics}#completion` : undefined },
+    owner && { label: `Affiliate · ${range} d`, value: eur(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/?tab=affiliate" },
   ].filter((t): t is { label: string; value: string; context: string; href: string | undefined } => !!t);
   const myTodos = todos.filter((t) => hasRole(staff.role, t.roles));
 
@@ -93,7 +118,7 @@ function DesktopDashboard() {
       </div>
       {owner && <IntegrationsLine />}
       <div className="grid grid-cols-12 gap-16">
-        {owner && <RevenueChart d={d} />}
+        {owner && <RevenueChart d={d} range={range} setRange={setRange} />}
         <AdminBox className={owner ? "col-span-4" : "col-span-12"}>
           <AdminTitle>To do today</AdminTitle>
           {myTodos.length === 0 ? (
@@ -114,7 +139,7 @@ function DesktopDashboard() {
       </div>
       <div className="grid grid-cols-12 gap-16">
         {seesOrders && <LatestOrders orders={orders.data.slice(0, 5)} />}
-        <TopWorks works={d.topWorks.slice(0, 5)} wide={!seesOrders} links={hasRole(staff.role, "content")} />
+        <TopWorks works={d.topWorks.slice(0, 5)} wide={!seesOrders} links={hasRole(staff.role, "content")} range={range} />
       </div>
     </>
   );
@@ -131,8 +156,7 @@ function IntegrationsLine() {
   );
 }
 
-function RevenueChart({ d }: { d: Dashboard }) {
-  const [range, setRange] = useState<Range>(30);
+function RevenueChart({ d, range, setRange }: { d: Dashboard; range: Range; setRange: (r: Range) => void }) {
   const days = d.days.slice(-range);
   const note = d.notes.find((n) => days.some((x) => x.day === n.day));
   const title = `Revenue per day, ${monthSpan(days[0]!.day, days.at(-1)!.day)}`;
@@ -152,7 +176,7 @@ function RevenueChart({ d }: { d: Dashboard }) {
         caption={title}
         note={note ? `${note.label} · ${note.text}` : ""}
         format={(v) => eur(v)}
-        data={days.map((x) => ({ label: x.label, value: x.revenueCents, tip: `${x.label} · ${eur(x.revenueCents)} · ${plural(x.orders, "order", "orders")}` }))}
+        data={days.map((x) => ({ label: x.label, value: x.revenueCents, tip: `${x.label} · ${eur(x.revenueCents)} · ${plural(x.orders, "order", "orders")}`, href: `/admin/orders/?from=${x.day}&to=${x.day}` }))}
       />
     </AdminBox>
   );
@@ -203,14 +227,14 @@ function LatestOrders({ orders }: { orders: Order[] }) {
   );
 }
 
-function TopWorks({ works, wide, links }: { works: Dashboard["topWorks"]; wide: boolean; links: boolean }) {
+function TopWorks({ works, wide, links, range }: { works: Dashboard["topWorks"]; wide: boolean; links: boolean; range: number }) {
   const max = Math.max(1, works[0]?.guides ?? 1);
   const cols = "40px 60px 1fr 60px";
   return (
     <AdminBox className={wide ? "col-span-12" : "col-span-5"}>
       <div className="flex justify-between">
-        <AdminTitle>Top works · 30 d</AdminTitle>
-        {links && <UnderLink href="/admin/works/">Catalog</UnderLink>}
+        <AdminTitle>Top works · {range} d</AdminTitle>
+        {links && <UnderLink href="/admin/works/?sort=sales">Catalog</UnderLink>}
       </div>
       <ul className="flex flex-col gap-14">
         {works.map((w) => {

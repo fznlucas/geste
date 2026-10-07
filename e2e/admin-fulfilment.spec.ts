@@ -107,8 +107,10 @@ test("customers: segments, detail, print quota and GDPR in two clicks", async ({
   await expect(page.getByRole("heading", { name: "Camille Martin", level: 1 })).toBeVisible();
   const n03 = page.getByRole("row", { name: /N°03/ });
   await expect(n03).toContainText("2 prints left");
-  await page.getByRole("button", { name: "Reset print quota" }).click();
-  await expect(page.getByRole("button", { name: "Print quota reset to 3" })).toBeVisible();
+  // The quota of one chosen guide.
+  await page.getByLabel("Print quota of").selectOption({ label: "N°03 · 2 left" });
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reset to 3" })).toBeVisible();
   await expect(n03).toContainText("3 prints left");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Camille’s data" }).click();
@@ -116,9 +118,11 @@ test("customers: segments, detail, print quota and GDPR in two clicks", async ({
   await page.getByRole("button", { name: "Delete account…" }).click();
   await expect(page.getByRole("button", { name: "Click again to confirm" })).toBeVisible();
   await page.getByRole("button", { name: "Click again to confirm" }).click();
-  await expect(page.getByRole("button", { name: "Deletion scheduled (30 days)" })).toBeVisible();
+  // A visible countdown, and it can be cancelled.
+  await expect(page.getByRole("button", { name: /^Deletion on .+ · 30 days left$/ })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Deletion scheduled (30 days)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Deletion on .+ · 30 days left$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel the deletion" })).toBeVisible();
   await expectNoAxeViolations(page);
 });
 

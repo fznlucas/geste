@@ -3,10 +3,12 @@
  * calendar. Promo codes and campaigns created or changed in this browser come from the admin overlay;
  * gift cards bought at checkout in this browser (local orders) are listed with the mock ones.
  */
-import { AUDIENCES, affiliates, promoCodes, socialWeek, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
-import { simNowIso } from "@/lib/clock";
+import { AUDIENCES, promoCodes, type CampaignRow, type GiftCardRow, type PromoRow } from "@/data/marketing";
+import { addDays, parisDay, simNowIso } from "@/lib/clock";
+import { AFFILIATE_PARTNERS } from "@/sim/config";
+import { giftCardEnd } from "@/lib/ledger/derive";
 import { clone } from "./clone";
-import { allCampaigns, allGiftCards, allOrders, allSubscribers, merged, orderNumberOf } from "./local";
+import { allAffiliateClicks, allAffiliateCommissions, allCampaigns, allGiftCards, allOrders, allSocialPosts, allSubscribers, merged, orderNumberOf, patched } from "./local";
 
 export type { PromoKind, PromoScope } from "@/data/marketing";
 
@@ -62,9 +64,14 @@ export interface GiftCard {
   status: string;
   state: "done" | "todo";
   orderNumber: string | null;
+  /** Valid until (the admin can extend it). */
+  expiresAt: string;
+  voided: boolean;
 }
 
 function giftStatus(g: GiftCardRow): Pick<GiftCard, "status" | "state"> {
+  if (g.voidedAt) return { status: "Cancelled", state: "done" };
+  if (giftCardEnd(g).at.getTime() < Date.parse(simNowIso())) return { status: "Expired", state: "done" };
   if (!g.sentAt && g.sendAt) {
     const d = new Date(g.sendAt);
     return { status: `Scheduled ${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })} ${d.getUTCDate()}`, state: "todo" };
@@ -84,9 +91,11 @@ export async function getGiftCards(): Promise<GiftCard[]> {
       code: g.code,
       fromTo: `${g.senderName} → ${g.recipientName ?? "by email"}`,
       amountCents: g.initialCents,
-      balanceCents: g.balanceCents,
+      balanceCents: g.voidedAt ? 0 : g.balanceCents,
       ...giftStatus(g),
       orderNumber: g.purchaseOrderId ? orderNumberOf(g.purchaseOrderId) : null,
+      expiresAt: giftCardEnd({ ...g, voidedAt: null }).at.toISOString(),
+      voided: !!g.voidedAt,
     })),
   );
 }
@@ -138,10 +147,72 @@ export async function getCampaigns(): Promise<{ draft: Campaign | null; past: Ca
   return clone({ draft: rows.find((c) => !c.sentAt && !c.scheduledAt) ?? rows.find((c) => !c.sentAt) ?? null, past: rows.filter((c) => c.sentAt).sort((a, b) => b.sentAt!.localeCompare(a.sentAt!)), audiences: audiences() });
 }
 
-export async function getAffiliates() {
-  return clone(affiliates);
+export interface AffiliatePartner {
+  id: string;
+  partner: string;
+  ratePct: number;
+  /** Link to a product with our tag: "{url}" is the product's address. */
+  linkTemplate: string;
+  payoutDay: number;
+  clicks: number;
+  sales: number;
+  /** Commissions earned in the period, EUR (partners pay in euros). */
+  earnedEurCents: number;
 }
 
-export async function getSocialWeek() {
-  return clone(socialWeek);
+/**
+ * Affiliate partners (Marketing › Affiliate): name, rate, link template and payout day as edited in the
+ * admin; clicks, sales and commissions of the last 30 days from the affiliate rows.
+ */
+export async function getAffiliates(): Promise<AffiliatePartner[]> {
+  const today = parisDay(simNowIso());
+  const from = addDays(today, -29);
+  const clicks = allAffiliateClicks().filter((d) => d.day >= from && d.day <= today);
+  const sales = allAffiliateCommissions().filter((c) => parisDay(c.at) >= from && parisDay(c.at) <= today);
+  return clone(
+    AFFILIATE_PARTNERS.map((p) => {
+      const row = patched("affiliate_partners", { id: p.id, partner: p.name, ratePct: p.ratePct, linkTemplate: `{url}?ref=geste-${p.id}`, payoutDay: p.payoutDay });
+      const mine = sales.filter((c) => c.partnerId === p.id);
+      return { ...row, clicks: clicks.reduce((s, d) => s + (d.clicks[p.id] ?? 0), 0), sales: mine.length, earnedEurCents: mine.reduce((s, c) => s + c.commissionCents, 0) };
+    }),
+  );
+}
+
+export interface SocialPost {
+  id: string;
+  network: "tiktok" | "instagram" | "pinterest" | "youtube";
+  title: string;
+  at: string;
+  /** The network's figures once posted (social adapter). */
+  views: number | null;
+  likes: number | null;
+  linkClicks: number | null;
+  /** Planned in the admin: can be moved or deleted. */
+  editable: boolean;
+}
+
+/**
+ * Social calendar of a week (Monday → Sunday, Paris), posts from the social rows and those planned in
+ * the admin; moved or deleted ones as edited.
+ */
+export async function getSocialWeek(monday?: string): Promise<{ monday: string; days: Array<{ day: string; label: string; posts: SocialPost[] }> }> {
+  const today = parisDay(simNowIso());
+  const weekday = (new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7;
+  const start = monday ?? addDays(today, -weekday);
+  const end = addDays(start, 6);
+  const now = simNowIso();
+  const posts: SocialPost[] = [
+    ...allSocialPosts().map((p) => ({ id: p.id, network: p.network, title: p.title, at: p.at, views: p.at <= now ? p.views : null, likes: p.at <= now ? p.likes : null, linkClicks: p.at <= now ? p.linkClicks : null, editable: false })),
+    ...merged<{ id: string; network: SocialPost["network"]; title: string; at: string; deleted?: boolean }>("social_posts", [])
+      .filter((p) => !p.deleted)
+      .map((p) => ({ id: p.id, network: p.network, title: p.title, at: p.at, views: null, likes: null, linkClicks: null, editable: true })),
+  ].filter((p) => parisDay(p.at) >= start && parisDay(p.at) <= end);
+  const NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return clone({
+    monday: start,
+    days: NAMES.map((n, i) => {
+      const day = addDays(start, i);
+      return { day, label: `${n} ${Number(day.slice(8, 10))}`, posts: posts.filter((p) => parisDay(p.at) === day).sort((a, b) => a.at.localeCompare(b.at)) };
+    }),
+  });
 }

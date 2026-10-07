@@ -5,9 +5,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ButtonLink, CanvasDiagram, FitLine, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
-import { findGuide, getArticles, getEditions, getHomeHeroWork, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
+import { CanvasDiagram, FitLine, PrintPaper, ProportionalGrid, SHEET_RATIO, WorkCard } from "@/components";
+import { findGuide, getArticles, getEditions, getHomeHeroWork, getHomeSettings, getWorks, toWorkCard, type PrintEdition } from "@/lib/api";
 import { fromPrice } from "@/lib/format";
+import { HomeHero } from "./_home/HomeHero";
 import { PRINT_WITH_GUIDE, defaultLevel } from "@/lib/pricing";
 
 const STEPS = [
@@ -17,7 +18,7 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const [hero, works, editions, articles] = await Promise.all([getHomeHeroWork(), getWorks(), getEditions(), getArticles({ limit: 2 })]);
+  const [hero, works, editions, articles, home] = await Promise.all([getHomeHeroWork(), getWorks(), getEditions(), getArticles({ limit: 2 }), getHomeSettings()]);
   if (!hero) throw new Error("Home hero work is not live");
   const guide = await findGuide(hero.id, hero.defaultFormat, defaultLevel(hero.defaultFormat, hero.baseLevel));
   const strokes = guide?.layers.flatMap((l) => l.diagram) ?? [];
@@ -33,26 +34,8 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-1264 flex-col gap-64 px-16 pt-8 lg:gap-120 lg:px-32 lg:pt-24">
-      {/* Hero */}
-      <section className="flex flex-col gap-16 lg:gap-24">
-        <Link href={`/works/${hero.slug}`} aria-label={`${hero.number}, see the work`} className="relative block aspect-[358/440] w-full overflow-hidden bg-surface-muted lg:aspect-[2/1]">
-          <Image src={hero.imageUrl} alt="" fill priority sizes="(min-width: 1200px) 1200px, 100vw" className="object-cover" />
-          <span className="absolute bottom-10 left-10 bg-bg px-7 py-3 lg:bottom-16 lg:left-16 lg:px-8 lg:py-4">{hero.number} · Digital preview</span>
-        </Link>
-        <div className="flex flex-col gap-16 lg:grid lg:grid-cols-12 lg:items-end lg:gap-x-40">
-          <div className="flex flex-col gap-16 lg:col-span-7 lg:gap-8">
-            <h1 className="text-lg lg:text-xl">Paint it yourself.</h1>
-            <p className="max-w-520 text-fg-muted">
-              Abstract works designed stroke by stroke, then broken into layers anyone can follow.
-              <span className="hidden lg:inline"> Each comes with its method, materials and step-by-step guide.</span>
-            </p>
-          </div>
-          <div className="flex flex-col-reverse gap-10 lg:col-span-5 lg:col-start-8 lg:flex-row lg:justify-end lg:gap-12">
-            <ButtonLink href="/shop" variant="ghost" className="lg:min-w-160">Browse all works</ButtonLink>
-            <ButtonLink href={`/works/${hero.slug}`} trailing={fromPrice(hero.minPriceCents)} className="lg:min-w-240">Start with {hero.number}</ButtonLink>
-          </div>
-        </div>
-      </section>
+      {/* Hero: the deploy's, or the one published from the admin in this browser. */}
+      <HomeHero built={{ slug: hero.slug, number: hero.number, imageUrl: hero.imageUrl, minPriceCents: hero.minPriceCents }} headline={home.headline} />
 
       {/* How it works */}
       <section className="flex flex-col gap-14 lg:gap-24">

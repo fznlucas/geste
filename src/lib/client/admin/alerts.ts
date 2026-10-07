@@ -11,6 +11,12 @@ export function markAlertRead(id: string) {
   patchRow("alerts", id, { read: true });
 }
 
+/** "Mark all read": every alert shown to this staff member. */
+export function markAlertsRead(ids: string[]) {
+  requireStaff();
+  for (const id of ids) patchRow("alerts", id, { read: true });
+}
+
 export function setPushTopic(topic: string, on: boolean) {
   requireStaff();
   patchRow("push_settings", topic, { on });

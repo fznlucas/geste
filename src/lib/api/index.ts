@@ -7,7 +7,7 @@ export { getWorks, getWork, getWorkById, getHomeHeroWork, getShoppingList, getGu
 export { getAdminWorks, getAdminWork, getWorkSlugs, formatRowId, paletteRowId, listRowId, type AdminWork, type AdminWorkDetail, type AdminWorkFormat, type AdminWorkPalette, type AdminListItem, type AdminWorkEdition, type AdminChecklistItem } from "./works";
 export { getArticles, getArticle, articleDate } from "./articles";
 export { getGuide, findGuide, flattenSteps } from "./guides";
-export { getGuideEditor, getGuideEditorParams, getWorkGuides, guideDraftContent, nextGuideVersion, type GuideContent, type GuideContentLayer, type GuideEditorData, type GuideVersionInfo } from "./guides";
+export { gestureVideo, getGuideEditor, getGuideEditorParams, getGuideIndex, type GuideIndexRow, getWorkGuides, guideDraftContent, nextGuideVersion, type GuideContent, type GuideContentLayer, type GuideEditorData, type GuideVersionInfo } from "./guides";
 export { getAiPipeline, aiBudget, aiJobCostCents, aiJobLabel, aiStage, aiJobRow, aiCandidateRow, allAiCandidates, allAiJobs, AI_STYLES, AI_MEDIUMS, AI_PALETTES, AI_FORMATS, AI_LIMITS, type AiPipeline, type AiJob, type AiCandidate, type AiBudget, type AiJobParams, type AiStyle, type AiMedium } from "./ai";
 export { getEditions, getEdition, getPrintCopies, getCertificateLog } from "./editions";
 export { getOrders, getOrder, getRefundOptions, REFUNDABLE_STATUSES, ORDERS_THIS_MONTH, getOrderTracking, customerOrderStatus, orderLineTitle, copyNumbersLabel, trackingCarrierLine } from "./orders";
@@ -20,11 +20,12 @@ export { setLocalRowsSource, setAdminOverlaySource, type LocalRows, type AdminOv
 export { getStaffMember, sessionExpired, sessionTimeoutHours } from "./staff";
 export { getAdminCounts, getAdminAlerts, getLowEdition, getPushSettings, PUSH_TOPICS, getOrderNotes, setAiToReviewSource, type AdminCounts, type AdminAlert, type OrderNote } from "./admin";
 export { getSupportThreads, getSupportThread, getSavedReplies } from "./support";
-export { getAdminArticles, getHomeSettings, getTranslationProgress, getLegalDocs, getLegalDocuments, getLegalDocument, LEGAL_KINDS, type AdminArticle, type HomeSettings, type LegalDoc, type LegalDocument, type LegalKind } from "./content";
+export { getAdminArticles, getArticleEditor, getHomeSettings, getTranslationProgress, type ArticleEditorData, getLegalDocs, getLegalDocuments, getLegalDocument, LEGAL_KINDS, type AdminArticle, type HomeSettings, type LegalDoc, type LegalDocument, type LegalKind } from "./content";
 export { getAnalytics, getFinance, financeCsv, ANALYTICS_RANGES, type Analytics, type AnalyticsRange, type Finance, type PnlRow } from "./insights";
-export { getPromoCodes, promoCodeExists, getGiftCards, getCampaigns, getAffiliates, getSocialWeek, type PromoCode, type GiftCard, type Campaign, type PromoKind, type PromoScope } from "./marketing";
+export { getPromoCodes, promoCodeExists, getGiftCards, getCampaigns, getAffiliates, getSocialWeek, type AffiliatePartner, type SocialPost, type PromoCode, type GiftCard, type Campaign, type PromoKind, type PromoScope } from "./marketing";
 export { storeSetting, getStoreSettings, getShippingZones, getPaymentProviders, getSecuritySettings, getIntegrations, getTeam, getPastAudit, TEAM_ROLE_LABEL, type StoreSetting, type TeamMember, type SettingStatus } from "./settings";
 export { getDashboard, adminDay, type Dashboard, type DashboardDay, type DashboardTopWork } from "./dashboard";
 export { MOCK_NOW, DEMO_CUSTOMER_ID } from "@/data/customers";
 export { DEMO_STAFF_ID } from "@/data/staff";
 export type * from "./types";
+export { adminSearch, type SearchGroup, type SearchHit } from "./search";

@@ -6,7 +6,8 @@
  * local checkout copies included). Owner and Fulfilment (docs/admin.md).
  */
 import { useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, useToast } from "@/components";
+import { useSearchParams } from "next/navigation";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, canOpenAdmin, useToast } from "@/components";
 import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { isLowStock } from "@/lib/metrics";
@@ -31,7 +32,10 @@ export function EditionsPage() {
   const toast = useToast();
   const { staff } = useAdmin();
   const canClose = hasRole(staff.role, "fulfilment");
+  const [cert, setCert] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  // ?low=1 (the sidebar's count): only the editions with 1 to 5 copies left.
+  const lowOnly = useSearchParams().get("low") === "1";
 
   const toggle = async (e: PrintEdition) => {
     setBusy(e.id);
@@ -59,6 +63,12 @@ export function EditionsPage() {
 
   return (
     <AdminPage title="Print editions" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment", "content"]} desktopHref="/admin/editions">
+      {lowOnly && (
+        <p role="status" className="flex gap-8">
+          <span>Low stock only: 1 to 5 copies left.</span>
+          <UnderLink href="/admin/editions">Show every edition</UnderLink>
+        </p>
+      )}
       <div className="relative overflow-x-auto">
         <div role="table" aria-label="Print editions" aria-busy={data.status === "loading"} className="relative flex min-w-920 flex-col gap-14 border border-border bg-surface px-20">
           <AdminHeadRow cols={COLS}>
@@ -73,18 +83,24 @@ export function EditionsPage() {
           </AdminHeadRow>
           {data.status === "loading"
             ? Array.from({ length: 7 }, (_, i) => <div key={i} aria-hidden="true" className="box-content min-h-60 border-b border-border" />)
-            : data.data.editions.map((e) => (
-                <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} onRaise={canClose ? (size) => raise(e, size) : undefined} />
+            : data.data.editions.filter((e) => !lowOnly || isLowStock(e)).map((e) => (
+                <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} onRaise={canClose ? (size) => raise(e, size) : undefined} canEditWork={canOpenAdmin(staff.role, "/admin/works")} />
               ))}
         </div>
       </div>
       <span className="text-fg-muted">Editions are numbered in order of payment. A refund with “back in stock” frees the number for the next buyer. Closing an edition hides the size from the store; a sold-out edition closes itself and reopens with a bigger size.</span>
       <AdminBox className="max-w-602">
-        <AdminTitle>Certificate log</AdminTitle>
+        <div className="flex items-center justify-between gap-12">
+          <AdminTitle>Certificate log</AdminTitle>
+          <label className="flex items-center gap-8">
+            <span className="sr-only">Find a certificate</span>
+            <input value={cert} onChange={(e) => setCert(e.target.value)} placeholder="C-07-S-012" className="min-h-32 w-140 border border-border-field bg-surface px-8 font-mono text-xs focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg" />
+          </label>
+        </div>
         {data.status === "ready" && data.data.log.length === 0 && <p className="text-fg-muted">No certificate signed yet.</p>}
         {data.status === "ready" && (
           <ul aria-label="Certificates" className="flex flex-col gap-14">
-            {data.data.log.map((c) => <LogRow key={c.id} c={c} />)}
+            {data.data.log.filter((c) => !cert.trim() || c.certificateNo?.toLowerCase().includes(cert.trim().toLowerCase())).map((c) => <LogRow key={c.id} c={c} linkOrder={canOpenAdmin(staff.role, "/admin/orders")} />)}
           </ul>
         )}
       </AdminBox>
@@ -93,7 +109,7 @@ export function EditionsPage() {
 }
 
 /** `onToggle` absent: the role reads the stock (Content), closing and reopening stay with Fulfilment. */
-function EditionRow({ e, busy, onToggle, onRaise }: { e: PrintEdition; busy: boolean; onToggle?: () => void; onRaise?: (size: number) => void }) {
+function EditionRow({ e, busy, onToggle, onRaise, canEditWork }: { e: PrintEdition; busy: boolean; onToggle?: () => void; onRaise?: (size: number) => void; canEditWork: boolean }) {
   const [size, setSize] = useState(String(e.editionSize + 10));
   const low = isLowStock(e);
   return (
@@ -101,7 +117,7 @@ function EditionRow({ e, busy, onToggle, onRaise }: { e: PrintEdition; busy: boo
       <span role="cell">
         <Artwork src={e.imageUrl} orientation={e.orientation} className="w-36" sizes="36px" />
       </span>
-      <span role="cell"><UnderLink href={`/admin/works/${e.workSlug}`}>{e.workNumber}</UnderLink></span>
+      <span role="cell">{canEditWork ? <UnderLink href={`/admin/works/${e.workSlug}`}>{e.workNumber}</UnderLink> : e.workNumber}</span>
       <span role="cell">{e.size} <span className="text-fg-muted">· {e.dimensions.replace(" cm", "")}</span></span>
       <span role="cell" className="flex items-center gap-10">
         <span aria-hidden="true" className="relative h-8 grow bg-surface-muted">
@@ -132,19 +148,24 @@ function EditionRow({ e, busy, onToggle, onRaise }: { e: PrintEdition; busy: boo
             {e.closedByHand ? "Reopen" : "Close edition"}
           </PillButton>
         )}
-        <PillLink href={`/admin/works/${e.workSlug}`}>
-          Edit<span className="sr-only"> {e.workNumber} {e.size}</span>
-        </PillLink>
+        {canEditWork && (
+          <PillLink href={`/admin/works/${e.workSlug}`}>
+            Edit<span className="sr-only"> {e.workNumber} {e.size}</span>
+          </PillLink>
+        )}
       </span>
     </AdminRow>
   );
 }
 
-function LogRow({ c }: { c: PrintCopy }) {
+function LogRow({ c, linkOrder }: { c: PrintCopy; linkOrder: boolean }) {
   return (
     <li className="box-content grid min-h-44 items-center gap-x-12 border-b border-border" style={{ gridTemplateColumns: LOG_COLS }}>
       <span className="text-fg-muted">#{c.certificateNo}</span>
-      <span>{c.workNumber} {c.size} {c.label}{c.customerName ? ` · ${c.customerName}` : ""}</span>
+      <span>
+        {c.orderNumber && linkOrder ? <UnderLink href={`/admin/orders/detail?number=${c.orderNumber}`}>{c.workNumber} {c.size} {c.label}</UnderLink> : `${c.workNumber} ${c.size} ${c.label}`}
+        {c.customerName ? ` · ${c.customerName}` : ""}
+      </span>
       <span className="text-fg-muted">{adminDate(c.printedAt!)}</span>
     </li>
   );

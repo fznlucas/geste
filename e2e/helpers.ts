@@ -46,7 +46,7 @@ export async function orderCopy(orderId: string, itemIndex = 0): Promise<{ numbe
 export { formatPrice };
 
 export { alerts, analytics, dashboard, orderTab, ordersThisMonth, todoCounts, todoItems } from "@/lib/metrics";
-export { getCustomers, getOrders } from "@/lib/api";
+export { getCustomers, getOrders, getSocialWeek } from "@/lib/api";
 
 /** A string as a literal piece of a RegExp. */
 export const re = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

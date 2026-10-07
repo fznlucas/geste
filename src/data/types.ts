@@ -41,6 +41,10 @@ export interface WorkRow {
   previewHeight: number;
   resultPhotoPath: string | null;
   studioTested: boolean;
+  /** The studio's own painting (Studio test), uploaded in the admin. */
+  studioPhotoPath?: string | null;
+  /** "Allow Custom level": any level on any format (default on). */
+  allowCustom?: boolean;
   seoTitle: string;
   seoDescription: string;
   sortOrder: number;

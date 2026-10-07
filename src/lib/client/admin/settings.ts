@@ -6,7 +6,7 @@
  */
 import { getTeam, TEAM_ROLE_LABEL } from "@/lib/api";
 import type { StaffRole } from "@/lib/types";
-import { deleteInsertedRow, insertRow, patchRow, adminNow, requireStaff } from "../admin";
+import { audit, deleteInsertedRow, insertRow, patchRow, adminNow, requireStaff } from "../admin";
 import { sendEmail } from "./email";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -31,4 +31,16 @@ export function removeStaff(id: string, email: string) {
 export function saveSetting(key: string, label: string, value: string) {
   const staff = requireStaff("owner");
   patchRow("site_settings", key, { value }, { action: "settings.save", target: `setting:${key}`, summary: `${staff.fullName} changed ${label.toLowerCase()} to “${value}”` });
+}
+
+/** Team › role: an invited or accepted member gets another role (never the owner's). */
+export function changeStaffRole(id: string, email: string, role: Exclude<StaffRole, "owner">) {
+  const staff = requireStaff("owner");
+  patchRow("staff_invites", id, { role }, { action: "staff.role", target: `staff:${email}`, summary: `${staff.fullName} made ${email} ${TEAM_ROLE_LABEL[role]}` });
+}
+
+/** Security › "Sign out every session": the staff sessions end (here: this browser's), the owner signs in again. */
+export function signOutEverywhere() {
+  const staff = requireStaff("owner");
+  audit({ action: "security.sign_out_all", target: "sessions", summary: `${staff.fullName} signed out every admin session` });
 }

@@ -9,7 +9,8 @@ import { allEntitlements, allWorks } from "@/lib/api/local";
 import { guides } from "@/data/guides";
 import { metric } from "./define";
 import { rollingDays, type Period } from "./period";
-import { devicesPct, funnel, levelMixPct, ordersBySource, repeatRatePct } from "./sales";
+import { devicesPct, funnel, levelMixPct, ordersBySource, paidOrders, repeatRatePct } from "./sales";
+import { storeTurnoverEurCents } from "./finance";
 
 export type AnalyticsRange = "7 days" | "30 days" | "90 days" | "Year";
 
@@ -30,10 +31,14 @@ export interface Analytics {
   leak: { from: string; to: string; pct: number };
   sources: Array<{ label: string; orders: number }>;
   /** `readers`: the painters counted; under 100 the page says it is a small sample. */
-  completion: { workNumber: string; readers: number; steps: Array<{ step: string; pct: number; drop: { points: number; reason: string } | null }> };
+  completion: { workNumber: string; readers: number; steps: Array<{ step: string; pct: number; drop: { points: number; reason: string } | null }>; editHref: string | null };
   devices: Array<{ label: string; pct: number }>;
   levelMix: Array<{ label: string; pct: number }>;
   repeat: { pct: number; context: string };
+  /** The average order of the range (the dashboard's "Avg. order" opens here): EUR excl. VAT, lines per order, share with a print. */
+  basket: { avgOrderCents: number; orders: number; linesPerOrder: number; withPrintPct: number };
+  /** Live works, for the completion picker. */
+  works: string[];
 }
 
 const LEAK_NAMES: Record<string, string> = { Visits: "visit", "Viewed a work": "work", "Added to cart": "cart", "Started checkout": "checkout", Paid: "paid" };
@@ -63,15 +68,32 @@ export const completion = metric("Buyers of the work's guide who opened it at le
   const pct = reached.map((n) => (painters.length ? Math.round((n / painters.length) * 100) : 0));
   const drops = pct.map((p, i) => (i ? pct[i - 1]! - p : 0));
   const biggest = new Set([...drops.keys()].sort((a, b) => drops[b]! - drops[a]!).slice(0, 2).filter((i) => drops[i]! > 0));
+  // "Edit these steps": the work's guide on its own canvas and level, opened at the worst drop.
+  const worst = [...biggest].sort((a, b) => drops[b]! - drops[a]!)[0];
+  const g = work && guides.find((x) => x.workId === work.id && x.format === work.defaultFormat && x.level === work.baseLevel);
   return {
     workNumber,
     readers: painters.length,
     steps: STEP_IDS.map((step, i) => ({ step, pct: pct[i]!, drop: biggest.has(i) ? { points: drops[i]!, reason: DROP_REASONS[step] ?? `${step} loses painters` } : null })),
+    editHref: g ? `/admin/works/${work.slug}/guide/${g.id}${worst !== undefined ? `?step=${STEP_IDS[worst]}` : ""}` : null,
   };
 });
 
+/** The average order of a period: the books' store turnover ÷ paid orders (EUR excl. VAT), lines, prints. */
+function basket(period: Period): Analytics["basket"] {
+  const orders = paidOrders(period);
+  const revenue = storeTurnoverEurCents(period);
+  const lines = orders.reduce((s, o) => s + o.items.length, 0);
+  return {
+    avgOrderCents: orders.length ? Math.round(revenue / orders.length) : 0,
+    orders: orders.length,
+    linesPerOrder: orders.length ? Math.round((lines / orders.length) * 10) / 10 : 0,
+    withPrintPct: orders.length ? Math.round((orders.filter((o) => o.items.some((i) => i.kind === "print")).length / orders.length) * 100) : 0,
+  };
+}
+
 /** Every analytics block for a range. */
-export const analytics = metric("Analytics figures for a range: funnel, biggest leak, sources, completion, devices, level mix, repeat rate.", async function analytics(range: AnalyticsRange = "30 days"): Promise<Analytics> {
+export const analytics = metric("Analytics figures for a range: funnel, biggest leak, sources, completion, devices, level mix, repeat rate, average order.", async function analytics(range: AnalyticsRange = "30 days", workNumber = "N°03"): Promise<Analytics> {
   const period = analyticsPeriod(range);
   const steps = funnel(period);
   const conv = steps.slice(1).map((f, i) => ({ from: steps[i]!.label, to: f.label, pct: steps[i]!.value ? (f.value / steps[i]!.value) * 100 : 0 }));
@@ -81,9 +103,11 @@ export const analytics = metric("Analytics figures for a range: funnel, biggest 
     funnel: steps,
     leak: { from: LEAK_NAMES[worst.from] ?? worst.from, to: LEAK_NAMES[worst.to] ?? worst.to, pct: Math.round(worst.pct * 10) / 10 },
     sources: ordersBySource(period),
-    completion: completion("N°03"),
+    completion: completion(workNumber),
     devices: devicesPct(period),
     levelMix: levelMixPct(period),
     repeat: { pct: repeatRatePct(), context: "of first-time buyers bought a 2nd guide within 60 days" },
+    basket: basket(period),
+    works: allWorks().filter((w) => w.status === "live").map((w) => w.number),
   });
 });

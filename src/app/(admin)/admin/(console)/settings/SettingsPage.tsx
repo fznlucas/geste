@@ -7,17 +7,19 @@
  * Integrations (Mock / Live per integration, Outbox, logs), Simulation. Payments & tax and Integrations
  * keep the board's rows first (docs/admin-v2/03 §2). The tab is in the URL (`?tab=Simulation`).
  */
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, Select, StatusChip, useToast,
+  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, PillButton, Select, StatusChip, useToast,
 } from "@/components";
 import {
   getPastAudit, getSecuritySettings, getShippingZones, getStoreSettings, getTeam,
   type SettingStatus, type StoreSetting,
 } from "@/lib/api";
-import { useAdminQuery, useAudit } from "@/lib/client";
-import { inviteStaff, removeStaff, saveSetting } from "@/lib/client/admin/settings";
+import { signOutStaff, useAdminQuery, useAudit } from "@/lib/client";
+import { downloadFile, toCsv } from "@/lib/client/admin/download";
+import { simToday } from "@/lib/clock";
+import { changeStaffRole, inviteStaff, removeStaff, saveSetting, signOutEverywhere } from "@/lib/client/admin/settings";
 import type { StaffRole } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
 import { Integrations, PaymentsAndTax, Simulation } from "./IntegrationsSettings";
@@ -158,10 +160,19 @@ function Team() {
         {q.data.map((m) => (
           <AdminRow key={m.id} cols={TEAM_COLS}>
             <span role="rowheader">{m.who}</span>
-            <span role="cell">{m.roleLabel}</span>
+            <span role="cell">
+              {/* Invited and accepted members can change role; the owner stays the owner. */}
+              {m.role === "owner" || m.id.startsWith("staff-") ? (
+                m.roleLabel
+              ) : (
+                <Select aria-label={`Role of ${m.email}`} value={m.role} onChange={(e) => { changeStaffRole(m.id, m.email, e.target.value as Exclude<StaffRole, "owner">); toast.show(`${m.email} · ${INVITE_ROLES.find(([k]) => k === e.target.value)?.[1]}`); }} className="min-h-32">
+                  {INVITE_ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </Select>
+              )}
+            </span>
             <span role="cell">{m.invited ? <StatusChip state="todo" label="Invite sent" /> : <StatusChip state={m.totpEnabled ? "done" : "todo"} label={m.totpEnabled ? "On" : "Off"} />}</span>
             <span role="cell">
-              {m.invited && (
+              {m.role !== "owner" && !m.id.startsWith("staff-") && (
                 <button
                   type="button"
                   onClick={() => {
@@ -223,10 +234,25 @@ const auditTime = (iso: string) => {
 function Security() {
   const q = useAdminQuery(async () => ({ settings: await getSecuritySettings(), past: await getPastAudit() }), []);
   const mine = useAudit();
+  const router = useRouter();
+  const [filter, setFilter] = useState("");
   if (q.status === "loading") return <Loading />;
-  const log = [...mine.map((a) => ({ id: a.id, at: a.at, summary: a.summary })), ...q.data.past];
+  const all = [...mine.map((a) => ({ id: a.id, at: a.at, summary: a.summary })), ...q.data.past];
+  const log = all.filter((a) => !filter.trim() || a.summary.toLowerCase().includes(filter.trim().toLowerCase()));
   return (
     <>
+      <div className="flex flex-wrap gap-10">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            signOutEverywhere();
+            signOutStaff();
+            router.replace("/admin/login");
+          }}
+        >
+          Sign out every session
+        </Button>
+      </div>
       <div role="table" aria-label="Security" className="flex flex-col gap-8">
         {q.data.settings.map((s) => (
           <AdminRow key={s.name} cols="1fr 200px">
@@ -235,7 +261,14 @@ function Security() {
           </AdminRow>
         ))}
       </div>
-      <AdminTitle as="h3" className="mt-12">Audit log</AdminTitle>
+      <div className="mt-12 flex flex-wrap items-center justify-between gap-10">
+        <AdminTitle as="h3">Audit log</AdminTitle>
+        <div className="flex items-center gap-8">
+          <label htmlFor="audit-filter" className="sr-only">Filter the audit log</label>
+          <Input id="audit-filter" value={filter} placeholder="Filter: refund, Lucas, #GS-…" onChange={(e) => setFilter(e.target.value)} className="w-240" />
+          <PillButton onClick={() => downloadFile(`geste-audit-${simToday()}.csv`, toCsv([["When (UTC)", "What"], ...log.map((a) => [a.at, a.summary])]))}>Export CSV</PillButton>
+        </div>
+      </div>
       <div role="table" aria-label="Audit log, newest first" className="flex flex-col gap-8">
         {log.map((a) => (
           <AdminRow key={a.id} cols="140px 1fr">

@@ -14,6 +14,10 @@ const ALERTS = [
   { id: "a3", text: "4 reviews waiting", when: "yesterday", href: "#", read: true },
 ];
 
+/** Type "ca": grouped results; anything else: the empty state. */
+const KIT_SEARCH = async (q: string) =>
+  q.toLowerCase().startsWith("ca") ? [{ group: "Customers", hits: [{ label: "Camille Martin", detail: "camille.martin@mail.com", href: "#" }] }, { group: "Orders", hits: [{ label: "#GS-1438", detail: "Camille Martin · 2026-10-01", href: "#" }] }] : [];
+
 export function ShellKit() {
   const [role, setRole] = useState<StaffRole>("owner");
   const [tab, setTab] = useState("All");
@@ -29,7 +33,7 @@ export function ShellKit() {
           <AdminTopBar
             breadcrumbs={[{ label: "Sales", href: "#" }]}
             title="Orders"
-            search={<AdminSearch onSearch={() => {}} />}
+            search={<AdminSearch search={KIT_SEARCH} onOpen={() => {}} />}
             demo={<DemoRoleMenu role={role} onRoleChange={setRole} onReset={() => {}} simulatedUpTo="14:32" simulationHref="#simulation" />}
             alerts={<AlertsPopover alerts={ALERTS} />}
             actions={<Button size="sm" variant="ghost" className="min-h-36">Export CSV</Button>}

@@ -267,6 +267,8 @@ export interface AdminWork {
   imageUrl: string | null;
   resultPhotoUrl: string | null;
   studioTested: boolean;
+  /** The studio test photo, when uploaded. */
+  studioPhotoUrl: string | null;
   seoTitle: string;
   seoDescription: string;
   sortOrder: number;
@@ -300,6 +302,8 @@ export interface AdminWorkDetail extends AdminWork {
   checklist: AdminChecklistItem[];
   /** Published review photos of this work: "Pick from submitted results". */
   resultCandidates: Array<{ reviewId: string; photoPath: string; photoUrl: string; customerName: string }>;
+  /** "Allow Custom level" (Formats & prices): any level on any format, same price. */
+  allowCustom: boolean;
 }
 
 /**
@@ -407,6 +411,7 @@ function mapAdminWork(row: WorkRow, createdIds: Set<string>): AdminWork {
     imageUrl: row.previewPath ? asset(row.previewPath) : null,
     resultPhotoUrl: row.resultPhotoPath ? asset(row.resultPhotoPath) : null,
     studioTested: !!row.studioTested,
+    studioPhotoUrl: row.studioPhotoPath ? asset(row.studioPhotoPath) : null,
     seoTitle: row.seoTitle ?? "",
     seoDescription: row.seoDescription ?? "",
     sortOrder: row.sortOrder,
@@ -443,7 +448,8 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
   const formats = adminFormats(row.id, work.proportion, work.baseLevel, work.orientation);
   const def = formats.find((f) => f.format === work.defaultFormat)!;
 
-  const paletteRows = palettes.filter((p) => p.workId === row.id);
+  // The work's palettes, and those added in the admin ("+ Add a palette").
+  const paletteRows = [...palettes.filter((p) => p.workId === row.id), ...inserted<(typeof palettes)[number]>("palettes").filter((p) => p.workId === row.id)];
   const workPalettes: AdminWorkPalette[] = (paletteRows.length ? paletteRows : [{ key: "original" as PaletteKey, name: "Original", swatches: palettes[0]!.swatches, active: true }])
     .map((p) => patched("palettes", { id: paletteRowId(row.id, p.key), key: p.key, name: p.name, swatches: p.swatches, note: FILTER_NOTE[p.key], active: p.active }))
     .map(({ id: _id, ...p }) => p);
@@ -488,7 +494,7 @@ export async function getAdminWork(slug: string): Promise<AdminWorkDetail | null
     .filter((r) => r.workId === row.id && r.photoPath && (r.status === "published" || r.status === "featured"))
     .map((r) => ({ reviewId: r.id, photoPath: r.photoPath!, photoUrl: asset(r.photoPath!), customerName: allCustomers().find((c) => c.id === r.userId)?.fullName ?? "" }));
 
-  return clone({ ...work, formats, palettes: workPalettes, shoppingList, editions, guide, checklist, resultCandidates });
+  return clone({ ...work, formats, palettes: workPalettes, shoppingList, editions, guide, checklist, resultCandidates, allowCustom: row.allowCustom ?? true });
 }
 
 /** Static params of the work editor: the works of the mock (drafts created in the admin use /admin/works/draft?slug=). */

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { Button } from "../primitives/Button";
 import { PillButton } from "./AdminUI";
@@ -17,6 +18,8 @@ export function AdminMeter({ pct, label, className }: { pct: number; label: stri
 }
 
 export interface AiCandidateCardProps {
+  /** Approved: the draft work it became ("→ Works (draft)" links to its editor). */
+  workHref?: string | null;
   id: string;
   imageUrl: string;
   similarity: number;
@@ -37,7 +40,7 @@ export interface AiCandidateCardProps {
  * Approve (Ink, 32 px) + ✕ pill; once decided, the verdict ("✓ Approved → Works (draft)", "✕ Rejected",
  * the rejected card's image at 40 % and its text Stone: the board fades the whole card, which fails contrast).
  */
-export function AiCandidateCard({ id, imageUrl, similarity, strokes, layers, note, warning, status, busy, onApprove, onReject }: AiCandidateCardProps) {
+export function AiCandidateCard({ id, imageUrl, similarity, strokes, layers, note, warning, status, busy, onApprove, onReject, workHref }: AiCandidateCardProps) {
   return (
     <li className={cn("flex flex-col gap-6", status === "rejected" && "text-fg-muted")}>
       <span className={cn("relative block aspect-[4/5] w-full", status === "rejected" && "opacity-40")}>
@@ -57,7 +60,11 @@ export function AiCandidateCard({ id, imageUrl, similarity, strokes, layers, not
           <PillButton onClick={onReject} disabled={busy} aria-label={`Reject ${id}`}>✕</PillButton>
         </span>
       ) : (
-        <span>{status === "approved" ? "✓ Approved → Works (draft)" : "✕ Rejected"}</span>
+        status === "approved" && workHref ? (
+          <Link href={workHref} className="self-start underline underline-offset-3 hover:text-fg-muted">✓ Approved → Works (draft)</Link>
+        ) : (
+          <span>{status === "approved" ? "✓ Approved → Works (draft)" : "✕ Rejected"}</span>
+        )
       )}
     </li>
   );

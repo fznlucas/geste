@@ -66,6 +66,9 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
     reviews: allReviews().filter((r) => r.userId === id).map(mapReview),
     source: CUSTOMER_SOURCES[id] ?? (row.source ? (SOURCE_LABEL[row.source] ?? null) : null),
     passkeyDevices: passkeys.filter((p) => p.userId === id).map((p) => p.device),
+    passwordSet: !!passwordChangedAt[id],
+    emailVerified: ordersOfCustomer(id).some((o) => o.status !== "pending"),
+    deletionAt: row.deletionScheduledAt ? new Date(Date.parse(row.deletionScheduledAt) + 30 * 86_400_000).toISOString() : null,
   });
 }
 

@@ -123,18 +123,26 @@ export function ledgerFromGiftCardUse(card: GiftCardRow, orderId: string, cents:
   return [line({ at, account: "liability.giftcards", amountEurCents: -eur, amountUsdCents: cents, fxRate: rate, category: "none", sourceTable: "gift_card_redemptions", sourceId: `${card.id}:${orderId}`, memo: `Gift card ${card.code} used` }, 0)];
 }
 
-/** A gift card past its validity with money left: breakage, turnover on its expiry day. */
-export function ledgerFromBreakage(card: GiftCardRow, now: number): LedgerLine[] {
+/** When a gift card stops: its own date when extended, else two years after purchase; voided: that day. */
+export function giftCardEnd(card: Pick<GiftCardRow, "createdAt" | "expiresAt" | "voidedAt">): { at: Date; voided: boolean } {
+  if (card.voidedAt) return { at: new Date(card.voidedAt), voided: true };
+  if (card.expiresAt) return { at: new Date(card.expiresAt), voided: false };
   const expiry = new Date(Date.parse(card.createdAt));
   expiry.setUTCFullYear(expiry.getUTCFullYear() + B.giftCardExpiryYears.value);
+  return { at: expiry, voided: false };
+}
+
+/** A gift card past its validity (or cancelled) with money left: breakage, turnover on that day. */
+export function ledgerFromBreakage(card: GiftCardRow, now: number): LedgerLine[] {
+  const { at: expiry, voided } = giftCardEnd(card);
   if (expiry.getTime() > now || card.balanceCents <= 0) return [];
   const rate = fxRate(parisDay(card.createdAt));
   const eur = toEur(card.balanceCents, rate);
   const at = expiry.toISOString().slice(0, 19) + "Z";
   const base = { at, sourceTable: "gift_cards", sourceId: card.id, fxRate: rate, amountUsdCents: card.balanceCents };
   return [
-    line({ ...base, account: "revenue.giftcards_breakage", amountEurCents: eur, category: B.categories.breakage.value, memo: `Gift card ${card.code} expired unused` }, 0),
-    line({ ...base, account: "liability.giftcards", amountEurCents: -eur, category: "none", memo: `Gift card ${card.code} expired` }, 1),
+    line({ ...base, account: "revenue.giftcards_breakage", amountEurCents: eur, category: B.categories.breakage.value, memo: `Gift card ${card.code} ${voided ? "cancelled" : "expired unused"}` }, 0),
+    line({ ...base, account: "liability.giftcards", amountEurCents: -eur, category: "none", memo: `Gift card ${card.code} ${voided ? "cancelled" : "expired"}` }, 1),
   ];
 }
 

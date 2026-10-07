@@ -20,6 +20,7 @@ import { printCopies, printEditions } from "@/data/editions";
 import { entitlements } from "@/data/entitlements";
 import type { CampaignRow, GiftCardRow } from "@/data/marketing";
 import { simNow } from "@/lib/clock";
+import { hashString } from "@/sim/random";
 import { mockCarrierScans } from "@/lib/integrations/boxtal/mock";
 import { campaigns as fixtureCampaigns, giftCards as fixtureGiftCards } from "@/data/marketing";
 import { orders, refunds, shipments } from "@/data/orders";
@@ -382,7 +383,19 @@ export const giftCardByCode = (code: string): GiftCardRow | undefined => {
   const c = code.replace(/\s+/g, "").toUpperCase();
   return allGiftCards().find((g) => g.code.replace(/\s+/g, "").toUpperCase() === c);
 };
-export const allCampaigns = memo((): CampaignRow[] => merged("campaigns", [...sim().campaigns, ...fixtureCampaigns]));
+/**
+ * Newsletters. A letter scheduled from the admin goes out at its time (the clock): sent then, with its
+ * open and click rates once the first day has passed (Resend's webhooks later), drawn from its id.
+ */
+export const allCampaigns = memo((): CampaignRow[] => {
+  const now = simNow().toISOString();
+  return merged("campaigns", [...sim().campaigns, ...fixtureCampaigns]).map((c) => {
+    if (c.sentAt || !c.scheduledAt || c.scheduledAt > now) return c;
+    const h = hashString(`campaign|${c.id}`);
+    const settled = Date.parse(now) - Date.parse(c.scheduledAt) > 86_400_000;
+    return { ...c, sentAt: c.scheduledAt, month: c.month ?? null, openRate: settled ? 45 + (h % 20) : null, clickRate: settled ? Math.round((3 + ((h >> 5) % 70) / 10) * 10) / 10 : null };
+  });
+});
 export const allPayments = (): PaymentRow[] => sim().payments;
 export const allTraffic = (): TrafficDayRow[] => sim().traffic;
 export const allSubscribers = (): SubscriberRow[] => sim().subscribers;

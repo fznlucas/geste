@@ -4,11 +4,16 @@
  * made here in the mock shows in the admin only.
  */
 import { articles } from "@/data/articles";
-import { ARTICLE_VIEWS, articleDrafts, homeSettings, legalDocs, legalDocuments, translationAreas, type ArticleDraftRow, type HomeSettingsRow } from "@/data/content";
+import { articleDrafts, homeSettings, legalDocs, legalDocuments, translationAreas, type ArticleDraftRow, type HomeSettingsRow } from "@/data/content";
+import { asset } from "@/lib/asset";
+import { simNowIso } from "@/lib/clock";
 import { clone } from "./clone";
-import { allWorks, merged, patched } from "./local";
+import { allTraffic, allWorks, merged, patched } from "./local";
 import { workChecklist } from "./works";
 import type { ArticleCategory } from "./types";
+
+/** Strings per area in the translation files (none yet: the French site is not built). */
+const TRANSLATION_FILES: { en: Record<string, number>; fr: Record<string, number> } = { en: {}, fr: {} };
 
 export interface AdminArticle {
   id: string;
@@ -20,17 +25,51 @@ export interface AdminArticle {
   views: number | null;
   /** Store page of a published article. */
   href: string | null;
+  /** Its editor (/admin/content/article/?id=). */
+  editHref: string;
+}
+
+/**
+ * Views of a published article from the traffic rows: about 3 % of the store's daily visits read the
+ * journal's newest pieces, each day's share fading by 3 % as the article ages (PostHog later).
+ */
+function articleViews(publishedAt: string): number {
+  const from = publishedAt.slice(0, 10);
+  const today = simNowIso().slice(0, 10);
+  let views = 0;
+  for (const d of allTraffic()) {
+    if (d.day < from || d.day > today) continue;
+    const age = Math.round((Date.parse(d.day) - Date.parse(from)) / 86_400_000);
+    views += d.visits * 0.03 * Math.pow(0.97, age);
+  }
+  return Math.round(views);
+}
+
+interface ArticleEdit {
+  id: string;
+  title?: string;
+  category?: ArticleCategory;
+  coverPath?: string;
+  bodyMd?: string;
+  frTitle?: string;
+  frBodyMd?: string;
+  status?: "draft" | "published";
+  publishedAt?: string | null;
 }
 
 /** Published newest first, then drafts newest first. */
 export async function getAdminArticles(): Promise<AdminArticle[]> {
   const published: AdminArticle[] = [...articles]
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .map((a) => ({ id: a.slug, title: a.title, category: a.category, status: "published", publishedAt: a.publishedAt, views: ARTICLE_VIEWS[a.slug] ?? 0, href: `/journal/${a.slug}` }));
-  const drafts: AdminArticle[] = merged<ArticleDraftRow>("article_drafts", articleDrafts)
+    .map((a) => {
+      const e = patched<ArticleEdit>("article_edits", { id: a.slug });
+      return { id: a.slug, title: e.title ?? a.title, category: e.category ?? a.category, status: "published", publishedAt: a.publishedAt, views: articleViews(a.publishedAt), href: `/journal/${a.slug}`, editHref: `/admin/content/article/?id=${a.slug}` };
+    });
+  // Drafts, and drafts published from the admin (on the store after the next build).
+  const drafts: AdminArticle[] = merged<ArticleDraftRow & ArticleEdit>("article_drafts", articleDrafts)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((d) => ({ id: d.id, title: d.title, category: d.category, status: "draft", publishedAt: null, views: null, href: null }));
-  return clone([...published, ...drafts]);
+    .map((d) => ({ id: d.id, title: d.title, category: d.category, status: d.status === "published" ? "published" : "draft", publishedAt: d.publishedAt ?? null, views: d.publishedAt ? articleViews(d.publishedAt) : null, href: null, editHref: `/admin/content/article/?id=${d.id}` }));
+  return clone([...drafts.filter((d) => d.status === "published"), ...published, ...drafts.filter((d) => d.status === "draft")]);
 }
 
 export interface HomeSettings {
@@ -74,8 +113,21 @@ export async function getHomeSettings(): Promise<HomeSettings> {
   });
 }
 
-export async function getTranslationProgress(): Promise<Array<{ area: string; frDonePct: number }>> {
-  return clone(translationAreas);
+/**
+ * French coverage, computed from the translation files (`messages/fr.json` next to `messages/en.json`).
+ * There is no `messages/` folder yet: the French site is not built, so every area is at 0 % (the board
+ * showed 20 % for the store pages).
+ */
+export async function getTranslationProgress(): Promise<{ areas: Array<{ area: string; frDonePct: number }>; note: string | null }> {
+  const files = TRANSLATION_FILES;
+  const pct = (area: string) => {
+    const en = files.en[area] ?? 0;
+    return en ? Math.round(((files.fr[area] ?? 0) / en) * 100) : 0;
+  };
+  return clone({
+    areas: translationAreas.map((a) => ({ area: a.area, frDonePct: pct(a.area) })),
+    note: Object.keys(files.en).length ? null : "No translation files yet (messages/en.json, messages/fr.json): the French site is not built.",
+  });
 }
 
 export interface LegalDoc {
@@ -86,10 +138,24 @@ export interface LegalDoc {
   updatedAt: string;
   status: "live" | "draft" | "blocked";
   note: string | null;
+  /** The text being edited (Markdown, "## " headings): the published one until a draft is saved. */
+  bodyMd: string;
+  /** A draft saved here, not published yet. */
+  hasDraft: boolean;
 }
 
+/** The accessibility statement has its own store page (/legal/accessibility): listed with the others. */
+const ACCESSIBILITY: (typeof legalDocs)[number] = { id: "accessibility", slug: "accessibility", title: "Accessibility statement", version: 1, updatedAt: "2026-09-20T09:00:00Z", status: "live", note: null };
+
+/** Legal pages with their versions; a draft saved or a version published here (the store follows at the next build). */
 export async function getLegalDocs(): Promise<LegalDoc[]> {
-  return clone(legalDocs);
+  return clone(
+    [...legalDocs, ACCESSIBILITY].map((row) => {
+      const d = patched<typeof row & { draftMd?: string | null; bodyMd?: string }>("legal_docs", row);
+      const published = d.bodyMd ?? legalDocuments.find((x) => x.kind === row.slug && x.locale === "en")?.bodyMd ?? "";
+      return { id: d.id, slug: d.slug, title: d.title, version: d.version, updatedAt: d.updatedAt, status: d.status, note: d.note, bodyMd: d.draftMd ?? published, hasDraft: !!d.draftMd };
+    }),
+  );
 }
 
 // ── Store: /legal/[doc] ──────────────────────────────────────────────────────
@@ -145,4 +211,37 @@ export async function getLegalDocuments(locale: "en" | "fr" = "en"): Promise<Leg
 
 export async function getLegalDocument(kind: string, locale: "en" | "fr" = "en"): Promise<LegalDocument | null> {
   return (await getLegalDocuments(locale)).find((d) => d.kind === kind) ?? null;
+}
+
+export interface ArticleEditorData {
+  id: string;
+  /** A published article of the store, or a draft written here. */
+  kind: "published" | "draft";
+  title: string;
+  category: ArticleCategory;
+  coverPath: string;
+  coverUrl: string;
+  /** Markdown: "## " starts a heading, a blank line a paragraph. */
+  bodyMd: string;
+  frTitle: string;
+  frBodyMd: string;
+  status: "draft" | "published";
+  publishedAt: string | null;
+  /** Pictures that can be the cover: the works' previews. */
+  covers: Array<{ path: string; label: string }>;
+}
+
+/** /admin/content/article/?id=: an article and its French version as edited here. */
+export async function getArticleEditor(id: string): Promise<ArticleEditorData | null> {
+  const covers = allWorks().map((w) => ({ path: w.previewPath, label: w.number }));
+  const a = articles.find((x) => x.slug === id);
+  if (a) {
+    const e = patched<ArticleEdit>("article_edits", { id });
+    const body = a.body.map((b) => (b.kind === "h2" ? `## ${b.text}` : b.text)).join("\n\n");
+    return clone({ id, kind: "published", title: e.title ?? a.title, category: e.category ?? a.category, coverPath: e.coverPath ?? a.coverPath, coverUrl: asset(e.coverPath ?? a.coverPath), bodyMd: e.bodyMd ?? body, frTitle: e.frTitle ?? "", frBodyMd: e.frBodyMd ?? "", status: "published", publishedAt: a.publishedAt, covers });
+  }
+  const d = merged<ArticleDraftRow & ArticleEdit>("article_drafts", articleDrafts).find((x) => x.id === id);
+  if (!d) return null;
+  const cover = d.coverPath ?? covers[0]!.path;
+  return clone({ id, kind: "draft", title: d.title, category: d.category, coverPath: cover, coverUrl: asset(cover), bodyMd: d.bodyMd ?? "", frTitle: d.frTitle ?? "", frBodyMd: d.frBodyMd ?? "", status: d.status ?? "draft", publishedAt: d.publishedAt ?? null, covers });
 }

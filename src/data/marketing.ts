@@ -45,6 +45,10 @@ export interface GiftCardRow {
   sendAt: string | null;
   sentAt: string | null;
   createdAt: string;
+  /** Cancelled in the admin (what was left becomes turnover that day). */
+  voidedAt?: string | null;
+  /** Validity extended in the admin (default: two years after purchase). */
+  expiresAt?: string | null;
 }
 
 export const giftCards: GiftCardRow[] = [

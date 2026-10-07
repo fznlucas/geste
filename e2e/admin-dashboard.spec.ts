@@ -81,7 +81,7 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   await page.goto("/admin/");
   const k = D.last30d;
   await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(eur(k.revenueCents))}\\s*${re(k.revenueDelta)}`) })).toBeVisible();
-  await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${k.orders}\\b`) })).toHaveAttribute("href", /\/admin\/orders\/?$/);
+  await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${k.orders}\\b`) })).toHaveAttribute("href", /\/admin\/orders\/?\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/);
   await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days.slice(-30))}` })).toBeVisible();
   await page.getByRole("button", { name: "7 d" }).click();
   await expect(page.getByRole("button", { name: "7 d" })).toHaveAttribute("aria-pressed", "true");
@@ -91,8 +91,10 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   await expect(page.getByRole("img", { name: /^[A-Z][a-z]{2} \d+ · / })).toHaveCount(90);
   await page.getByRole("img", { name: /^Sep 22 · / }).hover();
   await expect(page.getByRole("tooltip")).toHaveText(/^Sep 22 · €[\d,.]+ · \d+ orders?$/);
+  // The range drives the whole page (tiles, chart, top works): back to 30 days.
+  await page.getByRole("button", { name: "30 d" }).click();
   await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.fulfilment, "print", "prints")} to pack and ship`) })).toBeVisible();
-  await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.reviews, "review", "reviews")} to moderate`) })).toHaveAttribute("href", /\/admin\/reviews\/?$/);
+  await expect(page.getByRole("link", { name: new RegExp(`${plural(COUNTS.reviews, "review", "reviews")} to moderate`) })).toHaveAttribute("href", /\/admin\/reviews\/?\?tab=moderate$/);
   const latest = ORDERS[0]!;
   await expect(page.getByRole("link", { name: new RegExp(`#${latest.number}\\s*${re(latest.customer.fullName)}`) })).toHaveAttribute("href", new RegExp(`/admin/orders/detail/?\\?number=${latest.number}`));
   const top = D.topWorks[0]!;

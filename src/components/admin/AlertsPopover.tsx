@@ -20,7 +20,7 @@ export interface AlertItem {
  * (a link to its module) + "Close". Escape, a click outside or a link closes it; focus returns to the button.
  * `onOpen`: following an alert's link marks it read.
  */
-export function AlertsPopover({ alerts, onOpen }: { alerts: AlertItem[]; onOpen?: (id: string) => void }) {
+export function AlertsPopover({ alerts, onOpen, onMarkAll }: { alerts: AlertItem[]; onOpen?: (id: string) => void; onMarkAll?: (ids: string[]) => void }) {
   const unread = alerts.filter((a) => !a.read).length;
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
@@ -75,16 +75,27 @@ export function AlertsPopover({ alerts, onOpen }: { alerts: AlertItem[]; onOpen?
               <span className="text-fg-muted">{a.when}</span>
             </Link>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              button.current?.focus();
-            }}
-            className="flex min-h-44 cursor-pointer items-center justify-center font-mono text-xs hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg"
-          >
-            Close
-          </button>
+          <div className="flex">
+            {onMarkAll && unread > 0 && (
+              <button
+                type="button"
+                onClick={() => onMarkAll(alerts.filter((a) => !a.read).map((a) => a.id))}
+                className="flex min-h-44 flex-1 cursor-pointer items-center justify-center border-r border-border font-mono text-xs hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg"
+              >
+                Mark all read
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                button.current?.focus();
+              }}
+              className="flex min-h-44 flex-1 cursor-pointer items-center justify-center font-mono text-xs hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </>

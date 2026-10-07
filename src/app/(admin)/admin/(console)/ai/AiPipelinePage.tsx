@@ -7,7 +7,7 @@
  * while the page is open (`advanceJobs` every 2 s); a job that would pass the budget is blocked.
  */
 import { useEffect, useState } from "react";
-import { AdminBox, AdminMeter, AdminRow, AdminTitle, AiCandidateCard, Button, Field, Input, Select, useToast } from "@/components";
+import { AdminBox, AdminMeter, AdminRow, AdminTabs, AdminTitle, AiCandidateCard, Button, Field, Input, Select, useToast } from "@/components";
 import {
   AI_FORMATS, AI_MEDIUMS, AI_PALETTES, AI_STYLES, aiJobCostCents, getAiPipeline,
   type AiBudget, type AiCandidate, type AiJob, type AiJobParams, type AiPipeline,
@@ -20,20 +20,15 @@ import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
 /** Simulated worker tick. */
-const TICK_MS = 2000;
 
 export function AiPipelinePage() {
   const q = useAdminQuery(getAiPipeline, []);
   const { staff } = useAdmin();
   const running = (q.data?.running.length ?? 0) > 0;
 
-  // The simulated GPU worker: runs while this page is open and something is queued or running.
+  // The simulated GPU worker runs from the admin frame (any admin page); here it catches up at once.
   useEffect(() => {
-    if (!running || !(staff.role === "owner" || staff.role === "content")) return;
-    const t = setInterval(() => {
-      if (document.visibilityState === "visible") advanceJobs();
-    }, TICK_MS);
-    return () => clearInterval(t);
+    if (running && (staff.role === "owner" || staff.role === "content")) advanceJobs();
   }, [running, staff.role]);
 
   return (
@@ -44,6 +39,9 @@ export function AiPipelinePage() {
 }
 
 function Pipeline({ data }: { data: AiPipeline }) {
+  const [show, setShow] = useState<"pending" | "decided">("pending");
+  const decided = data.candidates.filter((c) => c.status !== "pending");
+  const shown = show === "pending" ? data.candidates.filter((c) => c.status === "pending") : decided;
   return (
     <div className="grid grid-cols-1 items-start gap-16 min-[1200px]:grid-cols-12">
       <NewGeneration budget={data.budget} nextJob={data.nextJobNumber} className="min-[1200px]:col-span-4" />
@@ -59,17 +57,20 @@ function Pipeline({ data }: { data: AiPipeline }) {
             <p className="text-fg-muted">Nothing running. New candidates appear below when a job ends.</p>
           )}
         </AdminBox>
-        <AdminBox>
+        {/* #to-validate: the sidebar's AI count opens here. */}
+        <AdminBox id="to-validate" className="scroll-mt-16">
           <div className="flex flex-col gap-4 min-[1200px]:flex-row min-[1200px]:justify-between min-[1200px]:gap-0">
             <AdminTitle>To validate · {data.toValidate}</AdminTitle>
             <span className="text-fg-muted">Similarity = how close the stroke render is to the target. Approve only what you would paint yourself.</span>
           </div>
-          {data.candidates.length ? (
+          {/* Decided cards leave the list for "Decided" (the last week's approvals and rejections). */}
+          <AdminTabs label="Candidate lists" tabs={[{ value: "pending", label: `To validate · ${data.toValidate}` }, { value: "decided", label: `Decided · ${decided.length}` }]} value={show} onChange={setShow} className="self-start" />
+          {shown.length ? (
             <ul className="grid grid-cols-2 gap-14 sm:grid-cols-3 min-[1200px]:grid-cols-5">
-              {data.candidates.map((c) => <Candidate key={c.id} c={c} />)}
+              {shown.map((c) => <Candidate key={c.id} c={c} />)}
             </ul>
           ) : (
-            <p className="text-fg-muted">Nothing to validate.</p>
+            <p className="text-fg-muted">{show === "pending" ? "Nothing to validate." : "No decision this week."}</p>
           )}
         </AdminBox>
       </div>
@@ -195,5 +196,5 @@ function Candidate({ c }: { c: AiCandidate }) {
       setBusy(false);
     }
   };
-  return <AiCandidateCard {...c} busy={busy} onApprove={() => decide(true)} onReject={() => decide(false)} />;
+  return <AiCandidateCard {...c} busy={busy} onApprove={() => decide(true)} onReject={() => decide(false)} workHref={c.workHref} />;
 }

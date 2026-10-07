@@ -35,7 +35,7 @@ export function KanbanBoard({ columns, onMove, busy }: { columns: KanbanColumn[]
   return (
     <div className="grid grid-cols-4 items-start gap-16">
       {columns.map((c, ci) => (
-        <section key={c.key} aria-label={`${c.title}, ${c.cards.length}`} className="flex min-h-584 flex-col gap-10 bg-surface-hover p-12">
+        <section key={c.key} id={`col-${c.key}`} aria-label={`${c.title}, ${c.cards.length}`} className="flex min-h-584 scroll-mt-16 flex-col gap-10 bg-surface-hover p-12">
           <div className="flex justify-between">
             <h2 className="font-medium tracking-normal">{c.title}</h2>
             <span className="text-fg-muted" aria-hidden="true">{c.cards.length}</span>

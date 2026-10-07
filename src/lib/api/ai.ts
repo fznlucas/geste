@@ -10,7 +10,7 @@ import { simNow } from "@/lib/clock";
 import { calendarMonth, inPeriod } from "@/lib/metrics/period";
 import type { AiCandidateRow, AiJobRow } from "@/data/types";
 import { clone } from "./clone";
-import { fixtureAiCandidates, merged, patched, simAiCandidates, simAiJobs } from "./local";
+import { fixtureAiCandidates, inserted, merged, patched, simAiCandidates, simAiJobs } from "./local";
 import type { PaletteKey } from "./types";
 
 export type AiStyle = AiJobRow["params"]["style"];
@@ -35,7 +35,8 @@ export const AI_PALETTES: Array<{ value: PaletteKey; label: string }> = [
 ];
 /** The stock canvases, by proportion family: the generated work keeps that proportion. */
 export const AI_FORMATS = Object.keys(CANVASES) as FormatKey[];
-export const AI_LIMITS = { maxStrokes: [20, 400], layers: [1, 5], candidates: [1, 24] } as const;
+/** Candidates per job: at most what the worker returns (10), so a job is never charged for more. */
+export const AI_LIMITS = { maxStrokes: [20, 400], layers: [1, 5], candidates: [1, 10] } as const;
 
 export interface AiJob {
   id: string;
@@ -65,6 +66,8 @@ export interface AiCandidate {
   warning: boolean;
   status: AiCandidateRow["status"];
   workSlug: string | null;
+  /** The draft work an approved candidate became (its editor). */
+  workHref: string | null;
 }
 
 export interface AiBudget {
@@ -138,8 +141,9 @@ function mapJob(j: AiJobRow): AiJob {
   return { id: j.id, number: j.number, name: `Job ${j.number}`, label: j.label, params: j.params, status: j.status, progress: j.progress, stage: aiStage(j.progress), costCents: j.costCents, createdAt: j.createdAt };
 }
 
-function mapCandidate(c: AiCandidateRow): AiCandidate {
-  return { id: c.id, jobNumber: c.jobNumber, imageUrl: asset(c.imagePath), imagePath: c.imagePath, similarity: c.similarity, strokes: c.strokes, layers: c.layers, note: c.note, warning: /^(Too|Low)/.test(c.note), status: c.status, workSlug: c.workSlug };
+function mapCandidate(c: AiCandidateRow, created: Set<string>): AiCandidate {
+  const href = c.workSlug ? (created.has(c.workSlug) ? `/admin/works/draft?slug=${c.workSlug}` : `/admin/works/${c.workSlug}/`) : null;
+  return { id: c.id, jobNumber: c.jobNumber, imageUrl: asset(c.imagePath), imagePath: c.imagePath, similarity: c.similarity, strokes: c.strokes, layers: c.layers, note: c.note, warning: /^(Too|Low)/.test(c.note), status: c.status, workSlug: c.workSlug, workHref: c.status === "approved" ? href : null };
 }
 
 const pendingCount = () => allAiCandidates().filter((c) => c.status === "pending").length;
@@ -157,7 +161,7 @@ export async function getAiPipeline(): Promise<AiPipeline> {
     candidates: allAiCandidates()
       .filter((c) => c.status === "pending" || Date.parse(c.createdAt) >= simNow().getTime() - 7 * 86_400_000)
       .sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }))
-      .map(mapCandidate),
+      .map((c) => mapCandidate(c, new Set(inserted<{ slug: string }>("works").map((w) => w.slug)))),
     toValidate: pendingCount(),
     budget: aiBudget(),
     nextJobNumber: Math.max(...jobs.map((j) => j.number)) + 1,

@@ -10,8 +10,8 @@ export function toCsv(rows: Array<Array<string | number | null | undefined>>): s
   return rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\r\n");
 }
 
-export function downloadFile(filename: string, content: string, type = "text/csv;charset=utf-8") {
-  const url = URL.createObjectURL(new Blob([content], { type }));
+export function downloadFile(filename: string, content: string | Uint8Array, type = "text/csv;charset=utf-8") {
+  const url = URL.createObjectURL(new Blob([content as BlobPart], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

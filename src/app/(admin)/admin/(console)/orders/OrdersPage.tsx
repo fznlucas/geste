@@ -7,15 +7,16 @@
  * this browser are listed with the others (newest first).
  */
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, OrderStatusChip, PillButton, PillLink, useToast } from "@/components";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, Modal, OrderStatusChip, PillButton, canOpenAdmin, useToast } from "@/components";
 import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
 import { inOrderTab, orderTab, ordersThisMonth } from "@/lib/metrics";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
-import { markShipped, shipCopies } from "@/lib/client/admin/orders";
+import { PARCELS, createLabel, markShipped, shipCopies } from "@/lib/client/admin/orders";
+import { carrierOf } from "@/lib/delivery";
 import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
-import { simToday } from "@/lib/clock";
+import { parisDay, simToday } from "@/lib/clock";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -28,6 +29,7 @@ const TABS: Array<{ value: OrdersTab; label: string }> = [
   { value: "issues", label: "Issues" },
   { value: "done", label: "Done" },
 ];
+const DATE = "min-h-32 border border-border-field bg-surface px-8 font-mono text-xs focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg";
 const TYPES: Array<[ItemKind | null, string]> = [[null, "All types"], ["guide", "Guides"], ["print", "Prints"], ["gift_card", "Gift cards"]];
 const COLS = "28px 90px 70px 1fr 1.6fr 70px 150px";
 const PAGE = 12;
@@ -38,13 +40,33 @@ export function OrdersPage() {
   const params = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
   const [exported, setExported] = useState(false);
-  // `?tab=to_ship` (the phone's "To do" and the sidebar badge open the tab they count).
-  const [tab, setTab] = useState<OrdersTab>(() => (TABS.some((t) => t.value === params.get("tab")) ? (params.get("tab") as OrdersTab) : "all"));
-  const [kind, setKind] = useState<ItemKind | null>(null);
+  const router = useRouter();
+  // Filters live in the URL: `?tab=to_ship` (the sidebar badge, the phone's "To do"), `?type=print`,
+  // `?from=2026-09-06&to=2026-10-05` (a dashboard tile or a day of the revenue chart), `?q=`.
+  const tab: OrdersTab = TABS.some((t) => t.value === params.get("tab")) ? (params.get("tab") as OrdersTab) : "all";
+  const kind = (["guide", "print", "gift_card"] as const).find((k) => k === params.get("type")) ?? null;
+  const from = params.get("from") ?? "", to = params.get("to") ?? "";
+  const setFilter = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(changes)) {
+      if (v && !(k === "tab" && v === "all")) next.set(k, v);
+      else next.delete(k);
+    }
+    router.replace(`/admin/orders/${next.size ? `?${next}` : ""}`, { scroll: false });
+  };
+  const setTab = (t: OrdersTab) => setFilter({ tab: t });
+  const setKind = (k: ItemKind | null) => setFilter({ type: k });
   const { staff } = useAdmin();
   const orders = useAdminQuery(() => getOrders({ search: q || undefined }), [q]);
-  // What is filtered (search, tab, type) is what "Export CSV" exports.
-  const rows = useMemo(() => (orders.data ?? []).filter((o) => inOrderTab(o, tab)).filter((o) => !kind || o.items.some((i) => i.kind === kind)), [orders.data, tab, kind]);
+  // What is filtered (search, tab, type, dates) is what "Export CSV" exports. Dates are Paris days of payment.
+  const rows = useMemo(
+    () =>
+      (orders.data ?? [])
+        .filter((o) => inOrderTab(o, tab))
+        .filter((o) => !kind || o.items.some((i) => i.kind === kind))
+        .filter((o) => (!from || parisDay(o.paidAt) >= from) && (!to || parisDay(o.paidAt) <= to)),
+    [orders.data, tab, kind, from, to],
+  );
 
   const exportAll = (rows: Order[]) => {
     download(`geste-orders-${simToday()}.csv`, ordersCsv(rows));
@@ -62,7 +84,7 @@ export function OrdersPage() {
       phoneTab="orders"
       desktopHref="/admin/orders"
     >
-      <DesktopOrders orders={orders.data} rows={rows} q={q} tab={tab} setTab={setTab} kind={kind} setKind={setKind} onExport={exportAll} exported={exported} />
+      <DesktopOrders orders={orders.data} rows={rows} q={q} tab={tab} setTab={setTab} kind={kind} setKind={setKind} from={from} to={to} setDates={(f, t) => setFilter({ from: f || null, to: t || null })} onExport={exportAll} exported={exported} />
     </AdminPage>
   );
 }
@@ -75,15 +97,19 @@ interface DesktopOrdersProps {
   setTab: (t: OrdersTab) => void;
   kind: ItemKind | null;
   setKind: (k: ItemKind | null) => void;
+  from: string;
+  to: string;
+  setDates: (from: string, to: string) => void;
   onExport: (rows: Order[]) => void;
   exported: boolean;
 }
 
-function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, exported }: DesktopOrdersProps) {
+function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, setDates, onExport, exported }: DesktopOrdersProps) {
   const { staff } = useAdmin();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [all, setAll] = useState(false);
+  const [labelsFor, setLabelsFor] = useState<Order[] | null>(null);
   const canShip = hasRole(staff.role, "fulfilment");
   const shown = all ? rows : rows.slice(0, PAGE);
   const picked = rows.filter((o) => selected.has(o.number));
@@ -124,10 +150,17 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, 
           ))}
         </div>
       </div>
+      <div role="group" aria-label="Dates of payment" className="flex flex-wrap items-center gap-8">
+        <label htmlFor="ord-from" className="text-fg-muted">Paid from</label>
+        <input id="ord-from" type="date" value={from} max={to || undefined} onChange={(e) => setDates(e.target.value, to)} className={DATE} />
+        <label htmlFor="ord-to" className="text-fg-muted">to</label>
+        <input id="ord-to" type="date" value={to} min={from || undefined} onChange={(e) => setDates(from, e.target.value)} className={DATE} />
+        {(from || to) && <PillButton onClick={() => setDates("", "")}>All dates</PillButton>}
+      </div>
       {picked.length > 0 && (
         <div role="region" aria-label="Selected orders" className="flex items-center gap-10 bg-fg px-14 py-10 text-fg-inverse">
           <span>{picked.length} selected</span>
-          <PillLink href="/admin/fulfilment" inverse>Print shipping labels</PillLink>
+          {canShip && <PillButton inverse onClick={() => setLabelsFor(picked)}>Create labels</PillButton>}
           {canShip && <PillButton inverse onClick={shipSelected}>Mark as shipped</PillButton>}
           <PillButton inverse onClick={() => onExport(picked)}>{exported ? "CSV downloaded" : "Export CSV"}</PillButton>
           <button type="button" onClick={() => setSelected(new Set())} className="ml-auto inline-flex min-h-32 cursor-pointer items-center text-fg-inverse hover:text-fg-muted-on-dark focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg-inverse">
@@ -157,7 +190,7 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, 
             </span>
             <span role="cell" className="text-fg-muted">{adminDate(o.createdAt)}</span>
             <span role="cell" className="min-w-0 truncate">
-              <Link href={`/admin/customers/detail/?id=${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link>
+              {canOpenAdmin(staff.role, "/admin/customers") ? <Link href={`/admin/customers/detail/?id=${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link> : o.customer.fullName}
             </span>
             <span role="cell" className="min-w-0 truncate text-fg-muted">{o.summary}</span>
             <span role="cell" className="tabular-nums">{formatPrice(o.totalCents)}</span>
@@ -180,6 +213,17 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, onExport, 
           </Link>
         )}
       </p>
+      {labelsFor && (
+        <BulkLabels
+          orders={labelsFor}
+          onClose={() => setLabelsFor(null)}
+          onDone={(made) => {
+            setLabelsFor(null);
+            setSelected(new Set());
+            toast.show(made ? `${made} ${made === 1 ? "label" : "labels"} created` : "No label created");
+          }}
+        />
+      )}
     </>
   );
 }
@@ -240,5 +284,52 @@ function PhoneOrders({ orders }: { orders: Order[] | undefined }) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Bulk "Create labels" (docs/admin-v2/04 Orders): one Boxtal label per selected order whose prints are
+ * all packed and that has none yet; the others are listed with the reason before anything is bought.
+ */
+function BulkLabels({ orders, onClose, onDone }: { orders: Order[]; onClose: () => void; onDone: (made: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const why = (o: Order) => {
+    if (!o.items.some((i) => i.kind === "print")) return "no print";
+    if (o.shipment) return "label already created";
+    const step = nextPrintStep(o);
+    return step === "shipped" ? null : step === null ? "already shipped" : "not packed yet";
+  };
+  const eligible = orders.filter((o) => !why(o));
+  const skipped = orders.filter((o) => why(o));
+  const run = async () => {
+    setBusy(true);
+    let made = 0;
+    for (const o of eligible) {
+      const big = o.items.some((i) => i.kind === "print" && i.edition && i.edition.size !== "S");
+      await createLabel({ number: o.number, carrier: carrierOf(o.shippingMethod), parcel: big ? PARCELS[1] : PARCELS[0] }).then(() => made++, () => undefined);
+    }
+    onDone(made);
+  };
+  return (
+    <Modal
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={`Create ${eligible.length} shipping ${eligible.length === 1 ? "label" : "labels"}?`}
+      width={460}
+      placement="admin"
+      actions={
+        <>
+          <Button variant="ghost" className="grow" onClick={onClose}>Cancel</Button>
+          <Button className="grow-2" trailing="→" loading={busy} disabled={!eligible.length} onClick={run}>Create {eligible.length}</Button>
+        </>
+      }
+    >
+      {eligible.length > 0 && <p>{eligible.map((o) => `#${o.number}`).join(", ")} · bought through Boxtal, cost in the books.</p>}
+      {skipped.length > 0 && (
+        <ul aria-label="Not eligible" className="flex flex-col gap-4 text-fg-muted">
+          {skipped.map((o) => <li key={o.number}>#{o.number} · {why(o)}</li>)}
+        </ul>
+      )}
+    </Modal>
   );
 }

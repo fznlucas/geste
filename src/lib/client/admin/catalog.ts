@@ -7,7 +7,9 @@
  */
 import { formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
 import { formatsOf, mediumFormat, type Orientation, type Proportion } from "@/lib/pricing";
+import { PALETTE_NAMES, PREVIEW_FILTERS } from "@/data/works";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
+import { readImage } from "./images";
 
 export interface WorkDraft {
   description: string;
@@ -23,6 +25,7 @@ export interface WorkDraft {
   /** Reference canvas of the grids (General), one of the proportion's three. */
   originalSize: FormatKey;
   formats: Array<{ format: FormatKey; priceCents: number; active: boolean }>;
+  allowCustom: boolean;
   palettes: Array<{ key: PaletteKey; active: boolean }>;
   shoppingList: Array<{ position: number; url: string }>;
   editions: Array<{ size: PrintSize; editionId: string | null; editionSize: number; priceCents: number }>;
@@ -34,7 +37,7 @@ export const STATUS_LABEL: Record<WorkStatus, string> = { live: "Live", draft: "
 function changedTabs(before: AdminWorkDetail, d: WorkDraft): string[] {
   const tabs: string[] = [];
   if (d.description !== before.description || d.orientation !== before.orientation || d.originalSize !== before.originalSize) tabs.push("General");
-  if (d.signature !== before.signature || d.proportion !== before.proportion || d.baseLevel !== before.baseLevel || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format); return !b || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
+  if (d.signature !== before.signature || d.proportion !== before.proportion || d.baseLevel !== before.baseLevel || d.allowCustom !== before.allowCustom || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format); return !b || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
   if (d.palettes.some((p) => before.palettes.find((x) => x.key === p.key)?.active !== p.active)) tabs.push("Palettes");
   if (d.shoppingList.some((i) => before.shoppingList.find((x) => x.position === i.position)?.url !== i.url)) tabs.push("Shopping list");
   if (d.editions.some((e) => { const b = before.editions.find((x) => x.size === e.size)!; return e.editionId && (b.editionSize !== e.editionSize || b.priceCents !== e.priceCents); })) tabs.push("Prints");
@@ -61,7 +64,7 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   const tabs = changedTabs(before, draft);
   if (!tabs.length) return [];
   const id = before.id;
-  patchRow("works", id, { description: draft.description.trim(), orientation: draft.orientation, signature: draft.signature, proportion: draft.proportion, baseLevel: draft.baseLevel, defaultFormat: mediumFormat(draft.proportion),
+  patchRow("works", id, { description: draft.description.trim(), orientation: draft.orientation, signature: draft.signature, allowCustom: draft.allowCustom, proportion: draft.proportion, baseLevel: draft.baseLevel, defaultFormat: mediumFormat(draft.proportion),
     // Another proportion: the reference canvas becomes its medium one unless one of the new three was chosen.
     originalSize: formatsOf(draft.proportion).includes(draft.originalSize) ? draft.originalSize : mediumFormat(draft.proportion), seoTitle: draft.seoTitle.trim(), seoDescription: draft.seoDescription.trim() });
   for (const f of draft.formats) {
@@ -102,12 +105,47 @@ export async function setResultPhoto(slug: string, photoPath: string) {
   patchRow("works", work.id, { resultPhotoPath: photoPath }, { action: "work.result_photo", target: `work:${slug}`, summary: `${staff.fullName} picked a real result photo for ${work.number}` });
 }
 
-/** Studio test "Upload": the photo is not kept in the mock; the work counts as painted by the studio. */
-export async function markStudioTested(slug: string) {
+/** Studio test "Upload": the photo of the studio's own painting; the work counts as painted by the studio. */
+export async function markStudioTested(slug: string, file?: File) {
   const staff = requireStaff("content");
   const work = await getAdminWork(slug);
   if (!work) return;
-  patchRow("works", work.id, { studioTested: true }, { action: "work.studio_test", target: `work:${slug}`, summary: `${staff.fullName} uploaded the studio test of ${work.number}` });
+  // A picture the browser cannot read still records the studio's painting (without the photo).
+  const photo = file ? await readImage(file).catch(() => null) : null;
+  patchRow("works", work.id, { studioTested: true, ...(photo ? { studioPhotoPath: photo.dataUrl } : {}) }, { action: "work.studio_test", target: `work:${slug}`, summary: `${staff.fullName} uploaded the studio test of ${work.number}` });
+}
+
+/** Digital preview "Replace": the new picture is the work's preview in the admin (the store after the next build). */
+export async function replacePreview(slug: string, file: File) {
+  const staff = requireStaff("content");
+  const work = await getAdminWork(slug);
+  if (!work) throw new Error("This work no longer exists.");
+  const photo = await readImage(file, 1200);
+  patchRow("works", work.id, { previewPath: photo.dataUrl, previewWidth: photo.width, previewHeight: photo.height }, { action: "work.preview", target: `work:${slug}`, summary: `${staff.fullName} replaced the digital preview of ${work.number}` });
+}
+
+/** Alternate palettes a work can add, with colours drawn from its original ones. */
+const SHIFT: Record<Exclude<PaletteKey, "original">, [number, number, number]> = { warm: [40, 10, -30], cool: [-30, 5, 40], earth: [10, -10, -40] };
+
+/** "+ Add a palette": a Warm, Cool or Earth version of the work's original colours, live at once. */
+export async function addPalette(slug: string, key: Exclude<PaletteKey, "original">): Promise<void> {
+  const staff = requireStaff("content");
+  const work = await getAdminWork(slug);
+  if (!work) throw new Error("This work no longer exists.");
+  if (work.palettes.some((p) => p.key === key)) throw new Error(`${work.number} already has a ${PALETTE_NAMES[key]} palette.`);
+  const original = work.palettes.find((p) => p.key === "original") ?? work.palettes[0]!;
+  const [dr, dg, db] = SHIFT[key];
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+  const swatches = original.swatches.map((s) => {
+    const n = Number.parseInt(s.hex.slice(1), 16);
+    const hex = [((n >> 16) & 255) + dr, ((n >> 8) & 255) + dg, (n & 255) + db].map((v) => clamp(v).toString(16).padStart(2, "0")).join("");
+    return { hex: `#${hex.toUpperCase()}`, name: `${s.name} (${PALETTE_NAMES[key].toLowerCase()})` };
+  });
+  insertRow("palettes", { id: paletteRowId(work.id, key), workId: work.id, key, name: PALETTE_NAMES[key], swatches, previewFilter: PREVIEW_FILTERS[key], active: true }, {
+    action: "work.palette_add",
+    target: `work:${slug}`,
+    summary: `${staff.fullName} added the ${PALETTE_NAMES[key]} palette to ${work.number}`,
+  });
 }
 
 /** "New work": a draft with the next number, the three 4:5 canvases and the Original palette. Returns its slug. */

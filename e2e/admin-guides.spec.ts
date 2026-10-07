@@ -83,16 +83,19 @@ test("roles: support cannot open the guide editor or the AI pipeline", async ({ 
 test("AI pipeline: start a job, approve and reject, the badge follows", async ({ page }) => {
   await asStaff(page);
   await page.goto("/admin/ai/");
-  await expect(page.getByText(`To validate · ${AI.toValidate}`)).toBeVisible();
+  await expect(page.getByText(`To validate · ${AI.toValidate}`).first()).toBeVisible();
   await expectNoAxeViolations(page);
   const badge = page.getByRole("link", { name: /^AI pipeline/ });
   if (!isPhone(page)) await expect(badge).toHaveText(new RegExp(`${AI.toValidate}$`));
 
   await page.getByRole("button", { name: "Approve C-115-a" }).click();
-  await expect(page.getByText("✓ Approved → Works (draft)")).toHaveCount(APPROVED + 1);
   await page.getByRole("button", { name: "Reject C-115-b" }).click();
+  await expect(page.getByText(`To validate · ${AI.toValidate - 2}`).first()).toBeVisible();
+  // Decided cards leave the list for "Decided"; an approved one links to its draft work.
+  await page.getByRole("button", { name: /^Decided/ }).click();
+  await expect(page.getByText("✓ Approved → Works (draft)")).toHaveCount(APPROVED + 1);
   await expect(page.getByText("✕ Rejected")).toHaveCount(REJECTED + 1);
-  await expect(page.getByText(`To validate · ${AI.toValidate - 2}`)).toBeVisible();
+  await page.getByRole("button", { name: /^To validate/ }).click();
   if (!isPhone(page)) await expect(badge).toHaveText(new RegExp(`${AI.toValidate - 2}$`));
 
   // New job: queued with its estimate, then running.
@@ -104,20 +107,23 @@ test("AI pipeline: start a job, approve and reject, the badge follows", async ({
   await expect(page.getByText(`GPU this month: ${formatPrice(AI.budget.spentCents + 70)} of ${formatPrice(AI.budget.budgetCents)} budget`)).toBeVisible();
 
   // Over the budget: blocked.
+  // At most 10 candidates: what the worker returns.
   await page.getByLabel("Candidates").fill("24");
+  await expect(page.getByText("Between 1 and 10")).toBeVisible();
+  await page.getByLabel("Candidates").fill("10");
   await page.getByLabel("Max strokes").fill("400");
-  await expect(page.getByRole("button", { name: /Generate 24 candidates/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /Generate 10 candidates/ })).toBeEnabled();
   // This month's spend near the budget (set away from the page: its worker writes the same store).
   await page.goto("/");
-  // The job just started costs what is left of the budget but $1: 24 candidates no longer fit.
+  // The job just started costs what is left of the budget but $1: 10 candidates no longer fit.
   await page.evaluate((cents) => {
     const raw = JSON.parse(localStorage.getItem("geste.admin.v2") ?? "{}");
     raw.inserts.ai_jobs[0].costCents = cents;
     localStorage.setItem("geste.admin.v2", JSON.stringify(raw));
   }, AI.budget.budgetCents - AI.budget.spentCents - 100);
   await page.goto("/admin/ai/");
-  await page.getByLabel("Candidates").fill("24");
-  await expect(page.getByRole("button", { name: /Generate 24 candidates/ })).toBeDisabled();
+  await page.getByLabel("Candidates").fill("10");
+  await expect(page.getByRole("button", { name: /Generate 10 candidates/ })).toBeDisabled();
   await expect(page.getByRole("alert").filter({ hasText: "Budget reached" })).toBeVisible();
 
   // The simulated worker ends job 116 (88 %): its candidates arrive.

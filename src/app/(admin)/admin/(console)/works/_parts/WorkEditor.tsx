@@ -15,9 +15,9 @@ import {
   StatusChip, Textarea, UnderLink, fieldClass, useToast,
   canOpenAdmin,
 } from "@/components";
-import { getAdminWork, type AdminWorkDetail, type LevelKey, type WorkStatus } from "@/lib/api";
+import { getAdminWork, getGuideIndex, type AdminWorkDetail, type LevelKey, type WorkStatus } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
-import { STATUS_LABEL, markStudioTested, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
+import { STATUS_LABEL, addPalette, markStudioTested, replacePreview, saveWork, setResultPhoto, setWorkStatus, type WorkDraft } from "@/lib/client/admin/catalog";
 import { addDays, simToday } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
@@ -45,6 +45,7 @@ interface Form {
   baseLevel: LevelKey;
   originalSize: FormatKey;
   formats: Array<{ format: WorkDraft["formats"][number]["format"]; price: string; active: boolean }>;
+  allowCustom: boolean;
   palettes: WorkDraft["palettes"];
   shoppingList: WorkDraft["shoppingList"];
   editions: Array<{ size: WorkDraft["editions"][number]["size"]; editionId: string | null; editionSize: string; price: string }>;
@@ -62,6 +63,7 @@ const toForm = (w: AdminWorkDetail): Form => ({
   baseLevel: w.baseLevel,
   originalSize: w.originalSize,
   formats: w.formats.map((f) => ({ format: f.format, price: money(f.priceCents), active: f.active })),
+  allowCustom: w.allowCustom,
   palettes: w.palettes.map((p) => ({ key: p.key, active: p.active })),
   shoppingList: w.shoppingList.map((i) => ({ position: i.position, url: i.url })),
   editions: w.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: String(e.editionSize), price: money(e.priceCents) })),
@@ -94,6 +96,8 @@ function Editor({ work }: { work: AdminWorkDetail }) {
   const { desktop } = useAdmin();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>("General");
+  /** The checklist item being fixed: its place in the form is marked. */
+  const [fix, setFix] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(() => toForm(work));
   const [savedNow, setSavedNow] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +127,7 @@ function Editor({ work }: { work: AdminWorkDetail }) {
         baseLevel: form.baseLevel,
         originalSize: form.originalSize,
         formats: form.formats.map((f) => ({ format: f.format, priceCents: parseMoney(f.price), active: f.active })),
+        allowCustom: form.allowCustom,
         palettes: form.palettes,
         shoppingList: form.shoppingList,
         editions: form.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: Number(e.editionSize), priceCents: parseMoney(e.price) })),
@@ -141,7 +146,7 @@ function Editor({ work }: { work: AdminWorkDetail }) {
     <div className={cn("grid items-start gap-16", desktop ? "grid-cols-12" : "grid-cols-1")}>
       <AdminBox className={desktop ? "col-span-9" : "min-w-0"}>
         <AdminTabs label="Work sections" tabs={TABS} value={tab} onChange={setTab} className={cn(!desktop && "overflow-x-auto [&>button]:shrink-0 [&>button]:whitespace-nowrap")} />
-        {tab === "General" && <General work={work} form={form} edit={edit} />}
+        {tab === "General" && <General work={work} form={form} edit={edit} fix={fix} />}
         {tab === "Formats & prices" && <Formats work={work} form={form} edit={edit} />}
         {tab === "Palettes" && <Palettes work={work} form={form} edit={edit} />}
         {tab === "Shopping list" && <ShoppingList work={work} form={form} edit={edit} />}
@@ -180,8 +185,26 @@ function Editor({ work }: { work: AdminWorkDetail }) {
           <AdminTitle>Before going live</AdminTitle>
           <ul className="flex flex-col gap-14">
             {work.checklist.map((c) => (
-              <li key={c.key} className="flex justify-between">
+              <li key={c.key} className="flex items-center justify-between gap-8">
                 <StatusChip state={c.done ? "done" : "issue"} label={c.label} />
+                {/* Where to fix it: the tab with the picture or the links, the work's guides. */}
+                {!c.done &&
+                  (c.key === "guide" ? (
+                    <UnderLink href={`/admin/guides/?work=${work.slug}`}>Fix</UnderLink>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab(c.key === "list" ? "Shopping list" : "General");
+                        setFix(c.key);
+                        requestAnimationFrame(() => document.getElementById(`fix-${c.key}`)?.scrollIntoView({ block: "center" }));
+                      }}
+                      aria-label={`Fix: ${c.label}`}
+                      className="cursor-pointer underline underline-offset-3 hover:text-fg-muted focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg"
+                    >
+                      Fix
+                    </button>
+                  ))}
               </li>
             ))}
           </ul>
@@ -194,6 +217,7 @@ function Editor({ work }: { work: AdminWorkDetail }) {
           ) : work.guide ? (
             <>
               <p className="text-fg-muted">{work.guide.layers} layers · {work.guide.steps} steps · v{work.guide.version}, edited {shortDate(work.guide.editedAt)}</p>
+              <GuideMatrix workId={work.id} />
               <ButtonLink href={`/admin/works/${work.slug}/guide/${work.guide.id}`} variant="ghost" fullWidth>Open guide editor</ButtonLink>
             </>
           ) : (
@@ -214,7 +238,7 @@ interface TabProps {
   edit: (patch: Partial<Form>) => void;
 }
 
-function General({ work, form, edit }: TabProps) {
+function General({ work, form, edit, fix }: TabProps & { fix?: string | null }) {
   const { desktop } = useAdmin();
   const toast = useToast();
   const upload = useRef<HTMLInputElement>(null);
@@ -247,14 +271,30 @@ function General({ work, form, edit }: TabProps) {
         </Field>
       </div>
       <div className={cn("grid gap-14", desktop ? "grid-cols-3" : "grid-cols-1")}>
-        <Slot label="Digital preview" picture={work.imageUrl ? <Artwork src={work.imageUrl} alt={`${work.number} · Digital preview`} orientation={form.orientation} className="w-200" sizes="200px" /> : <Missing>Missing</Missing>}>
+        <Slot id="fix-preview" marked={fix === "preview"} label="Digital preview" picture={work.imageUrl ? <Artwork src={work.imageUrl} alt={`${work.number} · Digital preview`} orientation={form.orientation} className="w-200" sizes="200px" /> : <Missing>Missing</Missing>}>
           <PillButton onClick={() => replace.current?.click()}>Replace</PillButton>
-          <input ref={replace} type="file" accept="image/*" hidden onChange={() => toast.show("Done · demo action")} />
+          <input
+            ref={replace}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              try {
+                await replacePreview(work.slug, file);
+                toast.show("Digital preview replaced");
+              } catch (err) {
+                toast.show(err instanceof Error ? err.message : "Could not read this image.", { tone: "danger" });
+              }
+            }}
+          />
         </Slot>
-        <Slot label="Real result (beginner)" picture={work.resultPhotoUrl ? <Image src={work.resultPhotoUrl} alt={`${work.number} · Real result`} width={400} height={500} sizes="200px" className="block h-250 w-200 shrink-0 object-cover" /> : <Missing>Missing</Missing>}>
+        <Slot id="fix-result" marked={fix === "result"} label="Real result (beginner)" picture={work.resultPhotoUrl ? <Image src={work.resultPhotoUrl} alt={`${work.number} · Real result`} width={400} height={500} sizes="200px" className="block h-250 w-200 shrink-0 object-cover" /> : <Missing>Missing</Missing>}>
           <ResultPicker work={work} />
         </Slot>
-        <Slot label="Studio test" picture={<Missing>[Your painted canvas]</Missing>}>
+        <Slot id="fix-studio" marked={fix === "studio"} label="Studio test" picture={work.studioPhotoUrl ? <Image src={work.studioPhotoUrl} alt={`${work.number} · Studio test`} width={400} height={500} sizes="200px" unoptimized className="block h-250 w-200 shrink-0 object-cover" /> : <Missing>[Your painted canvas]</Missing>}>
           <PillButton onClick={() => upload.current?.click()}>Upload</PillButton>
           <input
             ref={upload}
@@ -262,9 +302,15 @@ function General({ work, form, edit }: TabProps) {
             accept="image/*"
             hidden
             onChange={async (e) => {
-              if (!e.target.files?.length) return;
-              await markStudioTested(work.slug);
-              toast.show("Studio test received");
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              try {
+                await markStudioTested(work.slug, file);
+                toast.show("Studio test received");
+              } catch (err) {
+                toast.show(err instanceof Error ? err.message : "Could not read this image.", { tone: "danger" });
+              }
             }}
           />
         </Slot>
@@ -273,9 +319,10 @@ function General({ work, form, edit }: TabProps) {
   );
 }
 
-function Slot({ label, picture, children }: { label: string; picture: ReactNode; children: ReactNode }) {
+/** A picture slot; `marked` when the checklist's "Fix" brought the user here. */
+function Slot({ id, marked, label, picture, children }: { id?: string; marked?: boolean; label: string; picture: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div id={id} aria-current={marked || undefined} className={cn("flex scroll-mt-16 flex-col gap-6", marked && "outline outline-1 outline-offset-4 outline-fg")}>
       <span className="text-fg-muted">{label}</span>
       {picture}
       {children}
@@ -324,7 +371,6 @@ const FORMAT_COLS = "90px 140px 110px 110px 90px 1fr";
 
 function Formats({ work, form, edit }: TabProps) {
   const set = (i: number, patch: Partial<Form["formats"][number]>) => edit({ formats: form.formats.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
-  const [custom, setCustom] = useState(true);
   const { desktop } = useAdmin();
   // Another proportion sells its own three canvases: their stored price when the work had them, else the default.
   const setProportion = (proportion: Proportion) =>
@@ -389,7 +435,7 @@ function Formats({ work, form, edit }: TabProps) {
         })}
       </div>
       <Checkbox layout="setting" gap="gap-10" className="-my-6" label={`Signature work · +${money(SIGNATURE_CENTS)} on every format`} checked={form.signature} onChange={(e) => edit({ signature: e.target.checked })} />
-      <Checkbox layout="setting" gap="gap-10" className="-my-6" label="Allow “Custom” level (any level on any format, same price)" checked={custom} onChange={(e) => setCustom(e.target.checked)} />
+      <Checkbox layout="setting" gap="gap-10" className="-my-6" label="Allow “Custom” level (any level on any format, same price)" checked={form.allowCustom} onChange={(e) => edit({ allowCustom: e.target.checked })} />
       <AdminTitle>Prints</AdminTitle>
       <PrintRows work={work} form={form} edit={edit} />
       <p className="text-fg-muted">Guide + print of this work in one cart: −{BUNDLE_DISCOUNT_PCT}% on both lines.</p>
@@ -400,11 +446,10 @@ function Formats({ work, form, edit }: TabProps) {
 const PALETTE_COLS = "140px 1fr 200px 90px";
 
 function Palettes({ work, form, edit }: TabProps) {
-  const toast = useToast();
   return (
     <div className="flex flex-col gap-14 overflow-x-auto">
       <div role="table" aria-label="Palettes" className="min-w-560 flex flex-col gap-14">
-        {work.palettes.map((p, i) => (
+        {work.palettes.map((p) => (
           <AdminRow key={p.key} cols={PALETTE_COLS}>
             <span role="cell">{p.name}</span>
             <span role="cell" className="flex gap-4">
@@ -416,12 +461,19 @@ function Palettes({ work, form, edit }: TabProps) {
             </span>
             <span role="cell" className="text-fg-muted">{p.note}</span>
             <span role="cell">
-              <Checkbox layout="setting" gap="gap-8" label="Live" checked={form.palettes[i]!.active} onChange={(e) => edit({ palettes: form.palettes.map((x, j) => (j === i ? { ...x, active: e.target.checked } : x)) })} />
+              {/* A palette added since the form opened is not in it yet: it starts from its stored state. */}
+              <Checkbox
+                layout="setting"
+                gap="gap-8"
+                label="Live"
+                checked={form.palettes.find((x) => x.key === p.key)?.active ?? p.active}
+                onChange={(e) => edit({ palettes: [...form.palettes.filter((x) => x.key !== p.key), { key: p.key, active: e.target.checked }] })}
+              />
             </span>
           </AdminRow>
         ))}
       </div>
-      <PillButton className="self-start" onClick={() => toast.show("Done · demo action")}>+ Add a palette</PillButton>
+      <AddPalette work={work} />
     </div>
   );
 }
@@ -519,5 +571,64 @@ function Seo({ form, edit }: Pick<TabProps, "form" | "edit">) {
       </Field>
       <span className="text-fg-muted">Link preview image is generated from the brand template.</span>
     </div>
+  );
+}
+
+/** The work's guides, canvas by level (docs/admin-v2/04 "Guide box"): each opens its editor; "·" not written yet. */
+function GuideMatrix({ workId }: { workId: string }) {
+  const q = useAdminQuery(getGuideIndex, []);
+  const own = (q.data ?? []).filter((g) => g.workId === workId);
+  if (!own.length) return null;
+  const formats = [...new Map(own.map((g) => [g.format, g.formatLabel])).entries()];
+  const levels = [...new Map(own.map((g) => [g.level, g.levelLabel])).entries()];
+  return (
+    <table aria-label="Guides of this work" className="w-full border-collapse">
+      <thead>
+        <tr>
+          <th scope="col" className="text-left font-normal text-fg-muted"><span className="sr-only">Canvas</span></th>
+          {levels.map(([l, label]) => <th key={l} scope="col" className="text-left font-normal text-fg-muted">{label.slice(0, 5)}.</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {formats.map(([f, label]) => (
+          <tr key={f}>
+            <th scope="row" className="py-2 text-left font-normal">{label}</th>
+            {levels.map(([l, levelLabel]) => {
+              const g = own.find((x) => x.format === f && x.level === l)!;
+              return (
+                <td key={l} className="py-2">
+                  <Link href={g.href} aria-label={`${label} · ${levelLabel} · v${g.version}${g.status === "stand_in" ? " · not written" : g.status === "draft" ? " · unpublished changes" : ""}`} className="underline underline-offset-3 hover:text-fg-muted">
+                    v{g.version}{g.status === "stand_in" ? " ·" : g.status === "draft" ? "*" : ""}
+                  </Link>
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** "+ Add a palette": the alternates the work does not have yet (Warm, Cool, Earth). */
+function AddPalette({ work }: { work: AdminWorkDetail }) {
+  const toast = useToast();
+  const missing = (["warm", "cool", "earth"] as const).filter((k) => !work.palettes.some((p) => p.key === k));
+  if (!missing.length) return <p className="text-fg-muted">Every palette is there: Original, Warm, Cool, Earth.</p>;
+  return (
+    <Popover align="start" width={240} trigger={<PillButton className="self-start">+ Add a palette</PillButton>}>
+      <div className="flex flex-col py-8">
+        {missing.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => addPalette(work.slug, k).then(() => toast.show(`${k[0]!.toUpperCase()}${k.slice(1)} palette added`), (e) => toast.show(e instanceof Error ? e.message : "Could not add it.", { tone: "danger" }))}
+            className="flex min-h-44 cursor-pointer items-center px-16 text-left hover:bg-surface-hover focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-2 focus-visible:outline-fg"
+          >
+            {k[0]!.toUpperCase()}{k.slice(1)} · from the original colours
+          </button>
+        ))}
+      </div>
+    </Popover>
   );
 }

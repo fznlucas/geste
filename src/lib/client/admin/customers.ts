@@ -22,12 +22,22 @@ export async function sendLoginLink(customerId: string): Promise<void> {
   audit({ action: "customer.login_link", target: `profile:${customerId}`, summary: `${staff.fullName} sent a login link to ${c.fullName}` });
 }
 
-/** "Reset print quota": every guide of the customer gets its 3 prints back. */
-export async function resetPrintCredits(customerId: string): Promise<void> {
+/** "Reset print quota": the chosen guide gets its 3 prints back (every guide when none is chosen). */
+export async function resetPrintCredits(customerId: string, entitlementId?: string): Promise<void> {
   const staff = requireStaff("support");
   const c = await customerOrThrow(customerId);
-  for (const item of c.library) patchRow("entitlements", item.entitlementId, { printsLeft: 3 });
-  audit({ action: "customer.reset_prints", target: `profile:${customerId}`, summary: `${staff.fullName} reset the print quota of ${c.fullName}` });
+  const items = c.library.filter((i) => !entitlementId || i.entitlementId === entitlementId);
+  if (!items.length) throw new Error("This guide is not in the library.");
+  for (const item of items) patchRow("entitlements", item.entitlementId, { printsLeft: 3 });
+  audit({ action: "customer.reset_prints", target: `profile:${customerId}`, summary: `${staff.fullName} reset the print quota of ${c.fullName}${entitlementId ? ` · ${items[0]!.work.number}` : ""}` });
+}
+
+/** Cancels a scheduled deletion (the customer changed their mind before the 30 days). */
+export async function cancelDeletion(customerId: string): Promise<void> {
+  const staff = requireStaff("support");
+  const c = await customerOrThrow(customerId);
+  if (!c.deletionScheduledAt) return;
+  patchRow("profiles", customerId, { deletionScheduledAt: null }, { action: "customer.delete_cancelled", target: `profile:${customerId}`, summary: `${staff.fullName} cancelled the deletion of ${c.fullName}'s account` });
 }
 
 /**

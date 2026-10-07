@@ -117,9 +117,14 @@ test("content: journal, new article, home, translations, legal", async ({ page }
   await page.goto("/admin/content/");
   await expect(page.getByRole("heading", { name: "Content" })).toBeVisible();
   const journal = page.getByRole("table", { name: "Journal" });
-  await expect(journal.getByRole("link", { name: /How to avoid mud: three rules/ })).toHaveAttribute("href", /\/journal\/avoid-mud-three-rules/);
+  // A row opens the article editor.
+  await expect(journal.getByRole("link", { name: /How to avoid mud: three rules/ })).toHaveAttribute("href", /\/admin\/content\/article\/?\?id=avoid-mud-three-rules/);
   await expect(journal).toContainText("Why N°10 took three tries");
+  // "New article" opens the new draft in the article editor; the journal lists it.
   await page.getByRole("button", { name: "New article" }).click();
+  await expect(page).toHaveURL(/\/admin\/content\/article\/?\?id=/);
+  await expect(page.getByLabel("Title")).toHaveValue("Untitled article");
+  await page.goto("/admin/content/");
   await expect(journal).toContainText("Untitled article");
 
   await page.getByRole("button", { name: "Home page", exact: true }).click();

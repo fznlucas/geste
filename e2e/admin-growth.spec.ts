@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { analytics, eur, finance, financePeriodSlug, orderNumber } from "./helpers";
+import { analytics, eur, finance, financePeriodSlug, getSocialWeek, orderNumber } from "./helpers";
 
 /** The analytics of the simulated history at the e2e clock (docs/admin-v2/01 §2). */
 const A = await analytics("30 days");
@@ -105,7 +105,13 @@ test("marketing: tabs, create a promo code, gift cards bought here", async ({ pa
   await tab(page, "Affiliate").click();
   await expect(page.getByRole("rowheader", { name: "Art supply store A" })).toBeVisible();
   await tab(page, "Social calendar").click();
-  await expect(page.getByText("TikTok · Sunday painting")).toBeVisible();
+  // The week's posts come from the social rows (read through the app at the e2e clock).
+  const post = (await getSocialWeek()).days.flatMap((d) => d.posts)[0];
+  if (post) await expect(page.getByText(`${{ tiktok: "TikTok", instagram: "Instagram", pinterest: "Pinterest", youtube: "YouTube" }[post.network]} · ${post.title}`).first()).toBeVisible();
+  await page.getByRole("button", { name: /^Plan a post on/ }).first().click();
+  await page.getByLabel("Title").fill("Reel · layer 2 in 30 s");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText("TikTok · Reel · layer 2 in 30 s")).toBeVisible();
 });
 
 test("settings: invite, audit log, remove", async ({ page }) => {

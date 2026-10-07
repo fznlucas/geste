@@ -184,7 +184,7 @@ const ALTERNATES: Record<number, Partial<Record<Exclude<PaletteKey, "original">,
   15: { warm: [["#E94839", "Cadmium red"], ["#196965", "Hooker’s green"], ["#FF7A3B", "Orange"], ["#E36184", "Coral"]], cool: [["#0B8762", "Teal"], ["#984157", "Oxide red"], ["#10ADB3", "Turquoise"], ["#25914C", "Olive green"]], earth: [["#A56857", "Raw sienna"], ["#4C615B", "Hooker’s green"], ["#D09772", "Sand"], ["#B78180", "Mauve"]] },
 };
 
-const PALETTE_NAMES: Record<PaletteKey, string> = { original: "Original", warm: "Warm", cool: "Cool", earth: "Earth" };
+export const PALETTE_NAMES: Record<PaletteKey, string> = { original: "Original", warm: "Warm", cool: "Cool", earth: "Earth" };
 /** palettes.preview_filter: how the work page tints the image for a palette. */
 export const PREVIEW_FILTERS: Record<PaletteKey, string | null> = {
   original: null,

@@ -13,10 +13,14 @@ export interface NavItem {
   roles: StaffRole[];
   /** Other paths that light this item (order detail → Orders). */
   match?: RegExp;
+  /** Where a click goes when the item has a count: the filter that count counts (docs/admin-v2/04 Shell). */
+  target?: string;
 }
 
-/** "Guide editor" opens the published N°03 guide, as on the boards. */
+/** The published N°03 guide (the Analytics completion link opens it at its worst step). */
 export const GUIDE_EDITOR_HREF = "/admin/works/n03/guide/00000000-0000-0000-0000-0000000000a3";
+/** "Guide editor" (sidebar): the index of every guide (docs/admin-v2/04 Shell). */
+export const GUIDES_HREF = "/admin/guides";
 
 /** docs/admin.md "Roles". Items a role cannot use are not rendered. */
 export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
@@ -24,26 +28,26 @@ export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "Sales",
     items: [
-      { label: "Orders", href: "/admin/orders", count: "orders", roles: ["owner", "support", "fulfilment"], match: /^\/admin\/orders/ },
-      { label: "Fulfilment", href: "/admin/fulfilment", count: "fulfilment", roles: ["owner", "fulfilment"] },
+      { label: "Orders", href: "/admin/orders", target: "/admin/orders/?tab=to_ship", count: "orders", roles: ["owner", "support", "fulfilment"], match: /^\/admin\/orders/ },
+      { label: "Fulfilment", href: "/admin/fulfilment", target: "/admin/fulfilment/?col=to_print", count: "fulfilment", roles: ["owner", "fulfilment"] },
       // Content reads the stock (the work editor links here); closing and reopening stay with Fulfilment.
-      { label: "Print editions", href: "/admin/editions", count: "editions", roles: ["owner", "fulfilment", "content"] },
+      { label: "Print editions", href: "/admin/editions", target: "/admin/editions/?low=1", count: "editions", roles: ["owner", "fulfilment", "content"] },
     ],
   },
   {
     group: "Catalog",
     items: [
       { label: "Works", href: "/admin/works", roles: ["owner", "content"], match: /^\/admin\/works(?!\/[^/]+\/guide)/ },
-      { label: "Guide editor", href: GUIDE_EDITOR_HREF, roles: ["owner", "content"], match: /^\/admin\/works\/[^/]+\/guide/ },
-      { label: "AI pipeline", href: "/admin/ai", count: "ai", roles: ["owner", "content"] },
+      { label: "Guide editor", href: GUIDES_HREF, roles: ["owner", "content"], match: /^\/admin\/(guides|works\/[^/]+\/guide)/ },
+      { label: "AI pipeline", href: "/admin/ai", target: "/admin/ai/#to-validate", count: "ai", roles: ["owner", "content"] },
     ],
   },
   {
     group: "Customers",
     items: [
       { label: "Customers", href: "/admin/customers", roles: ["owner", "support"], match: /^\/admin\/customers/ },
-      { label: "Support inbox", href: "/admin/support", count: "support", roles: ["owner", "support"] },
-      { label: "Reviews & results", href: "/admin/reviews", count: "reviews", roles: ["owner", "support", "content"] },
+      { label: "Support inbox", href: "/admin/support", target: "/admin/support/?status=unread", count: "support", roles: ["owner", "support"] },
+      { label: "Reviews & results", href: "/admin/reviews", target: "/admin/reviews/?tab=moderate", count: "reviews", roles: ["owner", "support", "content"] },
     ],
   },
   {
@@ -84,10 +88,12 @@ export interface AdminSidebarProps {
   counts: Partial<Record<NonNullable<NavItem["count"]>, number>>;
   /** "Log out": ends the staff session (the caller navigates to /admin/login). */
   onLogOut?: () => void;
+  /** The session was opened with the authenticator code (AAL2): "2FA on". */
+  twoFactor?: boolean;
 }
 
 /** 232 px sidebar content (257 px with its 12 px padding and rule, as the boards measure it) (AdminDashboard): logo, grouped nav with counts (active row inverted to Ink), store link, who, log out. */
-export function AdminSidebar({ role, userName, activeHref, counts, onLogOut }: AdminSidebarProps) {
+export function AdminSidebar({ role, userName, activeHref, counts, onLogOut, twoFactor = true }: AdminSidebarProps) {
   return (
     <aside className="flex w-257 shrink-0 flex-col gap-20 border-r border-border px-12 py-16">
       <Link href="/admin" className="flex min-h-40 items-center gap-8 px-10 hover:text-fg-muted">
@@ -104,7 +110,7 @@ export function AdminSidebar({ role, userName, activeHref, counts, onLogOut }: A
               {items.map((i) => {
                 const on = i.href === activeHref;
                 return (
-                  <Link key={i.href} href={i.href} aria-current={on ? "page" : undefined} className={cn(navLink, on ? "bg-fg text-fg-inverse" : "hover:bg-surface-muted")}>
+                  <Link key={i.href} href={i.count && counts[i.count] ? (i.target ?? i.href) : i.href} aria-current={on ? "page" : undefined} className={cn(navLink, on ? "bg-fg text-fg-inverse" : "hover:bg-surface-muted")}>
                     <span>{i.label}</span>
                     {i.count && <Badge count={counts[i.count] ?? 0} />}
                   </Link>
@@ -119,15 +125,16 @@ export function AdminSidebar({ role, userName, activeHref, counts, onLogOut }: A
           <span>View the store</span>
           <span aria-hidden="true">↗</span>
         </Link>
+        {/* The 2FA state of this session; the owner opens Settings › Security from it. */}
         {role === "owner" ? (
-          <Link href="/admin/settings" className={cn(navLink, "hover:bg-surface-muted")}>
+          <Link href="/admin/settings/?tab=Security" className={cn(navLink, "hover:bg-surface-muted")}>
             <span>{userName} · {ROLE_LABEL[role]}</span>
-            <span className="text-fg-muted">2FA on</span>
+            <span className="text-fg-muted">{twoFactor ? "2FA on" : "2FA off"}</span>
           </Link>
         ) : (
           <span className={navLink}>
             <span>{userName} · {ROLE_LABEL[role]}</span>
-            <span className="text-fg-muted">2FA on</span>
+            <span className="text-fg-muted">{twoFactor ? "2FA on" : "2FA off"}</span>
           </span>
         )}
         <button type="button" onClick={onLogOut} className={cn(navLink, "w-full cursor-pointer text-fg-muted hover:bg-surface-muted hover:text-fg")}>

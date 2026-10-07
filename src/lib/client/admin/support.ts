@@ -6,6 +6,7 @@
  */
 import { findGuide, getCustomer, getGuide, getOrder, getSupportThread, type FormatKey } from "@/lib/api";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
+import { call } from "@/lib/integrations";
 import { sendEmail } from "./email";
 
 const ROLES = ["support"] as const;
@@ -101,4 +102,13 @@ export async function swapGuideFormat(orderNumber: string, itemId: string, forma
   });
   patchRow("order_items", item.id, { guideId: target.id, config: { ...item.config, format } });
   return target.formatLabel;
+}
+
+/** "Draft with Claude": a reply draft from the thread (Claude adapter; Mock: a canned draft that follows the subject). */
+export async function draftWithClaude(threadId: string): Promise<string> {
+  requireStaff([...ROLES]);
+  const t = await getSupportThread(threadId);
+  if (!t) throw new Error("This conversation no longer exists.");
+  const last = [...t.messages].reverse().find((m) => m.from === "customer");
+  return call("claude", "draftReply", `thread:${threadId}`, (a) => a.draftReply({ subject: t.subject, firstName: (t.customerName ?? t.email).split(" ")[0]!, lastMessage: last?.body ?? "" }));
 }

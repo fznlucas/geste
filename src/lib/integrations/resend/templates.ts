@@ -16,6 +16,8 @@ export interface EmailData {
   body?: string;
   subject?: string;
   role?: string;
+  /** A gift card's code ("GESTE-4F2K-91AA"). */
+  code?: string;
   domain: string;
 }
 
@@ -40,7 +42,7 @@ export function renderEmail(template: EmailTemplate, d: EmailData): { subject: s
     case "invite":
       return { subject: "You are invited to the Geste admin", body: `Hello,\n\nLucas invited you to the Geste admin as ${d.role}. Accept and set up two-factor sign-in: https://${d.domain}/admin/login\n\n${sign}` };
     case "gift_card":
-      return { subject: "A Geste gift card for you", body: `${hi}\n\nSomeone sent you a gift card: ${d.amountLabel}. Use it at checkout on https://${d.domain}\n\n${sign}` };
+      return { subject: "A Geste gift card for you", body: `${hi}\n\nSomeone sent you a gift card: ${d.amountLabel}${d.code ? `, code ${d.code}` : ""}. Use it at checkout on https://${d.domain}\n\n${sign}` };
     case "supplier_reorder":
       return { subject: `Reorder · ${d.subject}`, body: d.body ?? "" };
     case "data_export":

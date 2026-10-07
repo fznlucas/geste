@@ -8,8 +8,8 @@
 import { resolveLevel } from "@/lib/pricing";
 import { works } from "@/data/works";
 import { simNow } from "@/lib/clock";
-import { BUSINESS } from "@/config/business";
 import { parisDay } from "@/lib/clock";
+import { giftCardEnd } from "@/lib/ledger/derive";
 import { allOrders, editionSoldCount, editionStock, giftCardByCode } from "./local";
 import { allPromos, promoUses } from "./marketing";
 import { vatRateAt } from "./vat";
@@ -76,9 +76,9 @@ export function checkPromo(code: string, cart: PricedCart, who: Pick<CartCodes, 
 export function checkGiftCard(code: string, cart: PricedCart): { id: string; code: string; cents: number; balanceAfterCents: number } | { reason: string } {
   const card = giftCardByCode(code);
   if (!card) return { reason: "This gift card code does not exist." };
-  const expiry = new Date(card.createdAt);
-  expiry.setUTCFullYear(expiry.getUTCFullYear() + BUSINESS.giftCardExpiryYears.value);
-  if (expiry.getTime() < simNow().getTime()) return { reason: `This gift card expired on ${shortDay(expiry.toISOString())}.` };
+  const end = giftCardEnd(card);
+  if (end.voided) return { reason: "This gift card was cancelled." };
+  if (end.at.getTime() < simNow().getTime()) return { reason: `This gift card expired on ${shortDay(end.at.toISOString())}.` };
   if (card.balanceCents <= 0) return { reason: "This gift card has been used up." };
   const giftLines = cart.lines.filter((l) => l.unavailable === null && l.kind === "gift_card").reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
   const payableByCard = cart.totals.totalCents - giftLines;

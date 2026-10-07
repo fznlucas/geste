@@ -33,7 +33,7 @@ test("works: filter tabs and grid / list", async ({ page }) => {
   await expect(page.getByText("Not painted").filter({ visible: true })).toHaveCount(2);
   await page.getByRole("button", { name: "Drafts" }).click();
   await expect(page.getByText("No works here yet.")).toBeVisible();
-  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.getByRole("button", { name: /^All · \d+$/ }).click();
   await page.getByRole("button", { name: "List", exact: true }).click();
   await expect(page.getByRole("button", { name: "List", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("table", { name: "Works" }).getByRole("row")).toHaveCount(16);
@@ -51,12 +51,13 @@ test("work editor: edit and save, the catalog shows the change", async ({ page }
   await page.getByRole("button", { name: "Formats & prices" }).click();
   // N°03 is 5:6, Intermediate: 38×46 Beginner, 50×60 Intermediate, 60×73 Advanced.
   await expect(page.getByLabel("Base level (medium)")).toHaveValue("intermediate");
-  await expect(page.getByRole("row", { name: /^38×46/ })).toContainText("Beginner");
-  await expect(page.getByRole("row", { name: /^60×73/ })).toContainText("Advanced");
+  const formats = page.getByRole("table", { name: "Formats and prices" });
+  await expect(formats.getByRole("row", { name: /^38×46/ })).toContainText("Beginner");
+  await expect(formats.getByRole("row", { name: /^60×73/ })).toContainText("Advanced");
   await expect(page.getByLabel("Price 60×73")).toHaveValue("$25");
   await page.getByLabel("Price 60×73").fill("$27");
   await page.getByLabel("Signature work · +$6 on every format").check();
-  await expect(page.getByRole("row", { name: /^60×73/ })).toContainText("$33");
+  await expect(formats.getByRole("row", { name: /^60×73/ })).toContainText("$33");
   await expect(page.getByLabel("Price S")).toHaveValue("$55");
   await page.getByRole("button", { name: "SEO" }).click();
   await page.getByLabel("Page title").fill("N°03 — paint it · Geste");

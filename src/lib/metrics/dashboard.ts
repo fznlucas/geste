@@ -46,6 +46,9 @@ export interface DashboardTopWork {
 export interface Dashboard {
   /** Money figures are EUR excl. VAT (the books); orders and visits are counts. */
   currency: "EUR";
+  /** The tiles' window: `range` days ending today (today partial). */
+  range: number;
+  period: { from: string; to: string };
   last30d: {
     revenueCents: number;
     /** "+38% vs Aug" */
@@ -137,8 +140,8 @@ function todayFigures() {
 export const dashboard = metric("Dashboard figures: revenue, orders, average order, conversion, guides finished, affiliate, revenue per day, today and top works.", async function dashboard(range = 30): Promise<Dashboard> {
   const period = rollingDays(range);
   const previous = previousPeriod(period);
-  // "vs prior 30 d": one line in the tile, as drawn; the exact dates go in the tile's tooltip (06 §2).
-  const vs = `vs prior ${range} d`;
+  // The previous equal period, named: "vs Aug 7 – Sep 5" (docs/admin-v2/04 Dashboard).
+  const vs = `vs ${adminDay(`${previous.from}T12:00:00Z`)} – ${adminDay(`${previous.to}T12:00:00Z`)}`;
 
   // Revenue = the store's turnover in the books (EUR excl. VAT), the same figure as Finance for the same days.
   const revenueCents = storeTurnoverEurCents(period);
@@ -158,15 +161,17 @@ export const dashboard = metric("Dashboard figures: revenue, orders, average ord
       revenueCents,
       revenueDelta: `${signed(pctChange(revenueCents, previousRevenue))} ${vs}`,
       orders,
-      ordersDelta: signed(pctChange(orders, previousOrders)),
+      ordersDelta: `${signed(pctChange(orders, previousOrders))} ${vs}`,
       avgOrderCents,
-      avgOrderDelta: signed(pctChange(avgOrderCents, previousAvg)),
+      avgOrderDelta: `${signed(pctChange(avgOrderCents, previousAvg))} ${vs}`,
       conversionPct: conversion,
-      conversionDelta: signed(Math.round((conversion - conversionBefore) * 10) / 10, "pt"),
+      conversionDelta: `${signed(Math.round((conversion - conversionBefore) * 10) / 10, "pt")} ${vs}`,
       guidesFinishedPct: guidesFinishedPct(),
       affiliateCents: affiliateEarnedEurCents(period),
     },
     currency: "EUR",
+    range,
+    period,
     days: days.map((d) => ({ ...d, revenueCents: perDay.get(d.day) ?? 0, label: adminDay(`${d.day}T12:00:00Z`) })),
     monthName: MONTH_NAMES[Number(period.to.slice(5, 7)) - 1]!,
     notes: notesIn(chart).map((n) => ({ ...n, label: adminDay(`${n.day}T12:00:00Z`) })),
