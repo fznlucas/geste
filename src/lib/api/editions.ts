@@ -2,8 +2,9 @@
 import { asset } from "@/lib/asset";
 import { imageRatio, printCm } from "@/lib/pricing";
 import type { PrintEditionRow } from "@/data/types";
+import { DEFAULT_PAPER } from "@/data/editions";
 import { clone } from "./clone";
-import { allPrintCopies, allPrintEditions, customerById, editionStock, workById, orderOfItem, shipmentOfOrder } from "./local";
+import { allPrintCopies, allPrintEditions, customerById, editionStock, labReadyAt, workById, orderOfItem, shipmentOfOrder } from "./local";
 import type { FulfilmentStatus, PrintCopy, PrintEdition } from "./types";
 
 function mapEdition(row: PrintEditionRow): PrintEdition {
@@ -31,6 +32,9 @@ function mapEdition(row: PrintEditionRow): PrintEdition {
     left,
     soldOut: left === 0,
     nextNumber: stock.numbers[0] ?? null,
+    paper: row.paper ?? DEFAULT_PAPER,
+    // Never below the copies taken and held, nor below a number already given (a restock leaves gaps).
+    minSize: Math.max(1, sold + row.reservedCount, ...allPrintCopies().filter((c) => c.editionId === row.id && (c.status === "sold" || c.status === "reserved")).map((c) => c.number)),
   };
 }
 
@@ -81,6 +85,8 @@ export async function getPrintCopies(query: { fulfilment?: FulfilmentStatus | Fu
           customerName: customer?.fullName ?? null,
           city: order?.shippingAddress?.city ?? null,
           workSlug: work.slug,
+          sentToLabAt: c.sentToLabAt ?? null,
+          labReadyAt: c.sentToLabAt ? labReadyAt(c.sentToLabAt) : null,
         };
       })
       .sort((a, b) => (b.orderPaidAt ?? "").localeCompare(a.orderPaidAt ?? "") || a.number - b.number),

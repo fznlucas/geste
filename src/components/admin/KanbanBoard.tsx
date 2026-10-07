@@ -17,6 +17,10 @@ export interface KanbanCard {
   /** Of the work: a landscape thumbnail is turned (40 × 32). */
   orientation?: Orientation;
   href: string;
+  /** A state line under the subtitle ("At the lab · back Oct 6"). */
+  note?: string;
+  /** One more action on the card ("Send to lab"), above the move buttons. */
+  action?: { label: string; ariaLabel: string; onClick: () => void };
 }
 
 export interface KanbanColumn {
@@ -52,6 +56,12 @@ export function KanbanBoard({ columns, onMove, busy }: { columns: KanbanColumn[]
                   </span>
                 </div>
                 <span className="text-fg-muted">{k.subtitle}</span>
+                {k.note && <span>{k.note}</span>}
+                {k.action && (
+                  <PillButton className="self-start" aria-label={k.action.ariaLabel} disabled={busy === k.id} onClick={k.action.onClick}>
+                    {k.action.label}
+                  </PillButton>
+                )}
                 <div className="flex gap-6">
                   {ci > 0 && (
                     <PillButton aria-label={`Move ${label} back to ${columns[ci - 1]!.title}`} disabled={busy === k.id} onClick={() => onMove(k.id, columns[ci - 1]!.key)}>

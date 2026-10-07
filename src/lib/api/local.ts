@@ -19,7 +19,9 @@ import { customers } from "@/data/customers";
 import { printCopies, printEditions } from "@/data/editions";
 import { entitlements } from "@/data/entitlements";
 import type { CampaignRow, GiftCardRow } from "@/data/marketing";
-import { simNow } from "@/lib/clock";
+import { parisDay, simNow } from "@/lib/clock";
+import { BUSINESS } from "@/config/business";
+import { parisInstant, workingDayAfter } from "@/sim/calendar";
 import { hashString } from "@/sim/random";
 import { mockCarrierScans } from "@/lib/integrations/boxtal/mock";
 import { campaigns as fixtureCampaigns, giftCards as fixtureGiftCards } from "@/data/marketing";
@@ -180,6 +182,9 @@ const PRE_LAUNCH_COPIES: PrintCopyRow[] = [...preLaunchCounts()].flatMap(([editi
 const ACTIVE: ReadonlyArray<PrintCopyRow["status"]> = ["sold", "reserved"];
 
 /** "C-07-S-012": work, size and copy number, so the S and M copies of a work never share a certificate. */
+/** When a copy sent to the lab comes back printed: the lab's turnaround in working days, at 10:00 Paris. */
+export const labReadyAt = (sentAt: string): string => parisInstant(workingDayAfter(parisDay(sentAt), BUSINESS.printLab.value.turnaroundWorkingDays), 10);
+
 export const certificateNumber = (editionId: string, number: number) => {
   const [, work, size] = editionId.split("-");
   return `C-${work}-${(size ?? "").toUpperCase()}-${String(number).padStart(3, "0")}`;
@@ -233,9 +238,16 @@ const copiesMemo = memo(() => {
     const orderId = orderOfItem(c.orderItemId)?.id;
     return !!(orderId && shipmentOfOrder(orderId)?.deliveredAt);
   };
+  // Back from the lab: a copy sent to the external lab is printed once its turnaround has passed.
+  const now = simNow().getTime();
+  const fromLab = (c: PrintCopyRow) => {
+    if (c.fulfilment !== "to_print" || !c.sentToLabAt) return null;
+    const ready = labReadyAt(c.sentToLabAt);
+    return Date.parse(ready) <= now ? { fulfilment: "printed" as const, printedAt: ready } : null;
+  };
   const rows = all.map((c) => {
     const number = numbered.get(c.id)!;
-    return { ...c, number, certificateNo: certificateNumber(c.editionId, number), ...(delivered(c) ? { fulfilment: "delivered" as const } : {}) };
+    return { ...c, number, certificateNo: certificateNumber(c.editionId, number), ...fromLab(c), ...(delivered(c) ? { fulfilment: "delivered" as const } : {}) };
   });
   const byItem = new Map<string, PrintCopyRow[]>();
   const sold = new Map<string, number>();

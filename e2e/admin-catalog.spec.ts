@@ -58,7 +58,8 @@ test("work editor: edit and save, the catalog shows the change", async ({ page }
   await page.getByLabel("Price 60×73").fill("$27");
   await page.getByLabel("Signature work · +$6 on every format").check();
   await expect(formats.getByRole("row", { name: /^60×73/ })).toContainText("$33");
-  await expect(page.getByLabel("Price S")).toHaveValue("$55");
+  // Prints: a summary; the edition is edited in Print editions.
+  await expect(page.getByRole("table", { name: "Print editions" }).getByRole("row", { name: /^S ·/ })).toContainText("$55");
   await page.getByRole("button", { name: "SEO" }).click();
   await page.getByLabel("Page title").fill("N°03 — paint it · Geste");
   await page.getByRole("button", { name: /Save changes/ }).click();

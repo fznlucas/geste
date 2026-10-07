@@ -1,6 +1,7 @@
 /** Settings & team (owner only). Store values changed in this browser come from the admin overlay ("site_settings"). */
 import { integrations, pastAudit, paymentProviders, securitySettings, shippingZones, storeSettings } from "@/data/settings";
 import { staff } from "@/data/staff";
+import { BUSINESS } from "@/config/business";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING } from "@/lib/pricing";
 import { clone } from "./clone";
@@ -75,4 +76,11 @@ const withOrderNumbers = (text: string) => text.replace(/\{order:([^}]+)\}/g, (_
 
 export async function getPastAudit() {
   return clone(pastAudit.map((a) => ({ ...a, summary: withOrderNumbers(a.summary) })));
+}
+
+/** Who prints (Settings › Shipping): in-house, or an external lab with its turnaround (config + admin choice). */
+export function printLab(): { mode: "in_house" | "external"; name: string; turnaroundWorkingDays: number } {
+  const lab = BUSINESS.printLab.value;
+  const mode = patched("business_settings", { id: "print_lab_mode", value: lab.mode as string }).value === "external" ? "external" : "in_house";
+  return { ...lab, mode };
 }

@@ -40,6 +40,12 @@ export function setVatRegime(regime: "collect" | "franchise") {
   patchRow("business_settings", "vat_regime", { value: regime }, { action: "tax.regime", target: "setting:vat_regime", summary: `${staff.fullName} set the VAT regime to ${regime === "collect" ? "VAT collected" : "franchise en base (no VAT)"}` });
 }
 
+/** Settings › Shipping › Print lab: the studio's printer, or the external lab ("Send to lab" on the To print cards). */
+export function setPrintLabMode(mode: "in_house" | "external") {
+  const staff = requireStaff("owner");
+  patchRow("business_settings", "print_lab_mode", { value: mode }, { action: "fulfilment.lab_mode", target: "setting:print_lab_mode", summary: `${staff.fullName} set printing to ${mode === "external" ? "the external lab" : "the in-house printer"}` });
+}
+
 /** Settings › Integrations › GPU provider: the monthly budget the AI pipeline checks before a job. */
 export function setGpuBudget(cents: number) {
   const staff = requireStaff("owner");

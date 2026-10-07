@@ -10,10 +10,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
-  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, PillButton, Select, StatusChip, useToast,
+  AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Button, Field, Input, PermissionMatrix, PillButton, Select, StatusChip, Switch, useToast,
 } from "@/components";
 import {
-  getPastAudit, getSecuritySettings, getShippingZones, getStoreSettings, getTeam,
+  getPastAudit, getSecuritySettings, getShippingZones, getStoreSettings, getTeam, printLab,
   type SettingStatus, type StoreSetting,
 } from "@/lib/api";
 import { signOutStaff, useAdminQuery, useAudit } from "@/lib/client";
@@ -21,6 +21,7 @@ import { downloadFile, toCsv } from "@/lib/client/admin/download";
 import { simToday } from "@/lib/clock";
 import { adminDateTime } from "@/lib/dates";
 import { changeStaffRole, inviteStaff, removeStaff, saveSetting, signOutEverywhere } from "@/lib/client/admin/settings";
+import { setPrintLabMode } from "@/lib/client/admin/integrations";
 import type { StaffRole } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
 import { Integrations, PaymentsAndTax, Simulation } from "./IntegrationsSettings";
@@ -102,13 +103,45 @@ function Shipping() {
   const q = useAdminQuery(getShippingZones, []);
   if (q.status === "loading") return <Loading />;
   return (
+    <div className="flex flex-col gap-24">
+      <ShippingZones zones={q.data} />
+      <PrintLab />
+    </div>
+  );
+}
+
+/** Who prints: the studio's printer, or the external lab ("Send to lab" on the Fulfilment board). */
+function PrintLab() {
+  const toast = useToast();
+  const q = useAdminQuery(async () => printLab(), []);
+  if (q.status === "loading") return null;
+  const lab = q.data;
+  const external = lab.mode === "external";
+  return (
+    <div className="flex flex-col gap-8">
+      <AdminTitle>Print lab</AdminTitle>
+      <Switch
+        label={`Print with an external lab (${lab.name})`}
+        checked={external}
+        onCheckedChange={(on) => {
+          setPrintLabMode(on ? "external" : "in_house");
+          toast.show(on ? `Printing at ${lab.name}: “Send to lab” on the To print cards` : "Printing in-house");
+        }}
+      />
+      <span className="text-fg-muted">{external ? `Fulfilment sends each copy's print file to the lab; it comes back printed after ${lab.turnaroundWorkingDays} working days, to sign and pack.` : "The studio prints the copies; paper is counted in Fulfilment › Supplies."} Lab and turnaround: to confirm with the lab.</span>
+    </div>
+  );
+}
+
+function ShippingZones({ zones }: { zones: Awaited<ReturnType<typeof getShippingZones>> }) {
+  return (
     <div role="table" aria-label="Shipping zones" className="flex flex-col gap-8">
       <AdminHeadRow cols={SHIP_COLS}>
         {["Zone", "Carriers", "From", "Status"].map((h) => (
           <span key={h} role="columnheader">{h}</span>
         ))}
       </AdminHeadRow>
-      {q.data.map((z) => (
+      {zones.map((z) => (
         <AdminRow key={z.zone} cols={SHIP_COLS}>
           <span role="rowheader">{z.zone}</span>
           <span role="cell" className="text-fg-muted">{z.carriers}</span>

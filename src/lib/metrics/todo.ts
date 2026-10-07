@@ -13,6 +13,7 @@ import { storeSetting } from "@/lib/api/settings";
 import { getOrders } from "@/lib/api/orders";
 import { getReviews } from "@/lib/api/reviews";
 import { getSupportThreads } from "@/lib/api/support";
+import { getSupplies } from "@/lib/api/supplies";
 import type { StaffRole } from "@/lib/api/types";
 import { addDays, parisDay, parisHour, simNow, simNowIso, simToday } from "@/lib/clock";
 import { euThresholdCrossings } from "@/lib/api/vat";
@@ -131,12 +132,13 @@ const newest = <T,>(rows: T[], at: (r: T) => string | null | undefined): T | und
  * marking one read never marks another. Times come from those rows. Read: `patchRow("alerts", id, { read })`.
  */
 export const alerts = metric("Alerts derived from the state of the store; ids from their cause, read state kept per alert.", async function alerts(): Promise<AdminAlert[]> {
-  const [toPrint, orders, low, threads, reviews] = await Promise.all([
+  const [toPrint, orders, low, threads, reviews, supplies] = await Promise.all([
     getPrintCopies({ fulfilment: "to_print" }),
     getOrders(),
     lowEdition(),
     getSupportThreads({ status: "open", unread: true }),
     getReviews({ status: "pending" }),
+    getSupplies(),
   ]);
   const candidates = allAiCandidates().filter((c) => c.status === "pending");
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -160,6 +162,11 @@ export const alerts = metric("Alerts derived from the state of the store; ids fr
       href: `/admin/orders/detail?number=${lastOrder.number}`, roles: ["owner", "support", "fulfilment"] as StaffRole[],
       phone: { rank: 1, text: `New order #${lastOrder.number} · $${Math.round(lastOrder.totalCents / 100)}`, href: `/admin/orders/detail?number=${lastOrder.number}` }, desktop: false,
     }] : []),
+    // Supplies at or under their reorder level, nothing on its way: one alert per item (its id changes with what is left).
+    ...supplies.filter((s) => s.low).map((s) => ({
+      id: `supplies:${s.key}:${s.inStock}`, text: `${s.label}: ${s.out ? "none left" : `${s.inStock} left`} · reorder`, when: alertWhen(simNowIso()), href: "/admin/fulfilment#supplies",
+      roles: ["owner", "fulfilment"] as StaffRole[], phone: null, desktop: true,
+    })),
     ...(low ? [{ id: `low-edition:${low.id}:${low.left}`, text: low.label, when: alertWhen(simNowIso()), href: "/admin/editions", roles: ["owner", "fulfilment"] as StaffRole[], phone: { rank: 3, text: low.label, href: "/admin/editions" }, desktop: true }] : []),
     ...(lastThread ? [{
       id: `support:${lastThread.id}:${lastThread.lastCustomerMessage?.at ?? lastThread.createdAt}`, text: plural(threads.length, "new support message", "new support messages"),

@@ -123,6 +123,8 @@ export interface PrintEditionRow {
   editionSize: number;
   priceCents: number;
   open: boolean;
+  /** The paper it is printed on (Editions › Edit); the default paper when not set. */
+  paper?: string;
   /** Mock only: in the database these two are counted from print_copies. */
   soldCount: number;
   reservedCount: number;
@@ -143,6 +145,8 @@ export interface PrintCopyRow {
   soldBeforeLaunch?: boolean;
   /** Admin v2 (sim): when it was packed. */
   packedAt?: string | null;
+  /** Sent to the external print lab (Fulfilment › Send to lab): it comes back printed after the lab's turnaround. */
+  sentToLabAt?: string | null;
   origin?: RowOrigin;
 }
 

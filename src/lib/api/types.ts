@@ -248,6 +248,10 @@ export interface PrintEdition {
   soldOut: boolean;
   /** Number the next buyer gets, the lowest free one ("Edition 12/100"); null when sold out. */
   nextNumber: number | null;
+  /** "Cotton rag 308 g · matte" */
+  paper: string;
+  /** The smallest edition size allowed: copies taken and held, and the highest number already given. */
+  minSize: number;
 }
 
 export interface PrintCopy {
@@ -271,6 +275,9 @@ export interface PrintCopy {
   customerName: string | null;
   city: string | null;
   workSlug: string;
+  /** At the external lab: sent then, back printed at `labReadyAt` (null: printed at the studio or not sent). */
+  sentToLabAt: string | null;
+  labReadyAt: string | null;
 }
 
 // ── Cart ───────────────────────────────────────────────────────────────────

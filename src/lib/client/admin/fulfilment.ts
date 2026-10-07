@@ -4,8 +4,13 @@
  * Fulfilment actions (future `src/actions/admin/fulfilment.ts`): move a numbered copy on the board,
  * close or reopen an edition. Fulfilment role (the owner passes). Each writes the audit log.
  */
-import { getEdition, getOrder, getPrintCopies, type FulfilmentStatus, type OrderDetail } from "@/lib/api";
-import { adminNow, patchRow, requireStaff } from "../admin";
+import { getEdition, getOrder, getPrintCopies, getSupplies, printLab, storeSetting, supplier, type FulfilmentStatus, type OrderDetail, type SupplyKey, type SupplyOrderRow } from "@/lib/api";
+import { sendEmail } from "./email";
+import { getMode } from "@/lib/integrations";
+import { adminDateTime } from "@/lib/dates";
+import { PRINT_PAPERS } from "@/data/editions";
+import { formatPrice } from "@/lib/format";
+import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
 import { requireShippable, shipCopies, unship } from "./orders";
 
 /** The four columns of AdminFulfilment, in order. */
@@ -43,11 +48,39 @@ export async function moveCopy(copyId: string, to: FulfilmentStatus): Promise<vo
   if (copy.fulfilment === "shipped" && copy.orderNumber) return unship(copy.orderNumber);
   const printedAt = to === "to_print" ? null : (copy.printedAt ?? adminNow());
   const what = `${copy.workNumber} ${copy.size} ${copy.label}${copy.orderNumber ? ` (#${copy.orderNumber})` : ""}`;
-  patchRow("print_copies", copyId, { fulfilment: to, printedAt }, {
+  // Back to To print: it is to print again (at the studio, or sent to the lab again).
+  patchRow("print_copies", copyId, { fulfilment: to, printedAt, ...(to === "to_print" ? { sentToLabAt: null } : {}) }, {
     action: "print_copy.move",
     target: `print_copy:${copyId}`,
     summary: `${staff.fullName} moved ${what} to ${stepTitle(to)}`,
   });
+}
+
+/**
+ * "Send to lab" (To print, lab mode = external, docs/admin-v2/04 Fulfilment): the print files go to the
+ * lab (Print lab integration, logged); the copy waits in To print, "At the lab", and comes back printed
+ * after the lab's turnaround (`labReadyAt`). Fulfilment role. Returns when it is back.
+ */
+export async function sendToLab(copyId: string): Promise<string> {
+  const staff = requireStaff("fulfilment");
+  const lab = printLab();
+  if (lab.mode !== "external") throw new Error("Printing is in-house: choose an external lab in Settings › Shipping first.");
+  const mode = getMode("print-lab");
+  if (mode === "off") throw new Error("The print lab is off in Settings › Integrations.");
+  const copy = (await getPrintCopies()).find((c) => c.id === copyId);
+  if (!copy) throw new Error("This print is no longer on the board.");
+  if (copy.fulfilment !== "to_print") throw new Error(`This print is ${stepTitle(copy.fulfilment)}: nothing to send.`);
+  if (copy.sentToLabAt) throw new Error(`Already at the lab since ${adminDateTime(copy.sentToLabAt)}.`);
+  if (copy.orderNumber) await requireShippable(copy.orderNumber);
+  const at = adminNow();
+  const what = `${copy.workNumber} ${copy.size} ${copy.label}${copy.orderNumber ? ` (#${copy.orderNumber})` : ""}`;
+  insertRow("integration_logs", { at, integration: "print-lab", direction: "out", operation: "send print file", mode: mode === "live" ? "live" : "mock", ok: true, related: copy.orderNumber ? `order:${copy.orderNumber}` : `print_copy:${copyId}`, detail: `${what} · certificate ${copy.certificateNo}` });
+  patchRow("print_copies", copyId, { sentToLabAt: at }, {
+    action: "print_copy.send_to_lab",
+    target: `print_copy:${copyId}`,
+    summary: `${staff.fullName} sent ${what} to ${lab.name}`,
+  });
+  return (await getPrintCopies()).find((c) => c.id === copyId)?.labReadyAt ?? at;
 }
 
 const stepTitle = (s: FulfilmentStatus) => FULFILMENT_STEPS.find((x) => x.key === s)?.title.toLowerCase() ?? s.replace("_", " ");
@@ -96,6 +129,32 @@ export async function setEditionSize(editionId: string, size: number): Promise<v
   });
 }
 
+/**
+ * Editions › Edit (the one place an edition's settings change; the work editor shows a summary): price,
+ * edition size (never below the copies taken and held, nor a number already given) and paper. More
+ * copies reopen a sold-out edition. Owner and Fulfilment; Content reads it.
+ */
+export async function saveEdition(editionId: string, changes: { priceCents: number; editionSize: number; paper: string }): Promise<string[]> {
+  const staff = requireStaff("fulfilment");
+  const edition = await getEdition(editionId);
+  if (!edition) throw new Error("Unknown edition.");
+  if (!Number.isFinite(changes.priceCents) || changes.priceCents <= 0) throw new Error("Enter a price.");
+  if (!Number.isInteger(changes.editionSize) || changes.editionSize < edition.minSize) throw new Error(`Enter at least ${edition.minSize} copies: ${edition.sold} taken${edition.reserved ? `, ${edition.reserved} held` : ""}${edition.minSize > edition.sold + edition.reserved ? `, number ${edition.minSize} already given` : ""}.`);
+  if (!PRINT_PAPERS.includes(changes.paper as (typeof PRINT_PAPERS)[number])) throw new Error("Choose a paper.");
+  const done: string[] = [];
+  if (changes.priceCents !== edition.priceCents) done.push(`price ${formatPrice(edition.priceCents)} → ${formatPrice(changes.priceCents)}`);
+  if (changes.editionSize !== edition.editionSize) done.push(`edition ${edition.editionSize} → ${changes.editionSize}`);
+  if (changes.paper !== edition.paper) done.push(`paper ${changes.paper}`);
+  if (!done.length) return [];
+  const reopens = edition.soldOut && changes.editionSize > edition.editionSize;
+  patchRow("print_editions", editionId, { priceCents: changes.priceCents, editionSize: changes.editionSize, paper: changes.paper, ...(reopens ? { open: true } : {}) }, {
+    action: "edition.edit",
+    target: `print_edition:${editionId}`,
+    summary: `${staff.fullName} edited the ${edition.workNumber} ${edition.size} edition · ${done.join(", ")}${reopens ? " (reopened)" : ""}`,
+  });
+  return done;
+}
+
 /** Close edition / Reopen (AdminEditions). A closed edition is hidden from the store (its size disappears). */
 export async function setEditionOpen(editionId: string, open: boolean): Promise<void> {
   const staff = requireStaff("fulfilment");
@@ -111,4 +170,32 @@ export async function setEditionOpen(editionId: string, open: boolean): Promise<
     target: `print_edition:${editionId}`,
     summary: `${staff.fullName} ${open ? "reopened" : "closed"} the ${edition.workNumber} ${edition.size} edition`,
   });
+}
+
+/**
+ * Supplies › Reorder: an email to the supplier (Outbox), the order kept (it arrives after the supplier's
+ * delay and adds to the stock), paid from the bank (books: bank → supplies in stock). Fulfilment role.
+ */
+export async function reorderSupply(item: SupplyKey, quantity: number): Promise<SupplyOrderRow> {
+  const staff = requireStaff("fulfilment");
+  const s = (await getSupplies()).find((x) => x.key === item);
+  if (!s) throw new Error("Unknown supply.");
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10 * s.reorderQty) throw new Error(`Order between 1 and ${10 * s.reorderQty} ${s.label.toLowerCase()}.`);
+  if (s.onOrder) throw new Error(`${s.onOrder} ${s.label.toLowerCase()} already on their way (${adminDateTime(s.arrivesAt!)}).`);
+  if (getMode("supplies") === "off") throw new Error("The supplier is off in Settings › Integrations.");
+  const at = adminNow();
+  const arrivesAt = new Date(Date.parse(at) + s.leadDays * 86_400_000).toISOString().slice(0, 19) + "Z";
+  const cents = quantity * s.unitCents;
+  const who = supplier();
+  const row = insertRow<Omit<SupplyOrderRow, "id">>("supply_orders", { item, quantity, cents, at, arrivesAt }, {
+    action: "supplies.reorder",
+    target: `supply:${item}`,
+    summary: `${staff.fullName} reordered ${quantity} ${s.label.toLowerCase()} from ${who.name} · €${(cents / 100).toFixed(2)}`,
+  });
+  insertRow("integration_logs", { at, integration: "supplies", direction: "out", operation: "reorder", mode: getMode("supplies") === "live" ? "live" : "mock", ok: true, related: `supply_order:${row.id}`, detail: `${quantity} ${s.label.toLowerCase()}` });
+  await sendEmail("supplier_reorder", who.email, `supply_order:${row.id}`, {
+    subject: `${quantity} ${s.label.toLowerCase()}`,
+    body: `Hello,\n\nPlease send ${quantity} ${s.label.toLowerCase()} (${(s.unitCents / 100).toFixed(2)} € each excl. VAT, ${(cents / 100).toFixed(2)} € in all) to ${storeSetting("store.name")}.\n\nThank you,\n${staff.fullName}`,
+  });
+  return row as SupplyOrderRow;
 }

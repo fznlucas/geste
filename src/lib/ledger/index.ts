@@ -6,6 +6,7 @@
 import { BUSINESS, type UrssafCategory, type VatRegime } from "@/config/business";
 import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { allAffiliateCommissions, allCustomers, allGiftCards, allOrders, allPayments, allPrintCopies, allPrintEditions, allRefunds, allShipments, patched } from "@/lib/api/local";
+import { allSupplyOrders } from "@/lib/api/supplies";
 import { allAiJobs } from "@/lib/api/ai";
 import { vatRateAt, vatRegime } from "@/lib/api/vat";
 import { LAUNCH_DATE } from "@/sim/config";
@@ -175,6 +176,13 @@ export function books(): Books {
   for (const s of allShipments()) {
     const o = byId.get(s.orderId);
     if (o) lines.push(...ledgerFromShipment(s, country(o)));
+  }
+  // Supplies reordered: paid from the bank when ordered, a stock until used (the cost lines count their use).
+  for (const o of allSupplyOrders()) {
+    if (Date.parse(o.at) > now) continue;
+    const base = { at: o.at, sourceTable: "supply_orders", sourceId: o.id, category: "none" as const };
+    lines.push({ ...base, id: `supply:${o.id}:0`, account: "cash.bank", amountEurCents: -o.cents, memo: `Supplies · ${o.quantity} ${o.item.replace("_", " ")}` });
+    lines.push({ ...base, id: `supply:${o.id}:1`, account: "asset.supplies", amountEurCents: o.cents, memo: `Supplies in stock · ${o.quantity} ${o.item.replace("_", " ")}` });
   }
   const sizeOf = new Map(allPrintEditions().map((e) => [e.id, e.size as "S" | "M" | "L"]));
   for (const c of allPrintCopies()) lines.push(...ledgerFromCopy(c, sizeOf.get(c.editionId) ?? "S"));

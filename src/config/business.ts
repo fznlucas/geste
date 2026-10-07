@@ -88,6 +88,25 @@ export const BUSINESS = {
     studioMaterials: v({ perWorkCents: 6000, monthlyCents: 4000, day: 20 }, "canvases and paints, estimate (confirm)"),
     adsMonthlyCents: v(0, "no paid campaigns (spec 02 §2)"),
   },
+
+  /** Who prints the copies (Settings › Shipping): the studio's printer, or an external lab that sends them back printed. */
+  printLab: v<{ mode: "in_house" | "external"; name: string; turnaroundWorkingDays: number }>({ mode: "in_house", name: "Atelier Tirage, Paris", turnaroundWorkingDays: 2 }, "lab name and turnaround, estimate (confirm with the lab)"),
+
+  /**
+   * Supplies counted at the studio (Fulfilment › Supplies): stock at launch, the level that asks for a
+   * reorder, the usual reorder and its price, the supplier's delay. Paper and certificates are used when a
+   * copy is printed (paper only in-house), a tube when a parcel gets its label.
+   */
+  supplies: v({
+    supplier: { name: "Papeterie Lemaire", email: "orders@papeterie-lemaire.example" },
+    items: {
+      tubes: { label: "Tubes", opening: 55, reorderAt: 10, reorderQty: 50, unitCents: 180, leadDays: 4 },
+      paper_s: { label: "Paper S", opening: 80, reorderAt: 20, reorderQty: 100, unitCents: 210, leadDays: 6 },
+      paper_m: { label: "Paper M", opening: 40, reorderAt: 10, reorderQty: 50, unitCents: 390, leadDays: 6 },
+      paper_l: { label: "Paper L", opening: 25, reorderAt: 6, reorderQty: 25, unitCents: 640, leadDays: 6 },
+      certificates: { label: "Certificates", opening: 200, reorderAt: 40, reorderQty: 200, unitCents: 35, leadDays: 8 },
+    },
+  }, "stock at launch, reorder levels, prices and delays: estimates (confirm with the supplier)"),
 } as const;
 
 export type Business = typeof BUSINESS;

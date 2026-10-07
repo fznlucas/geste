@@ -374,7 +374,7 @@ export function financeFec(f: Finance): string {
     "cost.payment_fees": ["627000", "Services bancaires"], "cost.fx": ["666000", "Pertes de change"], "cost.gpu": ["628100", "Calcul GPU"], "cost.software": ["651000", "Logiciels"],
     "cost.studio_materials": ["606400", "Fournitures atelier"], "cost.ads": ["623000", "Publicité"], "cost.bank": ["627100", "Frais bancaires"],
     "tax.urssaf": ["646000", "Cotisations URSSAF"], "tax.cfp": ["633300", "Formation professionnelle"], "tax.versement_liberatoire": ["108000", "Versement libératoire"],
-    "cash.stripe_balance": ["511100", "Stripe"], "cash.bank": ["512000", "Banque"],
+    "cash.stripe_balance": ["511100", "Stripe"], "cash.bank": ["512000", "Banque"], "asset.supplies": ["322000", "Stock fournitures (tubes, papier, certificats)"],
   };
   const head = ["JournalCode", "JournalLib", "EcritureNum", "EcritureDate", "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib", "PieceRef", "PieceDate", "EcritureLib", "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate", "Montantdevise", "Idevise"];
   const fecDate = (iso: string) => parisDay(iso).replaceAll("-", "");

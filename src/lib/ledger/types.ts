@@ -13,7 +13,9 @@ export type LedgerAccount =
   | "cost.print_production" | "cost.packaging" | "cost.shipping_labels" | "cost.payment_fees" | "cost.fx"
   | "cost.gpu" | "cost.software" | "cost.studio_materials" | "cost.ads" | "cost.bank"
   | "tax.urssaf" | "tax.cfp" | "tax.versement_liberatoire"
-  | "cash.stripe_balance" | "cash.bank";
+  | "cash.stripe_balance" | "cash.bank"
+  /** Supplies bought and not used yet (tubes, paper, certificates): a reorder moves money from the bank to it; using them is the cost lines. */
+  | "asset.supplies";
 
 export interface LedgerLine {
   id: string;

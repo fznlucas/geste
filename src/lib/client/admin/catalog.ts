@@ -5,7 +5,7 @@
  * savePalettes, saveShoppingList, setWorkStatus). Mock: patches in the admin overlay + audit log.
  * The store pages are built at deploy time and do not show these edits (docs/mock-plan.md §6).
  */
-import { formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type PrintSize, type WorkStatus } from "@/lib/api";
+import { formatRowId, getAdminWork, getAdminWorks, listRowId, paletteRowId, type AdminWorkDetail, type FormatKey, type LevelKey, type PaletteKey, type WorkStatus } from "@/lib/api";
 import { formatsOf, mediumFormat, type Orientation, type Proportion } from "@/lib/pricing";
 import { PALETTE_NAMES, PREVIEW_FILTERS } from "@/data/works";
 import { adminNow, insertRow, patchRow, requireStaff } from "../admin";
@@ -28,7 +28,6 @@ export interface WorkDraft {
   allowCustom: boolean;
   palettes: Array<{ key: PaletteKey; active: boolean }>;
   shoppingList: Array<{ position: number; url: string }>;
-  editions: Array<{ size: PrintSize; editionId: string | null; editionSize: number; priceCents: number }>;
 }
 
 export const STATUS_LABEL: Record<WorkStatus, string> = { live: "Live", draft: "Draft", scheduled: "Scheduled", archived: "Archived" };
@@ -40,7 +39,6 @@ function changedTabs(before: AdminWorkDetail, d: WorkDraft): string[] {
   if (d.signature !== before.signature || d.proportion !== before.proportion || d.baseLevel !== before.baseLevel || d.allowCustom !== before.allowCustom || d.formats.some((f) => { const b = before.formats.find((x) => x.format === f.format); return !b || b.priceCents !== f.priceCents || b.active !== f.active; })) tabs.push("Formats & prices");
   if (d.palettes.some((p) => before.palettes.find((x) => x.key === p.key)?.active !== p.active)) tabs.push("Palettes");
   if (d.shoppingList.some((i) => before.shoppingList.find((x) => x.position === i.position)?.url !== i.url)) tabs.push("Shopping list");
-  if (d.editions.some((e) => { const b = before.editions.find((x) => x.size === e.size)!; return e.editionId && (b.editionSize !== e.editionSize || b.priceCents !== e.priceCents); })) tabs.push("Prints");
   if (d.seoTitle !== before.seoTitle || d.seoDescription !== before.seoDescription) tabs.push("SEO");
   return tabs;
 }
@@ -53,12 +51,6 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   const errors: string[] = [];
   if (!draft.seoTitle.trim()) errors.push("Enter a page title.");
   for (const f of draft.formats) if (!Number.isFinite(f.priceCents) || f.priceCents <= 0) errors.push(`Enter a price for ${f.format.replace("x", "×")}.`);
-  for (const e of draft.editions) if (e.editionId && (!Number.isInteger(e.editionSize) || e.editionSize < 1 || !Number.isFinite(e.priceCents) || e.priceCents <= 0)) errors.push(`Check the ${e.size} edition.`);
-  // An edition never shrinks below the copies already taken.
-  for (const e of draft.editions) {
-    const b = before.editions.find((x) => x.size === e.size);
-    if (e.editionId && b && e.editionSize < b.sold) errors.push(`The ${e.size} edition has ${b.sold} copies sold: it cannot be smaller.`);
-  }
   if (errors.length) throw new Error(errors[0]);
 
   const tabs = changedTabs(before, draft);
@@ -73,7 +65,6 @@ export async function saveWork(slug: string, draft: WorkDraft): Promise<string[]
   }
   for (const p of draft.palettes) patchRow("palettes", paletteRowId(id, p.key), { active: p.active });
   for (const i of draft.shoppingList) patchRow("shopping_items", listRowId(id, i.position), { url: i.url.trim() });
-  for (const e of draft.editions) if (e.editionId) patchRow("print_editions", e.editionId, { editionSize: e.editionSize, priceCents: e.priceCents });
   patchRow("works", id, {}, { action: "work.save", target: `work:${before.slug}`, summary: `Lucas edited ${before.number} · ${tabs.join(", ")}`.replace("Lucas", requireStaff().fullName) });
   return tabs;
 }

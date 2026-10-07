@@ -2,16 +2,17 @@
 
 /**
  * /admin/editions (AdminEditions): every edition with sold / edition bar, reserved, left (Signal at 5 or
- * fewer), price, Close edition / Reopen, Edit (→ the work editor), and the certificate log (printed copies,
- * local checkout copies included). Owner and Fulfilment (docs/admin.md).
+ * fewer), price, Close edition / Reopen, Edit (a drawer: price, edition size, paper — the one place an
+ * edition's settings change; the work editor shows a summary and links here, `?edit=<id>`), and the
+ * certificate log (printed copies, local checkout copies included). Owner and Fulfilment; Content reads.
  */
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, PillButton, PillLink, UnderLink, canOpenAdmin, useToast } from "@/components";
-import { getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, Button, Drawer, Field, Input, PillButton, Select, UnderLink, canOpenAdmin, useToast } from "@/components";
+import { PRINT_PAPERS, getCertificateLog, getEditions, type PrintCopy, type PrintEdition } from "@/lib/api";
 import { hasRole, useAdminQuery } from "@/lib/client";
 import { isLowStock } from "@/lib/metrics";
-import { setEditionOpen, setEditionSize } from "@/lib/client/admin/fulfilment";
+import { saveEdition, setEditionOpen, setEditionSize } from "@/lib/client/admin/fulfilment";
 import { cn } from "@/lib/cn";
 import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
@@ -37,8 +38,11 @@ export function EditionsPage() {
   const [cert, setCert] = useState("");
   const [allLog, setAllLog] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  // ?low=1 (the sidebar's count): only the editions with 1 to 5 copies left.
-  const lowOnly = useSearchParams().get("low") === "1";
+  // ?low=1 (the sidebar's count): only the editions with 1 to 5 copies left. ?edit=<id>: that edition's drawer (from the work editor).
+  const params = useSearchParams();
+  const lowOnly = params.get("low") === "1";
+  const [editing, setEditing] = useState<string | null>(params.get("edit"));
+  const editEdition = data.status === "ready" ? data.data.editions.find((e) => e.id === editing) : undefined;
 
   const toggle = async (e: PrintEdition) => {
     setBusy(e.id);
@@ -87,7 +91,7 @@ export function EditionsPage() {
           {data.status === "loading"
             ? Array.from({ length: 7 }, (_, i) => <div key={i} aria-hidden="true" className="box-content min-h-60 border-b border-border" />)
             : data.data.editions.filter((e) => !lowOnly || isLowStock(e)).map((e) => (
-                <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} onRaise={canClose ? (size) => raise(e, size) : undefined} canEditWork={canOpenAdmin(staff.role, "/admin/works")} />
+                <EditionRow key={e.id} e={e} busy={busy === e.id} onToggle={canClose ? () => toggle(e) : undefined} onRaise={canClose ? (size) => raise(e, size) : undefined} canEditWork={canOpenAdmin(staff.role, "/admin/works")} onEdit={() => setEditing(e.id)} />
               ))}
         </div>
       </div>
@@ -121,12 +125,73 @@ export function EditionsPage() {
           );
         })()}
       </AdminBox>
+      {editEdition && <EditionDrawer key={editEdition.id} e={editEdition} canEdit={canClose} canEditWork={canOpenAdmin(staff.role, "/admin/works")} onClose={() => setEditing(null)} />}
     </AdminPage>
   );
 }
 
+const money = (cents: number) => `$${Number((cents / 100).toFixed(2))}`;
+const parseMoney = (s: string) => (/^\s*\$?\s*\d+(\.\d{1,2})?\s*$/.test(s) ? Math.round(Number(s.replace(/[$\s]/g, "")) * 100) : Number.NaN);
+
+/** Editions › Edit: price, edition size (at least the copies taken), paper. Content reads it. */
+function EditionDrawer({ e, canEdit, canEditWork, onClose }: { e: PrintEdition; canEdit: boolean; canEditWork: boolean; onClose: () => void }) {
+  const toast = useToast();
+  const [price, setPrice] = useState(money(e.priceCents));
+  const [size, setSize] = useState(String(e.editionSize));
+  const [paper, setPaper] = useState(e.paper);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const priceCents = parseMoney(price);
+  const sizeN = Number(size);
+  const sizeError = size && (!Number.isInteger(sizeN) || sizeN < e.minSize) ? `At least ${e.minSize}` : undefined;
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const done = await saveEdition(e.id, { priceCents, editionSize: sizeN, paper });
+      toast.show(done.length ? `${e.workNumber} ${e.size} saved · ${done.join(", ")}` : "Nothing changed");
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the edition.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Drawer
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title={`${e.workNumber} · Print ${e.size} · ${e.dimensions}`}
+      footer={canEdit ? (
+        <div className="flex gap-8">
+          <Button variant="ghost" className="grow" onClick={onClose}>Cancel</Button>
+          <Button className="grow-2" onClick={save} disabled={busy || Number.isNaN(priceCents) || !!sizeError}>{busy ? "Saving…" : "Save edition"}</Button>
+        </div>
+      ) : undefined}
+    >
+      <div className="flex flex-col gap-16">
+        <p className="text-fg-muted">{e.sold} sold · {e.reserved} held · {e.open ? `${e.left} left` : e.soldOut ? "sold out" : "closed"}. The one place where an edition changes; the work editor shows a summary.</p>
+        <Field label="Price" error={Number.isNaN(priceCents) ? "Enter a price, like $55" : undefined}>
+          <Input value={price} disabled={!canEdit} onChange={(ev) => setPrice(ev.target.value)} />
+        </Field>
+        <Field label="Edition size" hint={`At least ${e.minSize}: copies taken and held${e.soldOut ? "; more copies reopen it" : ""}.`} error={sizeError}>
+          <Input inputMode="numeric" value={size} disabled={!canEdit} onChange={(ev) => setSize(ev.target.value.replace(/\D/g, ""))} />
+        </Field>
+        <Field label="Paper">
+          <Select value={paper} disabled={!canEdit} onChange={(ev) => setPaper(ev.target.value)}>
+            {PRINT_PAPERS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </Select>
+        </Field>
+        {!canEdit && <p className="text-fg-muted">Read only: the owner and Fulfilment edit editions.</p>}
+        {error && <p role="alert" className="text-danger">{error}</p>}
+        {canEditWork && <UnderLink href={`/admin/works/${e.workSlug}`} className="self-start">Open {e.workNumber} in the catalog</UnderLink>}
+      </div>
+    </Drawer>
+  );
+}
+
 /** `onToggle` absent: the role reads the stock (Content), closing and reopening stay with Fulfilment. */
-function EditionRow({ e, busy, onToggle, onRaise, canEditWork }: { e: PrintEdition; busy: boolean; onToggle?: () => void; onRaise?: (size: number) => void; canEditWork: boolean }) {
+function EditionRow({ e, busy, onToggle, onRaise, canEditWork, onEdit }: { e: PrintEdition; busy: boolean; onToggle?: () => void; onRaise?: (size: number) => void; canEditWork: boolean; onEdit: () => void }) {
   const [size, setSize] = useState(String(e.editionSize + 10));
   const low = isLowStock(e);
   return (
@@ -165,11 +230,9 @@ function EditionRow({ e, busy, onToggle, onRaise, canEditWork }: { e: PrintEditi
             {e.closedByHand ? "Reopen" : "Close edition"}
           </PillButton>
         )}
-        {canEditWork && (
-          <PillLink href={`/admin/works/${e.workSlug}`}>
-            Edit<span className="sr-only"> {e.workNumber} {e.size}</span>
-          </PillLink>
-        )}
+        <PillButton onClick={onEdit} aria-haspopup="dialog">
+          {onToggle ? "Edit" : "View"}<span className="sr-only"> {e.workNumber} {e.size}</span>
+        </PillButton>
       </span>
     </AdminRow>
   );

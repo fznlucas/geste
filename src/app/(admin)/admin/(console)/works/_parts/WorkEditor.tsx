@@ -48,7 +48,6 @@ interface Form {
   allowCustom: boolean;
   palettes: WorkDraft["palettes"];
   shoppingList: WorkDraft["shoppingList"];
-  editions: Array<{ size: WorkDraft["editions"][number]["size"]; editionId: string | null; editionSize: string; price: string }>;
   status: WorkStatus;
   publishAt: string;
 }
@@ -66,7 +65,6 @@ const toForm = (w: AdminWorkDetail): Form => ({
   allowCustom: w.allowCustom,
   palettes: w.palettes.map((p) => ({ key: p.key, active: p.active })),
   shoppingList: w.shoppingList.map((i) => ({ position: i.position, url: i.url })),
-  editions: w.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: String(e.editionSize), price: money(e.priceCents) })),
   status: w.status,
   // A new schedule defaults to four days after today (AdminCatalog "Scheduled · Oct 6" on Oct 2).
   publishAt: (w.publishAt ?? addDays(simToday(), 4)).slice(0, 10),
@@ -130,7 +128,6 @@ function Editor({ work }: { work: AdminWorkDetail }) {
         allowCustom: form.allowCustom,
         palettes: form.palettes,
         shoppingList: form.shoppingList,
-        editions: form.editions.map((e) => ({ size: e.size, editionId: e.editionId, editionSize: Number(e.editionSize), priceCents: parseMoney(e.price) })),
       };
       await saveWork(work.slug, draft);
       await setWorkStatus(work.slug, form.status, form.status === "scheduled" ? `${form.publishAt}T08:00:00Z` : null);
@@ -437,7 +434,7 @@ function Formats({ work, form, edit }: TabProps) {
       <Checkbox layout="setting" gap="gap-10" className="-my-6" label={`Signature work · +${money(SIGNATURE_CENTS)} on every format`} checked={form.signature} onChange={(e) => edit({ signature: e.target.checked })} />
       <Checkbox layout="setting" gap="gap-10" className="-my-6" label="Allow “Custom” level (any level on any format, same price)" checked={form.allowCustom} onChange={(e) => edit({ allowCustom: e.target.checked })} />
       <AdminTitle>Prints</AdminTitle>
-      <PrintRows work={work} form={form} edit={edit} />
+      <PrintRows work={work} form={form} />
       <p className="text-fg-muted">Guide + print of this work in one cart: −{BUNDLE_DISCOUNT_PCT}% on both lines.</p>
     </div>
   );
@@ -513,11 +510,15 @@ function ShoppingList({ work, form, edit }: TabProps) {
   );
 }
 
-const PRINT_COLS = "160px 120px 120px 1fr";
+const PRINT_COLS = "160px 120px 90px 1fr";
 
-/** S, M, L of the work: edition size and price (Prints tab and Formats & prices, the same form fields). */
-function PrintRows({ work, form, edit }: TabProps) {
-  const set = (i: number, patch: Partial<Form["editions"][number]>) => edit({ editions: form.editions.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
+/**
+ * S, M, L of the work, read only (Prints tab and Formats & prices): an edition's price, size and paper
+ * change in Print editions › Edit, the one place for them (docs/admin-v2/04 Editions).
+ */
+function PrintRows({ work, form }: Pick<TabProps, "work" | "form">) {
+  const { staff } = useAdmin();
+  const canOpen = canOpenAdmin(staff.role, "/admin/editions");
   return (
     <div role="table" aria-label="Print editions" className="min-w-520 flex flex-col gap-14">
       <AdminHeadRow cols={PRINT_COLS}>
@@ -526,22 +527,22 @@ function PrintRows({ work, form, edit }: TabProps) {
         <span role="columnheader">Price</span>
         <span role="columnheader">Status</span>
       </AdminHeadRow>
-      {work.editions.map((e, i) => {
-        const f = form.editions[i]!;
+      {work.editions.map((e) => {
         const offered = !!e.editionId;
         // The form's orientation, so the sizes turn before saving.
         const dims = printCm(e.size, form.orientation);
         return (
           <AdminRow key={e.size} cols={PRINT_COLS}>
             <span role="cell">{e.size} · {dims}</span>
-            <span role="cell">
-              <input aria-label={`Edition ${e.size}`} inputMode="numeric" value={f.editionSize} disabled={!offered} onChange={(ev) => set(i, { editionSize: ev.target.value.replace(/\D/g, "") })} className={fieldClass(false, !offered).replace("min-h-44", "min-h-32")} />
-            </span>
-            <span role="cell">
-              <input aria-label={`Price ${e.size}`} value={f.price} disabled={!offered} onChange={(ev) => set(i, { price: ev.target.value })} className={fieldClass(offered && Number.isNaN(parseMoney(f.price)), !offered).replace("min-h-44", "min-h-32")} />
-            </span>
-            <span role="cell">
+            <span role="cell">{offered ? `${e.editionSize} copies` : "—"}</span>
+            <span role="cell" className="tabular-nums">{offered ? money(e.priceCents) : "—"}</span>
+            <span role="cell" className="flex flex-wrap items-center gap-x-12">
               {!offered ? <StatusChip state="off" label="Not offered" /> : e.open ? <StatusChip state="done" label={`On sale · ${e.sold} sold`} /> : <StatusChip state="todo" label={`Closed · ${e.sold} sold`} />}
+              {offered && canOpen && (
+                <UnderLink href={`/admin/editions?edit=${e.editionId}`}>
+                  Edit in Print editions<span className="sr-only"> · {work.number} {e.size}</span>
+                </UnderLink>
+              )}
             </span>
           </AdminRow>
         );
@@ -555,6 +556,7 @@ function Prints(props: TabProps) {
   return (
     <div className="flex flex-col gap-14 overflow-x-auto">
       <PrintRows {...props} />
+      <p className="text-fg-muted">Price, edition size and paper are edited in Print editions, the one place for them.</p>
       {canOpenAdmin(staff.role, "/admin/editions") && <Link href="/admin/editions" className="self-start underline underline-offset-3 hover:text-fg-muted">Edition stock</Link>}
     </div>
   );

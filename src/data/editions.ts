@@ -45,6 +45,10 @@ const SOLD: Record<number, Partial<Record<PrintSize, number | [sold: number, res
 const HOME_FIRST = [7, 1, 8];
 const workNumbers = [...HOME_FIRST, ...works.map((_, i) => i + 1).filter((n) => !HOME_FIRST.includes(n))];
 
+/** Papers an edition can be printed on (Editions › Edit). The first is the default. estimate — confirm with the lab */
+export const PRINT_PAPERS = ["Cotton rag 308 g · matte", "Cotton rag 310 g · baryta", "Bamboo 290 g · matte"] as const;
+export const DEFAULT_PAPER = PRINT_PAPERS[0];
+
 export const printEditions: PrintEditionRow[] = [
   // The Home's three S editions first, then every edition by work.
   ...HOME_FIRST.map((n) => edition(n, "S", SOLD[n]!.S as number)),
