@@ -229,6 +229,9 @@ export class Simulator {
       if (order) {
         sources.push(order.source!);
         devices.push(order.device!);
+      } else if (slot.giftCardId) {
+        // Nothing left to buy in that basket: the card's holder comes back tomorrow (the use is not lost).
+        this.giftUses.set(addDays(day, 1), [...(this.giftUses.get(addDays(day, 1)) ?? []), slot.giftCardId]);
       }
     });
 

@@ -355,6 +355,7 @@ function CashTab({ f }: { f: Finance }) {
             ["Next URSSAF payment", c.nextUrssaf ? `${eur(c.nextUrssaf.totalCents)} · ${c.nextUrssaf.label} · due ${day(c.nextUrssaf.dueDate)}` : "—"],
             ["Next VAT payment", c.nextVat ? `${eur(c.nextVat.amountCents)} · ${c.nextVat.label} · due ${day(c.nextVat.dueDate)}` : "—"],
             ["Gift cards still owed", eur(c.giftCardLiabilityCents)],
+            ["· sold − used − expired, since launch", `${eur(c.giftCards.soldCents)} − ${eur(c.giftCards.usedCents)} − ${eur(c.giftCards.expiredCents)}`],
           ].map(([k, v]) => (
             <AdminRow key={k} cols="1fr auto">
               <span role="rowheader">{k}</span>

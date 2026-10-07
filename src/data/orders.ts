@@ -96,7 +96,8 @@ export const orders: OrderRow[] = [
   order(2033, "2026-09-28T16:25:00Z", "jules-fabre", [{ kind: "print", edition: "ed-08-l" }], { last4: "4000" }),
   order(2032, "2026-09-27T15:40:00Z", "chloe-garnier", [{ kind: "guide", work: 3 }], { last4: "2222" }),
   order(2031, "2026-09-27T10:05:00Z", "nina-keller", [{ kind: "print", edition: "ed-01-s" }], { shipping: "international", last4: "8431" }),
-  order(2030, "2026-09-26T18:40:00Z", "paul-girard", [{ kind: "guide", work: 6 }, { kind: "guide", work: 4 }], { last4: "1117" }),
+  // Two guides and a $100 gift card for Anne, to be sent on Christmas Eve (gc-1zz7).
+  order(2030, "2026-09-26T18:40:00Z", "paul-girard", [{ kind: "guide", work: 6 }, { kind: "guide", work: 4 }, { kind: "gift_card", cents: 10000 }], { last4: "1117" }),
   order(2029, "2026-09-25T13:35:00Z", "maya-lopez", [{ kind: "print", edition: "ed-02-s" }, { kind: "guide", work: 12 }], { shipping: "international", last4: "3056" }),
   // Camille's second print: shipped, in transit on the mock's "now" (Tracking board's steps, GS-2041 stays in preparation).
   order(2028, "2026-09-25T08:30:00Z", "camille-martin", [{ kind: "print", edition: "ed-01-s" }]),

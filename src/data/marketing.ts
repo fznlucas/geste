@@ -31,7 +31,7 @@ export const promoCodes: PromoRow[] = [
   { id: "promo-noel2026", code: "NOEL2026", kind: "percent", value: 20, scope: "everything", firstOrderOnly: false, maxUses: null, startsAt: "2026-11-30T23:00:00Z", endsAt: "2026-12-24T22:59:59Z", note: "Scheduled Dec 1", label: "−20% guides and prints", createdAt: "2026-09-20T09:00:00Z" },
 ];
 
-/** `gift_cards`. The first two were bought in mock orders (GS-2039, GS-2012). */
+/** `gift_cards`. Each was bought in an order (GS-2039, GS-2012, GS-2030): a card is money received and owed until used. */
 export interface GiftCardRow {
   id: string;
   code: string;
@@ -54,7 +54,7 @@ export interface GiftCardRow {
 export const giftCards: GiftCardRow[] = [
   { id: "gc-4f2k", code: "GESTE-4F2K-91AA", initialCents: 5000, balanceCents: 5000, purchaseOrderId: "order-2039", senderName: "Léa Dubois", recipientName: "Marc", sendAt: null, sentAt: "2026-09-30T18:21:00Z", createdAt: "2026-09-30T18:20:00Z" },
   { id: "gc-8jq1", code: "GESTE-8JQ1-02BC", initialCents: 3000, balanceCents: 1100, purchaseOrderId: "order-2012", senderName: "Camille Martin", recipientName: "Léa", sendAt: null, sentAt: "2026-09-18T12:11:00Z", createdAt: "2026-09-18T12:10:00Z" },
-  { id: "gc-1zz7", code: "GESTE-1ZZ7-77XY", initialCents: 10000, balanceCents: 10000, purchaseOrderId: null, senderName: "Paul G.", recipientName: "Anne", sendAt: "2026-12-24T08:00:00Z", sentAt: null, createdAt: "2026-09-26T18:45:00Z" },
+  { id: "gc-1zz7", code: "GESTE-1ZZ7-77XY", initialCents: 10000, balanceCents: 10000, purchaseOrderId: "order-2030", senderName: "Paul G.", recipientName: "Anne", sendAt: "2026-12-24T08:00:00Z", sentAt: null, createdAt: "2026-09-26T18:40:00Z" },
 ];
 
 /** `campaigns`: the October draft and the letters already sent. */

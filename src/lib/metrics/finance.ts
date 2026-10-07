@@ -88,6 +88,8 @@ export interface Cash {
   nextPayout: Payout | null;
   nextUrssaf: UrssafDeclaration | null;
   giftCardLiabilityCents: number;
+  /** Since launch, from the liability lines: sold, used (net of refunds paid back onto cards), expired or cancelled. owed = sold − used − expired. */
+  giftCards: { soldCents: number; usedCents: number; expiredCents: number };
 }
 
 export interface Finance {
@@ -190,8 +192,19 @@ export const cash = metric("Money at now: bank balance, Stripe balance waiting a
     nextPayout: b.payouts.find((p) => p.status === "scheduled") ?? null,
     nextUrssaf: [...b.declarations].reverse().find((d) => d.status === "to_declare" || d.status === "late" || d.status === "in_progress") ?? null,
     giftCardLiabilityCents: sum(upTo, ["liability.giftcards"]),
+    giftCards: giftCardFlows(upTo),
   };
 });
+
+function giftCardFlows(lines: LedgerLine[]): Cash["giftCards"] {
+  const g = lines.filter((l) => l.account === "liability.giftcards");
+  const of = (t: (l: LedgerLine) => boolean) => g.filter(t).reduce((s, l) => s + l.amountEurCents, 0);
+  return {
+    soldCents: of((l) => l.sourceTable === "orders"),
+    usedCents: -of((l) => l.sourceTable === "gift_card_redemptions" || l.sourceTable === "gift_card_refunds"),
+    expiredCents: -of((l) => l.sourceTable === "gift_cards"),
+  };
+}
 
 /** Store turnover (the dashboard's "Revenue"): orders, refunds, gift cards used, EUR excl. VAT. */
 export const storeTurnoverEurCents = metric("Store turnover excl. VAT: guides, prints, shipping and gift cards used, minus refunds (EUR, cash basis).", function storeTurnoverEurCents(p: Period): number {

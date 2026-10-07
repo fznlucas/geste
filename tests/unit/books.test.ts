@@ -75,6 +75,13 @@ describe.each(CLOCKS)("the books at %s", (iso) => {
       else c.expired -= l.amountEurCents;
     }
     expect(per.size).toBeGreaterThan(0);
+    // A card is money received: every card was sold in an order, so none is owed without a sale.
+    for (const g of cards) expect(g.purchaseOrderId, g.id).toBeTruthy();
+    // The totals Finance shows add up: owed = sold − used − expired.
+    const { cash } = await import("@/lib/metrics/finance");
+    const c = cash();
+    expect(c.giftCardLiabilityCents).toBe(c.giftCards.soldCents - c.giftCards.usedCents - c.giftCards.expiredCents);
+    expect(c.giftCardLiabilityCents).toBeLessThanOrEqual(c.giftCards.soldCents);
     for (const [id, c] of per) {
       expect(c.owed, id).toBeLessThanOrEqual(c.sold - c.used - c.expired);
       expect(c.owed, id).toBeGreaterThanOrEqual(0);
