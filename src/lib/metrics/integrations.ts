@@ -33,14 +33,15 @@ export function simulationStatus() {
   };
 }
 
-/** How the history was brought to today in this tab (worker + cache, docs/admin-v2/01 §2), or null (Node, not yet). */
+/** How the history was brought to today in this tab (cache, worker or page, docs/admin-v2/01 §2), or null (Node, not yet). */
 function historyLine(): string | null {
   const p = simPrimeInfo();
   if (!p) return null;
   const day = (d: string) => `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
-  const where = p.where === "worker" ? "in the background" : "on the page";
   const days = `${p.daysComputed} ${p.daysComputed === 1 ? "day" : "days"}`;
-  if (p.from === "cache") return `History: from the cache up to ${day(p.cachedUpTo!)}, ${days} generated ${where} in ${p.ms} ms`;
+  const where = p.where === "worker" ? "in the background" : "on the page";
+  if (p.from === "cache" && p.daysComputed === 0) return `History: from the cache up to ${day(p.cachedUpTo!)}, nothing generated, read in ${p.ms} ms`;
+  if (p.from === "cache") return `History: from the cache up to ${day(p.cachedUpTo!)}, ${days} generated ${where}`;
   return `History: generated from launch, ${days} ${where} in ${p.ms} ms${p.cache ? ", kept for the next opening" : " (no cache in this browser)"}`;
 }
 

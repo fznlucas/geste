@@ -1,18 +1,27 @@
 /**
- * Bringing the engine to today (docs/admin-v2/01 §2), in the Web Worker or, failing that, on the page:
- * the history up to the last complete day comes from the cache when it has it; only the days after it
- * and today are generated. The last complete day (yesterday) is saved for the next opening; today is
- * not (it is generated in full, then cut at the minute, every time). No cache (private window, no
- * IndexedDB, dev server): everything is generated, nothing breaks.
+ * Bringing the engine to today (docs/admin-v2/01 §2), in the Web Worker (or on the page when there is
+ * none). The cache holds the history up to the last day generated, as bytes (`wire.ts`): the rows and
+ * the engine state. A day is generated in full and cut at the minute on the page, so a day in the cache
+ * is complete: the same day reopened generates nothing; a later day generates the missing days only.
+ * No cache (private window, no IndexedDB, dev server): everything is generated, nothing breaks.
  */
 import { LAUNCH_DATE } from "./config";
-import { Simulator, type SimSnapshot } from "./generate";
+import { Simulator } from "./generate";
+import { decodeRows, decodeState, encodeRows, encodeState } from "./wire";
 
-/** Where complete days are kept: IndexedDB in the browser, a Map in the tests. */
-export interface SnapshotStore {
-  get(key: string): Promise<SimSnapshot | null>;
-  /** Clones the snapshot when called (structured clone): the engine may run on right after. */
-  put(key: string, snapshot: SimSnapshot): Promise<void>;
+/** One cached history: up to `lastDay` (included), rows and engine state as JSON bytes. */
+export interface HistoryRecord {
+  seed: string;
+  lastDay: string;
+  rows: ArrayBuffer;
+  state: ArrayBuffer;
+}
+
+/** Where the history is kept: IndexedDB in the browser, a Map in the tests. */
+export interface HistoryStore {
+  get(key: string): Promise<HistoryRecord | null>;
+  /** Copies the record when called (the buffers can be transferred right after). */
+  put(key: string, record: HistoryRecord): Promise<void>;
 }
 
 export interface PrimeRequest {
@@ -23,30 +32,25 @@ export interface PrimeRequest {
   key: string | null;
 }
 
-export interface PrimeResult {
-  snapshot: SimSnapshot;
-  /** Where the history came from: the cache (complete days) or generated from launch. */
+export interface PrimeResult extends HistoryRecord {
+  /** Where the history came from: the cache (maybe with days added) or generated from launch. */
   from: "cache" | "cold";
-  /** Last complete day read from the cache. */
+  /** Last day read from the cache. */
   cachedUpTo: string | null;
-  /** Days generated this time (missing complete days + today). */
+  /** Days generated this time. */
   daysComputed: number;
-  /** Time spent, ms (wall, in the worker). */
+  /** Wall time in the worker, ms. */
   ms: number;
 }
 
-const days = (from: string | null, to: string) => {
-  if (to < LAUNCH_DATE) return 0;
-  const start = from && from >= LAUNCH_DATE ? Date.parse(`${from}T12:00:00Z`) + 86_400_000 : Date.parse(`${LAUNCH_DATE}T12:00:00Z`);
-  return Math.max(0, Math.round((Date.parse(`${to}T12:00:00Z`) - start) / 86_400_000) + 1);
-};
+const dayNumber = (day: string) => Math.round(Date.parse(`${day}T12:00:00Z`) / 86_400_000);
 
-const dayBefore = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+/** Usable for `today`: same seed, and not past it (a clock moved back cannot rewind the history). */
+export const usableFor = (rec: HistoryRecord | null, seed: string, today: string): rec is HistoryRecord => !!rec && rec.seed === seed && rec.lastDay <= today;
 
-export async function primeEngine(req: PrimeRequest, store: SnapshotStore | null): Promise<PrimeResult> {
+export async function primeEngine(req: PrimeRequest, store: HistoryStore | null): Promise<PrimeResult> {
   const t = performance.now();
-  const yesterday = dayBefore(req.today);
-  let cached: SimSnapshot | null = null;
+  let cached: HistoryRecord | null = null;
   if (store && req.key) {
     try {
       cached = await store.get(req.key);
@@ -54,21 +58,29 @@ export async function primeEngine(req: PrimeRequest, store: SnapshotStore | null
       cached = null; // Unreadable cache: generate.
     }
   }
-  // A cache past yesterday (the clock was moved back) cannot be rewound: generate from launch.
-  const usable = cached && cached.seed === req.seed && (!cached.lastDay || cached.lastDay <= yesterday) ? cached : null;
-  const sim = usable ? Simulator.restore(usable) : new Simulator(req.seed);
-  const cachedUpTo = usable?.lastDay ?? null;
-  if (yesterday >= LAUNCH_DATE && (!sim.lastDay || sim.lastDay < yesterday)) {
-    sim.run(yesterday);
-    // Save the complete days for the next opening (never over a later cache: going back in time keeps it).
-    if (store && req.key && (!cached?.lastDay || cached.lastDay <= yesterday)) {
-      try {
-        await store.put(req.key, sim.snapshot());
-      } catch {
-        // Full or blocked storage: the page works without the cache.
-      }
-    }
+  const usable = usableFor(cached, req.seed, req.today) ? cached : null;
+  if (usable && usable.lastDay === req.today) {
+    return { ...usable, from: "cache", cachedUpTo: usable.lastDay, daysComputed: 0, ms: performance.now() - t };
+  }
+  let sim: Simulator;
+  if (usable) {
+    const rows = decodeRows(usable.rows);
+    sim = Simulator.restore(decodeState(usable.state, rows));
+  } else {
+    sim = new Simulator(req.seed);
   }
   sim.run(req.today);
-  return { snapshot: sim.snapshot(), from: usable ? "cache" : "cold", cachedUpTo, daysComputed: days(cachedUpTo, req.today), ms: performance.now() - t };
+  const record: HistoryRecord = { seed: req.seed, lastDay: req.today, rows: encodeRows(sim.rows), state: encodeState(sim.snapshot()) };
+  // Kept for the next opening (never over a later history: going back in time keeps it).
+  if (store && req.key && (!cached || cached.lastDay <= req.today)) {
+    try {
+      await store.put(req.key, record);
+    } catch {
+      // Full or blocked storage: the page works without the cache.
+    }
+  }
+  const from = usable ? "cache" : "cold";
+  const start = usable ? usable.lastDay : null;
+  const daysComputed = req.today < LAUNCH_DATE ? 0 : dayNumber(req.today) - (start ? dayNumber(start) : dayNumber(LAUNCH_DATE) - 1);
+  return { ...record, from, cachedUpTo: start, daysComputed, ms: performance.now() - t };
 }
