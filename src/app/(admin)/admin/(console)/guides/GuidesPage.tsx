@@ -37,7 +37,7 @@ export function GuidesPage() {
   const rows = all.filter((g) => (!f.work || g.workSlug === f.work) && (!f.canvas || g.canvas === f.canvas) && (!f.level || g.level === f.level) && (!f.status || g.status === f.status));
 
   return (
-    <AdminPage title="Guides" breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} desktopHref="/admin/guides">
+    <AdminPage title="Guides" subtitle="Every guide of every work: three canvases × three levels" breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} desktopHref="/admin/guides">
       <div role="group" aria-label="Filters" className="flex flex-wrap items-end gap-10">
         <label className="flex flex-col gap-6">
           <span className="text-fg-muted">Work</span>

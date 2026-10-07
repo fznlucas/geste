@@ -10,9 +10,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AdminBox, AdminHeadRow, AdminRow, AdminTitle, Artwork, BarChart, Button, KpiTile, PillButton, StatusChip, UnderLink, useToast } from "@/components";
 import { createWork } from "@/lib/client/admin/catalog";
 import { getOrders, type Order } from "@/lib/api";
-import { dashboard, modeCounts, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
+import { DASHBOARD_DEFINITIONS, dashboard, modeCounts, todoItems, type Dashboard, type TodoItem } from "@/lib/metrics";
 import { hasRole, useAdminQuery } from "@/lib/client";
-import { parisHour } from "@/lib/clock";
+import { parisHour, simNow } from "@/lib/clock";
+import { adminDate } from "@/lib/dates";
 import { formatPrice } from "@/lib/format";
 
 /** The books' figures: EUR excl. VAT (docs/admin-v2/02); order totals stay what the customer paid (USD). */
@@ -69,7 +70,7 @@ export function DashboardPage() {
     }
   };
   return (
-    <AdminPage title={greeting(staff.fullName)} breadcrumbs={[{ label: "Overview", href: "/admin" }]} actions={hasRole(staff.role, "content") ? <Button size="sm" trailing="+" onClick={newWork} className="min-h-36 min-w-140">New work</Button> : undefined} phone={<PhoneToday />} phoneTab="today" desktopHref="/admin/">
+    <AdminPage title={greeting(staff.fullName)} subtitle={`Today, ${adminDate(simNow())} · money in EUR excl. VAT`} breadcrumbs={[{ label: "Overview", href: "/admin" }]} actions={hasRole(staff.role, "content") ? <Button size="sm" trailing="+" onClick={newWork} className="min-h-36 min-w-140">New work</Button> : undefined} phone={<PhoneToday />} phoneTab="today" desktopHref="/admin/">
       <DesktopDashboard />
     </AdminPage>
   );
@@ -101,14 +102,16 @@ function DesktopDashboard() {
   const span = `${d.period.from}..${d.period.to}`;
   const analytics = `/admin/analytics/?range=${range === 90 ? 90 : range === 7 ? 7 : 30}`;
   // Each tile opens the place its number comes from, for the same days (docs/admin-v2/04 Dashboard).
+  const orderRows = `/admin/orders/?from=${d.period.from}&to=${d.period.to}`;
+  // Units and periods on every figure; each "?" gives the definition and the rows (docs/admin-v2/06).
   const tiles = [
-    owner && { label: `Revenue · ${range} d`, value: eur(k.revenueCents), context: k.revenueDelta, href: `/admin/finance/?period=${span}` },
-    { label: `Orders · ${range} d`, value: String(k.orders), context: k.ordersDelta, href: seesOrders ? `/admin/orders/?from=${d.period.from}&to=${d.period.to}` : undefined },
-    owner && { label: "Avg. order", value: `€${(k.avgOrderCents / 100).toFixed(1)}`, context: k.avgOrderDelta, href: `${analytics}#basket` },
-    { label: "Conversion", value: `${k.conversionPct}%`, context: k.conversionDelta, href: owner ? `${analytics}#funnel` : undefined },
-    { label: "Guides finished", value: `${k.guidesFinishedPct}%`, context: "of guides started", href: owner ? `${analytics}#completion` : undefined },
-    owner && { label: `Affiliate · ${range} d`, value: eur(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/?tab=affiliate" },
-  ].filter((t): t is { label: string; value: string; context: string; href: string | undefined } => !!t);
+    owner && { label: `Revenue · ${range} d`, value: eur(k.revenueCents), context: `excl. VAT · ${k.revenueDelta}`, href: `/admin/finance/?period=${span}`, definition: DASHBOARD_DEFINITIONS.revenue, rowsHref: `/admin/finance/?period=${span}&tab=ledger` },
+    { label: `Orders · ${range} d`, value: String(k.orders), context: k.ordersDelta, href: seesOrders ? orderRows : undefined, definition: DASHBOARD_DEFINITIONS.orders, rowsHref: seesOrders ? orderRows : undefined },
+    owner && { label: "Avg. order", value: `€${Math.round(k.avgOrderCents / 100)}`, context: `excl. VAT · ${k.avgOrderDelta}`, href: `${analytics}#basket`, definition: DASHBOARD_DEFINITIONS.avgOrder, rowsHref: orderRows },
+    { label: "Conversion", value: `${k.conversionPct}%`, context: k.conversionDelta, href: owner ? `${analytics}#funnel` : undefined, definition: DASHBOARD_DEFINITIONS.conversion },
+    { label: "Guides finished", value: `${k.guidesFinishedPct}%`, context: "of guides started", href: owner ? `${analytics}#completion` : undefined, definition: DASHBOARD_DEFINITIONS.guidesFinished },
+    owner && { label: `Affiliate · ${range} d`, value: eur(k.affiliateCents), context: "shopping lists", href: "/admin/marketing/?tab=affiliate", definition: DASHBOARD_DEFINITIONS.affiliate, rowsHref: "/admin/marketing/?tab=affiliate" },
+  ].filter((t): t is { label: string; value: string; context: string; href: string | undefined; definition: string; rowsHref?: string } => !!t);
   const myTodos = todos.filter((t) => hasRole(staff.role, t.roles));
 
   return (
@@ -298,9 +301,6 @@ function PhoneToday() {
   return (
     <>
       <h1 className="text-admin-title leading-20 font-medium tracking-heading">Today · {t.label}</h1>
-      <div className="grid grid-cols-2 gap-10">
-        {tiles.map((x) => <KpiTile key={x.label} size="sm" {...x} />)}
-      </div>
       <h2 className="text-xs font-medium tracking-normal">To do</h2>
       {todos.length === 0 ? (
         <p className="text-fg-muted">Nothing waiting.</p>
@@ -316,6 +316,10 @@ function PhoneToday() {
           ))}
         </ul>
       )}
+      {/* The phone: what to do first, the figures second (docs/admin-v2/06 §10). */}
+      <div className="grid grid-cols-2 gap-10">
+        {tiles.map((x) => <KpiTile key={x.label} size="sm" {...x} />)}
+      </div>
       {seesOrders && (
         <>
           <h2 className="text-xs font-medium tracking-normal">Latest</h2>

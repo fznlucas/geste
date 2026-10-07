@@ -154,6 +154,8 @@ export interface Crumb {
 export interface AdminTopBarProps {
   breadcrumbs: Crumb[];
   title: ReactNode;
+  /** The line under the title: what the page is for and the period in view (docs/admin-v2/06 §6). */
+  subtitle?: ReactNode;
   /** Search field, "Demo data" menu, alerts button: in this order before the page actions. */
   search?: ReactNode;
   demo?: ReactNode;
@@ -162,7 +164,7 @@ export interface AdminTopBarProps {
 }
 
 /** Top bar: breadcrumb "Sales /" + 20 px title, then search · Demo data · Alerts · page actions. */
-export function AdminTopBar({ breadcrumbs, title, search, demo, alerts, actions }: AdminTopBarProps) {
+export function AdminTopBar({ breadcrumbs, title, subtitle, search, demo, alerts, actions }: AdminTopBarProps) {
   return (
     <header className="flex items-center justify-between gap-16 border-b border-border px-32 py-14">
       <div className="flex min-w-0 flex-col gap-2">
@@ -175,6 +177,7 @@ export function AdminTopBar({ breadcrumbs, title, search, demo, alerts, actions 
           ))}
         </nav>
         <h1 className="text-admin-title font-medium tracking-heading">{title}</h1>
+        {subtitle && <p className="text-fg-muted">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-10">
         {search}

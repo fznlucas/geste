@@ -62,7 +62,7 @@ export function EditionsPage() {
   };
 
   return (
-    <AdminPage title="Print editions" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment", "content"]} desktopHref="/admin/editions">
+    <AdminPage title="Print editions" subtitle={data.status === "ready" ? `${data.data.editions.filter((e) => e.open).length} editions on sale · ${data.data.editions.filter(isLowStock).length} low on stock · ${data.data.editions.filter((e) => e.soldOut).length} sold out` : undefined} breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment", "content"]} desktopHref="/admin/editions">
       {lowOnly && (
         <p role="status" className="flex gap-8">
           <span>Low stock only: 1 to 5 copies left.</span>

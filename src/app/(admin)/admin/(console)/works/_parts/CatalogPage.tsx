@@ -81,7 +81,7 @@ export function CatalogPage() {
   );
 
   return (
-    <AdminPage title="Works" breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} actions={actions} desktopHref="/admin/works">
+    <AdminPage title="Works" subtitle={q.data ? `${q.data.length} works · ${q.data.filter((w) => w.status === "live").length} live · ${q.data.filter((w) => w.missing.length).length} with something to finish` : undefined} breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} actions={actions} desktopHref="/admin/works">
       <div className={cn("flex justify-between gap-12", desktop ? "items-center" : "flex-col")}>
         <AdminTabs label="Filter works" tabs={tabs} value={tab} onChange={setTab} className="self-start" />
         {bySales && <span className="flex gap-8 text-fg-muted">Most sold first · <UnderLink href="/admin/works/">Catalog order</UnderLink></span>}

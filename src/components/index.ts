@@ -81,6 +81,7 @@ export * from "./admin/SupportParts";
 export * from "./admin/AdminUI";
 export * from "./admin/AiCandidateCard";
 export * from "./admin/AdminSearch";
+export * from "./admin/InfoTip";
 export * from "./admin/AlertsPopover";
 export * from "./admin/DemoRoleMenu";
 export * from "./admin/DataTable";

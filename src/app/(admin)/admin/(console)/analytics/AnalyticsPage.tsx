@@ -33,7 +33,7 @@ export function AnalyticsPage() {
     if (q.status === "ready" && window.location.hash) document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "start" });
   }, [q.status]);
   return (
-    <AdminPage title="Analytics" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/analytics">
+    <AdminPage title="Analytics" subtitle={`Last ${range.toLowerCase()} · store and reader · all devices`} breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/analytics">
       <div className="flex flex-wrap justify-between gap-12">
         <AdminTabs label="Range" tabs={ANALYTICS_RANGES} value={range} onChange={setRange} className="whitespace-nowrap" />
         <span className="text-fg-muted">Store + app · all devices</span>

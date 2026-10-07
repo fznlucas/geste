@@ -32,7 +32,7 @@ export function AiPipelinePage() {
   }, [running, staff.role]);
 
   return (
-    <AdminPage title="AI pipeline" breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} desktopHref="/admin/ai">
+    <AdminPage title="AI pipeline" subtitle={q.data ? `${q.data.toValidate} candidates to validate · GPU this month ${formatPrice(q.data.budget.spentCents)} of ${formatPrice(q.data.budget.budgetCents)}` : undefined} breadcrumbs={[{ label: "Catalog", href: "/admin/works" }]} roles={["content"]} desktopHref="/admin/ai">
       {q.status === "loading" ? <div aria-busy="true" className="h-600 bg-surface-muted" /> : <Pipeline data={q.data} />}
     </AdminPage>
   );

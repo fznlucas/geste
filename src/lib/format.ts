@@ -8,6 +8,11 @@ export function formatPrice(cents: number, locale: "en" | "fr" = "en", currency 
   }).format(v);
 }
 
+/** Money in admin tables: always two decimals, so the column lines up ("$80.00", "€12.40"). */
+export function formatMoney(cents: number, currency = "USD"): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+}
+
 /** "from $15" style label used on work cards. */
 export function fromPrice(cents: number, locale: "en" | "fr" = "en"): string {
   return (locale === "fr" ? "dès " : "from ") + formatPrice(cents, locale);

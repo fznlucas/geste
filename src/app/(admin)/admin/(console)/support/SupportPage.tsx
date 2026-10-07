@@ -14,22 +14,22 @@ import { useAdminQuery } from "@/lib/client";
 import { durationLabel, firstReplyMinutes } from "@/lib/metrics";
 import { deleteReply, draftWithClaude, markThreadRead, reply, saveReply, setThreadStatus, startThread, swapGuideFormat } from "@/lib/client/admin/support";
 import { cn } from "@/lib/cn";
-import { simNow } from "@/lib/clock";
+import { parisDay, simNow } from "@/lib/clock";
+import { adminDate, adminDateTime } from "@/lib/dates";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
 type Tab = "Open" | "Done";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** "09:12" today, "Yesterday", "Mon" this week, "Sept 24" before (simulated now, UTC). */
+/** "09:12" today, "Yesterday", "Mon" this week, "Sep 24" before (simulated now, Paris time). */
 function inboxWhen(iso: string): string {
-  const d = new Date(iso);
-  const day = (x: Date) => Math.floor(x.getTime() / 86_400_000);
-  const diff = day(simNow()) - day(d);
-  if (diff <= 0) return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  const day = (x: string) => Date.parse(`${x}T00:00:00Z`) / 86_400_000;
+  const diff = Math.round(day(parisDay(simNow())) - day(parisDay(iso)));
+  if (diff <= 0) return adminDateTime(iso).split(", ").at(-1)!;
   if (diff === 1) return "Yesterday";
-  if (diff < 7) return DAYS[d.getUTCDay()]!;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  if (diff < 7) return DAYS[new Date(`${parisDay(iso)}T12:00:00Z`).getUTCDay()]!;
+  return adminDate(iso);
 }
 
 /** List preview, as the board cuts it: 38 characters and an ellipsis. */
@@ -156,6 +156,7 @@ export function SupportPage() {
   return (
     <AdminPage
       title="Support inbox"
+      subtitle={threads.status === "ready" ? `${all.filter((t) => t.status === "open").length} open · ${all.filter((t) => t.overdue).length} waiting over 24 h · replies from ${storeSetting("store.support_email")}` : undefined}
       breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]}
       roles={["support"]}
       desktopHref="/admin/support"

@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, KanbanBoard, Modal, UnderLink, useToast, type KanbanColumn } from "@/components";
-import { addDays, parisDay, simToday } from "@/lib/clock";
+import { addDays, parisDay, simNow, simToday } from "@/lib/clock";
 import { adminDate } from "@/lib/dates";
 import { getPrintCopies, type FulfilmentStatus, type PrintCopy } from "@/lib/api";
 import { useAdminQuery } from "@/lib/client";
@@ -27,6 +27,10 @@ export function FulfilmentPage() {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const pickupLine = nextPickupLabel();
+  // "3 prints to pack before the 16:00 pickup · 1 late" (late: paid more than 3 days ago).
+  const waiting = (copies.data ?? []).filter((c) => c.fulfilment === "to_print" || c.fulfilment === "printed" || c.fulfilment === "packed");
+  const late = waiting.filter((c) => c.orderPaidAt && simNow().getTime() - Date.parse(c.orderPaidAt) > 3 * 86_400_000).length;
+  const subtitle = copies.status === "ready" ? `${waiting.length} ${waiting.length === 1 ? "print" : "prints"} to pack and ship${pickupLine ? ` · ${pickupLine}` : ""}${late ? ` · ${late} late` : ""}` : undefined;
   // ?col=to_print (the sidebar's count): that column in view once the cards are there.
   const col = useSearchParams().get("col");
   useEffect(() => {
@@ -54,7 +58,7 @@ export function FulfilmentPage() {
   };
 
   return (
-    <AdminPage title="Fulfilment · prints" breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment"]} desktopHref="/admin/fulfilment">
+    <AdminPage title="Fulfilment · prints" subtitle={subtitle} breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]} roles={["fulfilment"]} desktopHref="/admin/fulfilment">
       <div className="flex flex-wrap justify-between gap-x-16">
         <span className="text-fg-muted">Print lab: in-house printer{pickupLine ? ` · ${pickupLine}` : ""}</span>
         <UnderLink href="/admin/editions">Edition stock</UnderLink>

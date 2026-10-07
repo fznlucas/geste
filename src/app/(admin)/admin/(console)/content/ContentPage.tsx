@@ -46,6 +46,7 @@ export function ContentPage() {
   return (
     <AdminPage
       title="Content"
+      subtitle="Journal, home page, translations and legal pages · the store follows at the next build"
       breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]}
       roles={["content"]}
       desktopHref="/admin/content"

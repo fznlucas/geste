@@ -52,6 +52,7 @@ export function ReviewsPage() {
   return (
     <AdminPage
       title="Reviews & results"
+      subtitle={reviews.status === "ready" ? `${reviews.data.filter((r) => r.status === "pending").length} to moderate · ${reviews.data.filter((r) => r.status === "featured").length} of 4 featured on the home and work pages` : undefined}
       breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]}
       roles={["support", "content"]}
       desktopHref="/admin/reviews"

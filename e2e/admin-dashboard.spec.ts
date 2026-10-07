@@ -80,7 +80,7 @@ test("dashboard: KPIs, chart ranges, to-do counts, latest orders", async ({ page
   await fresh(page, { staff: true });
   await page.goto("/admin/");
   const k = D.last30d;
-  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(eur(k.revenueCents))}\\s*${re(k.revenueDelta)}`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(`Revenue · 30 d\\s*${re(eur(k.revenueCents))}\\s*excl\\. VAT · ${re(k.revenueDelta)}`) })).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(`Orders · 30 d\\s*${k.orders}\\b`) })).toHaveAttribute("href", /\/admin\/orders\/?\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/);
   await expect(page.getByRole("heading", { name: `Revenue per day, ${span(D.days.slice(-30))}` })).toBeVisible();
   await page.getByRole("button", { name: "7 d" }).click();

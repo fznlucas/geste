@@ -20,7 +20,8 @@ export function AdminBox({ children, className, style, as: As = "div", ...rest }
 /** 36 px header row + its 1 px Ink rule (content-box like the boards: 37 px, and a `min-h-*` class is the board's value): Stone labels [.th]. `cols` is the CSS grid template of the board. */
 export function AdminHeadRow({ cols, children, className }: { cols: string; children: ReactNode; className?: string }) {
   return (
-    <div role="row" className={cn("box-content grid min-h-36 items-center gap-x-12 border-b border-fg text-fg-muted", className)} style={{ gridTemplateColumns: cols }}>
+    // Sticky: long tables keep their column names in view (docs/admin-v2/06 §5).
+    <div role="row" className={cn("sticky top-0 z-[1] box-content grid min-h-36 items-center gap-x-12 border-b border-fg bg-surface text-fg-muted", className)} style={{ gridTemplateColumns: cols }}>
       {children}
     </div>
   );

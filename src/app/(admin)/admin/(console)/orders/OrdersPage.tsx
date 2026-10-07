@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, Modal, OrderStatusChip, PillButton, canOpenAdmin, useToast } from "@/components";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, Artwork, Button, FilterSummary, Modal, OrderStatusChip, PillButton, canOpenAdmin, useToast } from "@/components";
 import { copyNumbersLabel, getOrders, type ItemKind, type Order, type OrdersTab } from "@/lib/api";
 import { inOrderTab, orderTab, ordersThisMonth } from "@/lib/metrics";
 import { audit, hasRole, useAdminQuery } from "@/lib/client";
@@ -17,8 +17,8 @@ import { PARCELS, createLabel, markShipped, shipCopies } from "@/lib/client/admi
 import { carrierOf } from "@/lib/delivery";
 import { NEXT_STEP_LABEL, advancePrints, nextPrintStep } from "@/lib/client/admin/fulfilment";
 import { parisDay, simToday } from "@/lib/clock";
-import { adminDate } from "@/lib/dates";
-import { formatPrice } from "@/lib/format";
+import { adminDate, parisSpan } from "@/lib/dates";
+import { formatMoney } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 import { download, ordersCsv } from "./_parts/csv";
@@ -77,6 +77,7 @@ export function OrdersPage() {
   return (
     <AdminPage
       title="Orders"
+      subtitle={orders.data ? `${ordersThisMonth()} paid orders this month · ${orders.data.filter((o) => orderTab(o) === "to_ship").length} to ship · totals in USD as charged` : undefined}
       breadcrumbs={[{ label: "Sales", href: "/admin/orders" }]}
       roles={["support", "fulfilment"]}
       actions={<PillButton onClick={() => orders.data && exportAll(rows)}>{exported ? "CSV downloaded" : "Export CSV"}</PillButton>}
@@ -84,7 +85,7 @@ export function OrdersPage() {
       phoneTab="orders"
       desktopHref="/admin/orders"
     >
-      <DesktopOrders orders={orders.data} rows={rows} q={q} tab={tab} setTab={setTab} kind={kind} setKind={setKind} from={from} to={to} setDates={(f, t) => setFilter({ from: f || null, to: t || null })} onExport={exportAll} exported={exported} />
+      <DesktopOrders orders={orders.data} rows={rows} q={q} tab={tab} setTab={setTab} kind={kind} setKind={setKind} from={from} to={to} setDates={(f, t) => setFilter({ from: f || null, to: t || null })} onClear={() => setFilter({ tab: null, type: null, from: null, to: null, q: null })} onExport={exportAll} exported={exported} />
     </AdminPage>
   );
 }
@@ -100,11 +101,13 @@ interface DesktopOrdersProps {
   from: string;
   to: string;
   setDates: (from: string, to: string) => void;
+  /** "Clear filters": every filter at once (one URL change). */
+  onClear: () => void;
   onExport: (rows: Order[]) => void;
   exported: boolean;
 }
 
-function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, setDates, onExport, exported }: DesktopOrdersProps) {
+function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, setDates, onClear, onExport, exported }: DesktopOrdersProps) {
   const { staff } = useAdmin();
   const toast = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -150,6 +153,18 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
           ))}
         </div>
       </div>
+      {orders && (
+        <FilterSummary
+          count={`${rows.length} ${rows.length === 1 ? "order" : "orders"}`}
+          filters={[
+            ...(tab !== "all" ? [TABS.find((t) => t.value === tab)!.label] : []),
+            ...(kind ? [TYPES.find(([k]) => k === kind)![1]] : []),
+            ...(from || to ? [`paid ${from && to ? parisSpan(from, to, simToday().slice(0, 4)) : from ? `from ${parisSpan(from, from, simToday().slice(0, 4))}` : `until ${parisSpan(to, to, simToday().slice(0, 4))}`}`] : []),
+            ...(q ? [`“${q}”`] : []),
+          ]}
+          onClear={onClear}
+        />
+      )}
       <div role="group" aria-label="Dates of payment" className="flex flex-wrap items-center gap-8">
         <label htmlFor="ord-from" className="text-fg-muted">Paid from</label>
         <input id="ord-from" type="date" value={from} max={to || undefined} onChange={(e) => setDates(e.target.value, to)} className={DATE} />
@@ -175,7 +190,7 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
           <span role="columnheader">Date</span>
           <span role="columnheader">Customer</span>
           <span role="columnheader">Items</span>
-          <span role="columnheader">Total</span>
+          <span role="columnheader" className="text-right">Total</span>
           <span role="columnheader">Status</span>
         </AdminHeadRow>
         {!orders && Array.from({ length: 6 }, (_, i) => <div key={i} aria-hidden="true" className="h-44 bg-surface-muted" />)}
@@ -193,7 +208,7 @@ function DesktopOrders({ orders, rows, q, tab, setTab, kind, setKind, from, to, 
               {canOpenAdmin(staff.role, "/admin/customers") ? <Link href={`/admin/customers/detail/?id=${o.customer.id}`} className="hover:text-fg-muted">{o.customer.fullName}</Link> : o.customer.fullName}
             </span>
             <span role="cell" className="min-w-0 truncate text-fg-muted">{o.summary}</span>
-            <span role="cell" className="tabular-nums">{formatPrice(o.totalCents)}</span>
+            <span role="cell" className="text-right tabular-nums">{formatMoney(o.totalCents)}</span>
             <span role="cell"><OrderStatusChip status={o.displayStatus} /></span>
           </AdminRow>
         ))}

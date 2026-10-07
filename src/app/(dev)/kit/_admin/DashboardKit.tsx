@@ -1,7 +1,7 @@
 "use client";
 
 /** /kit: dashboard and phone-shell pieces in every state (M6 "dashboard"). */
-import { AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, KpiTile, StatusChip } from "@/components";
+import { AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, FilterSummary, InfoTip, KpiTile, StatusChip } from "@/components";
 
 function State({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -27,6 +27,16 @@ export function DashboardKit() {
           <KpiTile label="Revenue · 30 d" value="$5,278" context="+38% vs Aug" href="#" />
           <KpiTile label="Avg. order" value="$29.3" context="−2%" href="#" />
           <KpiTile label="Conversion" value="2.8%" context="+0.6 pt" />
+        </div>
+      </State>
+      <State label="KpiTile with its “?” (definition + See the rows) · InfoTip alone · FilterSummary with and without filters">
+        <div className="grid grid-cols-3 items-start gap-12">
+          <KpiTile label="Revenue · 30 d" value="€3,412" context="excl. VAT · +12% vs Aug 7 – Sep 5" href="#" definition="Store turnover excl. VAT: guides, prints, shipping and gift cards used, minus refunds (EUR)." rowsHref="#" />
+          <span className="flex items-center gap-8">Turnover <InfoTip label="Turnover" definition="Money received for guides, prints, shipping and gift cards used, minus refunds (cash basis)." rowsHref="#" /></span>
+          <span className="flex flex-col gap-6">
+            <FilterSummary count="42 orders" filters={["To ship", "paid Sep 6 – Oct 5"]} onClear={() => {}} />
+            <FilterSummary count="1,204 orders" filters={[]} />
+          </span>
         </div>
       </State>
       <State label="KpiTile · sm (AdminMToday)">

@@ -25,7 +25,7 @@ const TABS = ["Promo codes", "Gift cards", "Newsletter", "Affiliate", "Social ca
 export function MarketingPage() {
   const [tab, setTab] = useTabParam(TABS, "Promo codes");
   return (
-    <AdminPage title="Marketing" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/marketing">
+    <AdminPage title="Marketing" subtitle="Promo codes, gift cards, newsletter, affiliate partners and the social calendar" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/marketing">
       <div className="flex justify-between overflow-x-auto">
         <AdminTabs label="Marketing" tabs={TABS} value={tab} onChange={setTab} className="whitespace-nowrap" />
       </div>

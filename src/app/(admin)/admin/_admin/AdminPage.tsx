@@ -23,6 +23,8 @@ import { useAdmin } from "./AdminFrame";
 
 export interface AdminPageProps {
   title: ReactNode;
+  /** The line under the title: what the page is for and the period in view (docs/admin-v2/06 §6). */
+  subtitle?: ReactNode;
   breadcrumbs: Crumb[];
   /** Page actions at the right of the top bar ("New work  +", "Export CSV"). */
   actions?: ReactNode;
@@ -40,7 +42,7 @@ export interface AdminPageProps {
   mainClassName?: string;
 }
 
-export function AdminPage({ title, breadcrumbs, actions, roles, children, phone, phoneTab = null, desktopHref = "/admin", mainClassName }: AdminPageProps) {
+export function AdminPage({ title, subtitle, breadcrumbs, actions, roles, children, phone, phoneTab = null, desktopHref = "/admin", mainClassName }: AdminPageProps) {
   const { staff, desktop } = useAdmin();
   const pathname = usePathname();
   const allowed = !roles || hasRole(staff.role, roles);
@@ -67,6 +69,7 @@ export function AdminPage({ title, breadcrumbs, actions, roles, children, phone,
         // A crumb is a link only to another page the role can open.
         breadcrumbs={breadcrumbs.map((b) => (b.href && (!canOpenAdmin(staff.role, b.href) || samePage(b.href, pathname)) ? { label: b.label } : b))}
         title={title}
+        subtitle={allowed ? subtitle : undefined}
         search={<TopSearch />}
         demo={<DemoMenu />}
         alerts={<Alerts />}

@@ -41,9 +41,13 @@ export function AlertsPopover({ alerts, onOpen, onMarkAll }: { alerts: AlertItem
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
+    // The panel lies over the page: what it covers cannot be used meanwhile (a click outside closes it).
+    const main = document.querySelector("main");
+    main?.setAttribute("inert", "");
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
+      main?.removeAttribute("inert");
     };
   }, [open]);
 

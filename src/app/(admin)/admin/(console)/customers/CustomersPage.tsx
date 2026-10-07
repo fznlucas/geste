@@ -6,11 +6,12 @@
  */
 import Link from "next/link";
 import { useState } from "react";
-import { AdminHeadRow, AdminRow, AdminTabs, PillButton, useToast } from "@/components";
+import { AdminHeadRow, AdminRow, AdminTabs, FilterSummary, PillButton, useToast } from "@/components";
 import { getCustomers, type CustomerSegment, type CustomerSummary } from "@/lib/api";
 import { audit, requireStaff, useAdminQuery } from "@/lib/client";
 import { downloadFile, toCsv } from "@/lib/client/admin/download";
 import { adminDate } from "@/lib/dates";
+import { formatMoney } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
 
 const COLS = "1.2fr 1.6fr 80px 90px 90px 90px 60px";
@@ -21,7 +22,7 @@ const SEGMENTS: Array<{ value: CustomerSegment; label: string }> = [
   { value: "abroad", label: "Abroad" },
 ];
 
-const dollars = (cents: number) => `$${Math.round(cents / 100)}`;
+const dollars = (cents: number) => formatMoney(cents);
 
 export function CustomersPage() {
   const [segment, setSegment] = useState<CustomerSegment>("all");
@@ -43,6 +44,7 @@ export function CustomersPage() {
   return (
     <AdminPage
       title="Customers"
+      subtitle="Orders and spent net of refunds, pending and cancelled orders left out"
       breadcrumbs={[{ label: "Customers", href: "/admin/customers" }]}
       roles={["support"]}
       desktopHref="/admin/customers"
@@ -50,12 +52,14 @@ export function CustomersPage() {
     >
       <div className="flex flex-wrap items-start justify-between gap-16">
         <AdminTabs label="Segment" tabs={SEGMENTS} value={segment} onChange={setSegment} />
-        <span className="text-fg-muted" role="status">{list.status === "ready" ? `${list.data.length} customers` : ""}</span>
+        {list.status === "ready" && (
+          <FilterSummary count={`${list.data.length} customers`} filters={segment === "all" ? [] : [SEGMENTS.find((s) => s.value === segment)!.label]} onClear={() => setSegment("all")} />
+        )}
       </div>
       <div className="relative overflow-x-auto">
         <div role="table" aria-label="Customers" aria-busy={list.status === "loading"} className="flex min-w-880 flex-col gap-14 border border-border bg-surface px-20">
           <AdminHeadRow cols={COLS}>
-            {["Name", "Email", "Orders", "Spent", "Last order", "Newsletter", "Country"].map((h) => <span key={h} role="columnheader">{h}</span>)}
+            {["Name", "Email", "Orders", "Spent", "Last order", "Newsletter", "Country"].map((h) => <span key={h} role="columnheader" className={h === "Spent" || h === "Orders" ? "text-right" : undefined}>{h}</span>)}
           </AdminHeadRow>
           {list.status === "loading"
             ? Array.from({ length: 8 }, (_, i) => <div key={i} role="row" aria-hidden="true" className="box-content min-h-44 border-b border-border" />)
@@ -73,12 +77,12 @@ function CustomerRow({ c }: { c: CustomerSummary }) {
   return (
     <AdminRow cols={COLS} className="relative hover:bg-surface-hover has-[a:focus-visible]:outline has-[a:focus-visible]:outline-1 has-[a:focus-visible]:outline-fg">
       <span role="cell">
-        <Link href={`/admin/customers/detail/?id=${c.id}`} className="outline-none after:absolute after:inset-0">{c.fullName}</Link>
+        <Link href={`/admin/customers/detail/?id=${c.id}`} aria-label={`${c.fullName}, open the customer`} className="outline-none after:absolute after:inset-0">{c.fullName}</Link>
         {c.deletionScheduledAt && <span className="text-fg-muted"> · deletion scheduled</span>}
       </span>
       <span role="cell" className="truncate text-fg-muted">{c.email}</span>
-      <span role="cell">{c.ordersCount}</span>
-      <span role="cell">{dollars(c.spentCents)}</span>
+      <span role="cell" className="text-right tabular-nums">{c.ordersCount}</span>
+      <span role="cell" className="text-right tabular-nums">{dollars(c.spentCents)}</span>
       <span role="cell">{c.lastOrderAt ? adminDate(c.lastOrderAt) : "—"}</span>
       <span role="cell">{c.newsletter ? "Yes" : "No"}</span>
       <span role="cell">{c.country}</span>

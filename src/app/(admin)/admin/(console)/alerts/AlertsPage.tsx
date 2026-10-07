@@ -17,7 +17,7 @@ import { useAdmin } from "../../_admin/AdminFrame";
 
 export function AlertsPage() {
   return (
-    <AdminPage title="Alerts" breadcrumbs={[{ label: "Overview", href: "/admin" }]} phone={<PhoneAlerts />} phoneTab="alerts" desktopHref="/admin/alerts/">
+    <AdminPage title="Alerts" subtitle="What needs you, from the orders, prints, messages, reviews and the books" breadcrumbs={[{ label: "Overview", href: "/admin" }]} phone={<PhoneAlerts />} phoneTab="alerts" desktopHref="/admin/alerts/">
       <DesktopAlerts />
     </AdminPage>
   );

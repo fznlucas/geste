@@ -19,6 +19,7 @@ import {
 import { signOutStaff, useAdminQuery, useAudit } from "@/lib/client";
 import { downloadFile, toCsv } from "@/lib/client/admin/download";
 import { simToday } from "@/lib/clock";
+import { adminDateTime } from "@/lib/dates";
 import { changeStaffRole, inviteStaff, removeStaff, saveSetting, signOutEverywhere } from "@/lib/client/admin/settings";
 import type { StaffRole } from "@/lib/types";
 import { AdminPage } from "../../_admin/AdminPage";
@@ -33,7 +34,7 @@ export function SettingsPage() {
   const asked = useSearchParams().get("tab");
   const [tab, setTab] = useState<Tab>(TABS.find((t) => t === asked) ?? "Store");
   return (
-    <AdminPage title="Settings & team" breadcrumbs={[{ label: "Studio", href: "/admin/settings" }]} roles={["owner"]} desktopHref="/admin/settings">
+    <AdminPage title="Settings & team" subtitle="Store, shipping, payments & tax, team, security, integrations and the simulation" breadcrumbs={[{ label: "Studio", href: "/admin/settings" }]} roles={["owner"]} desktopHref="/admin/settings">
       <AdminBox>
         <div className="overflow-x-auto">
           <AdminTabs label="Settings" tabs={TABS} value={tab} onChange={setTab} className="whitespace-nowrap" />
@@ -224,12 +225,8 @@ function Team() {
 
 // ── Security ─────────────────────────────────────────────────────────────────
 
-/** "Oct 2 10:31" (UTC, three-letter month as on the admin boards). */
-const auditTime = (iso: string) => {
-  const d = new Date(iso);
-  const hh = String(d.getUTCHours()).padStart(2, "0"), mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })} ${d.getUTCDate()} ${hh}:${mm}`;
-};
+/** "Oct 2, 12:31" (Paris time, as everywhere in the admin). */
+const auditTime = (iso: string) => adminDateTime(iso);
 
 function Security() {
   const q = useAdminQuery(async () => ({ settings: await getSecuritySettings(), past: await getPastAudit() }), []);

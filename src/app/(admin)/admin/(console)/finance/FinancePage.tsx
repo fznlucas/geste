@@ -8,8 +8,9 @@
  */
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, Input, KpiTile, PillButton, Select, StatusChip, useToast } from "@/components";
-import { finance, financeCsv, financeFec, financePeriodOptions, financePeriodSlug, ledgerLines, type Finance, type LedgerAccount, type UrssafDeclaration } from "@/lib/metrics";
+import { AdminBox, AdminHeadRow, AdminRow, AdminTabs, AdminTitle, InfoTip, Input, KpiTile, PillButton, Select, StatusChip, useToast } from "@/components";
+import { cn } from "@/lib/cn";
+import { FINANCE_DEFINITIONS, finance, financeCsv, financeFec, financePeriodOptions, financePeriodSlug, ledgerLines, type Finance, type LedgerAccount, type UrssafDeclaration } from "@/lib/metrics";
 import { useAdminQuery } from "@/lib/client";
 import { exportBooks, markUrssafDeclared, markUrssafPaid, markVatDeclared, markVatPaid } from "@/lib/client/admin/finance";
 import { formatPrice } from "@/lib/format";
@@ -55,7 +56,7 @@ export function FinancePage() {
   const period = params.get("period");
   const q = useAdminQuery(() => finance(period), [period]);
   return (
-    <AdminPage title="Finance" breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/finance">
+    <AdminPage title="Finance" subtitle={q.status === "ready" ? `${q.data.month} · EUR excl. VAT, cash basis · micro-entreprise` : undefined} breadcrumbs={[{ label: "Growth", href: "/admin/analytics" }]} roles={["owner"]} desktopHref="/admin/finance">
       {q.status === "loading" ? <div aria-busy="true" aria-label="Loading" className="h-640 bg-surface-muted" /> : <Body f={q.data} />}
     </AdminPage>
   );
@@ -89,10 +90,10 @@ function Body({ f }: { f: Finance }) {
     <>
       <PeriodPicker f={f} onChange={(value) => go({ period: value })} />
       <div className="grid grid-cols-2 gap-12 md:grid-cols-5">
-        <KpiTile label={`Revenue · ${mon}`} value={eur(f.revenueCents)} context="turnover, excl. VAT" href="?tab=pnl#pnl" />
-        <KpiTile label="Gross margin" value={eur(f.grossMarginCents)} context={`${f.grossMarginPct}%`} href="?tab=pnl#pnl" />
-        <KpiTile label={`Costs · ${mon}`} value={eur(f.costsCents)} context="overheads, see below" href="?tab=pnl#pnl" />
-        <KpiTile label="Net result" value={eur(f.netCents)} context="before URSSAF & income tax" href="?tab=pnl#pnl" />
+        <KpiTile label={`Revenue · ${mon}`} value={eur(f.revenueCents)} context="turnover, excl. VAT" href="?tab=pnl#pnl" definition={FINANCE_DEFINITIONS.revenue} rowsHref="?tab=ledger" />
+        <KpiTile label="Gross margin" value={eur(f.grossMarginCents)} context={`${f.grossMarginPct}% of turnover`} href="?tab=pnl#pnl" definition={FINANCE_DEFINITIONS.grossMargin} rowsHref="?tab=ledger" />
+        <KpiTile label={`Costs · ${mon}`} value={eur(f.costsCents)} context="overheads, see below" href="?tab=pnl#pnl" definition="Overheads of the period: GPU, software, ads, studio materials, bank." rowsHref="?tab=ledger" />
+        <KpiTile label="Net result" value={eur(f.netCents)} context="before URSSAF & income tax" href="?tab=pnl#pnl" definition={FINANCE_DEFINITIONS.net} rowsHref="?tab=ledger" />
         {f.nextPayout && <KpiTile label="Next payout" value={eur(f.nextPayout.cents)} context={`Stripe · ${day(f.nextPayout.date)}`} href="?tab=cash" />}
       </div>
       <AdminTabs tabs={TABS} value={tab} onChange={(t) => go({ tab: t, accounts: null })} label="Finance views" />
@@ -143,6 +144,14 @@ function PeriodPicker({ f, onChange }: { f: Finance; onChange: (value: string) =
   );
 }
 
+/** The definitions behind the P&L totals (`FINANCE_DEFINITIONS`). */
+const PNL_DEFINITION: Record<string, string> = {
+  turnover: FINANCE_DEFINITIONS.revenue,
+  gross_margin: FINANCE_DEFINITIONS.grossMargin,
+  operating: FINANCE_DEFINITIONS.net,
+  after_contributions: `${FINANCE_DEFINITIONS.net.replace(/\.$/, "")}, minus ${FINANCE_DEFINITIONS.contributions.charAt(0).toLowerCase()}${FINANCE_DEFINITIONS.contributions.slice(1)}`,
+};
+
 function PnlTab({ f, onRow, onCsv, onFec, exported }: { f: Finance; onRow: (accounts: LedgerAccount[]) => void; onCsv: () => void; onFec: () => void; exported: string | null }) {
   return (
     <div className="grid grid-cols-1 items-start gap-16 md:grid-cols-12">
@@ -163,7 +172,11 @@ function PnlTab({ f, onRow, onCsv, onFec, exported }: { f: Finance; onRow: (acco
           {f.pnl.map((r) => {
             const cells = (
               <>
-                <span role="rowheader" className={r.total ? "font-medium" : r.memo ? "text-fg-muted" : undefined}>{r.label}</span>
+                <span role="rowheader" className={cn("flex items-center gap-8", r.total ? "font-medium" : r.memo ? "text-fg-muted" : undefined)}>
+                  {r.label}
+                  {/* The totals say what they are; their rows are the lines above them. */}
+                  {r.total && PNL_DEFINITION[r.key] && <InfoTip label={r.label} definition={PNL_DEFINITION[r.key]!} rowsHref={`/admin/finance/?tab=ledger${f.period ? `&period=${f.period.from}..${f.period.to}` : ""}`} />}
+                </span>
                 <span role="cell" className={r.memo ? "text-right text-fg-muted" : "text-right"}>{eur(r.cents, r.cost)}</span>
                 <span role="cell" className="text-right text-fg-muted">{r.sharePct === null ? "" : `${r.sharePct}%`}</span>
               </>
