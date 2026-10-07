@@ -18,8 +18,10 @@ import { formatPrice } from "@/lib/format";
 import { AdminPage } from "../../_admin/AdminPage";
 import { useAdmin } from "../../_admin/AdminFrame";
 
-const COLS = "56px 80px 120px 1fr 90px 90px 90px 200px";
+const COLS = "56px 80px 120px 1fr 90px 90px 90px 220px";
 const LOG_COLS = "120px 1fr 90px";
+/** The log shows the latest ten; a search reads all of it. */
+const LOG_PAGE = 10;
 
 /** Grouped by work, in the order the works first appear (N°07's S, M, L, then N°01's…), as on the board. */
 function byWork(list: PrintEdition[]): PrintEdition[] {
@@ -33,6 +35,7 @@ export function EditionsPage() {
   const { staff } = useAdmin();
   const canClose = hasRole(staff.role, "fulfilment");
   const [cert, setCert] = useState("");
+  const [allLog, setAllLog] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   // ?low=1 (the sidebar's count): only the editions with 1 to 5 copies left.
   const lowOnly = useSearchParams().get("low") === "1";
@@ -98,11 +101,25 @@ export function EditionsPage() {
           </label>
         </div>
         {data.status === "ready" && data.data.log.length === 0 && <p className="text-fg-muted">No certificate signed yet.</p>}
-        {data.status === "ready" && (
-          <ul aria-label="Certificates" className="flex flex-col gap-14">
-            {data.data.log.filter((c) => !cert.trim() || c.certificateNo?.toLowerCase().includes(cert.trim().toLowerCase())).map((c) => <LogRow key={c.id} c={c} linkOrder={canOpenAdmin(staff.role, "/admin/orders")} />)}
-          </ul>
-        )}
+        {data.status === "ready" && (() => {
+          const found = data.data.log.filter((c) => !cert.trim() || c.certificateNo?.toLowerCase().includes(cert.trim().toLowerCase()));
+          const shown = allLog || cert.trim() ? found : found.slice(0, LOG_PAGE);
+          return (
+            <>
+              <ul aria-label="Certificates" className="flex flex-col gap-14">
+                {shown.map((c) => <LogRow key={c.id} c={c} linkOrder={canOpenAdmin(staff.role, "/admin/orders")} />)}
+              </ul>
+              {shown.length < found.length && (
+                <p className="flex gap-8 text-fg-muted">
+                  <span>{shown.length} certificates shown</span>
+                  <button type="button" onClick={() => setAllLog(true)} className="cursor-pointer text-fg underline underline-offset-3 hover:text-fg-muted">
+                    Show {found.length - shown.length} more
+                  </button>
+                </p>
+              )}
+            </>
+          );
+        })()}
       </AdminBox>
     </AdminPage>
   );

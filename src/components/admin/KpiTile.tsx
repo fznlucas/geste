@@ -21,7 +21,8 @@ export function KpiTile({ label, value, context, href, size = "md", definition, 
   const cls = cn("flex flex-col border border-border bg-surface", size === "md" ? "gap-6 p-20" : "gap-2 p-14", href && "hover:border-border-field focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-fg");
   const body = (
     <>
-      <span className="text-fg-muted">{label}</span>
+      {/* Room for the "?" in the corner: a long label wraps before it instead of running under it. */}
+      <span className={cn("text-fg-muted", definition && (size === "md" ? "pr-20" : "pr-24"))}>{label}</span>
       <span className={cn("tabular-nums", size === "md" ? "text-lg tracking-heading" : "text-stat")}>{value}</span>
       <span className="text-fg-muted">{context}</span>
     </>

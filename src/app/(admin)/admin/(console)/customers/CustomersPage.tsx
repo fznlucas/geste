@@ -23,10 +23,13 @@ const SEGMENTS: Array<{ value: CustomerSegment; label: string }> = [
 ];
 
 const dollars = (cents: number) => formatMoney(cents);
+/** Rows before "Show N more", as on Orders. */
+const PAGE = 25;
 
 export function CustomersPage() {
   const [segment, setSegment] = useState<CustomerSegment>("all");
   const list = useAdminQuery(() => getCustomers({ segment }), [segment]);
+  const [all, setAll] = useState(false);
   const toast = useToast();
 
   const exportCsv = () => {
@@ -65,9 +68,17 @@ export function CustomersPage() {
             ? Array.from({ length: 8 }, (_, i) => <div key={i} role="row" aria-hidden="true" className="box-content min-h-44 border-b border-border" />)
             : list.data.length === 0
               ? <div role="row"><p role="cell" className="py-40 text-center text-fg-muted">No customer in this segment yet.</p></div>
-              : list.data.map((c) => <CustomerRow key={c.id} c={c} />)}
+              : (all ? list.data : list.data.slice(0, PAGE)).map((c) => <CustomerRow key={c.id} c={c} />)}
         </div>
       </div>
+      {list.status === "ready" && !all && list.data.length > PAGE && (
+        <p className="flex gap-8 text-fg-muted">
+          <span>{PAGE} customers shown</span>
+          <button type="button" onClick={() => setAll(true)} className="cursor-pointer text-fg underline underline-offset-3 hover:text-fg-muted">
+            Show {list.data.length - PAGE} more
+          </button>
+        </p>
+      )}
     </AdminPage>
   );
 }

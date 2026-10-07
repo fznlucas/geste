@@ -46,7 +46,9 @@ export async function getCustomers(query: { segment?: CustomerSegment; search?: 
           default: return true;
         }
       })
-      .filter((c) => !search || c.fullName.toLowerCase().includes(search) || c.email.toLowerCase().includes(search)),
+      .filter((c) => !search || c.fullName.toLowerCase().includes(search) || c.email.toLowerCase().includes(search))
+      // Latest buyers first (the list is paged); never-ordered accounts last.
+      .sort((a, b) => (b.lastOrderAt ?? "").localeCompare(a.lastOrderAt ?? "")),
   );
 }
 
