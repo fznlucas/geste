@@ -206,22 +206,30 @@ describe("calibration on the boards", () => {
 });
 
 describe("performance", () => {
-  it("cold today < 400 ms, warm reopen < 150 ms; two years reported", () => {
+  // CPU time (process.cpuUsage), not the wall clock: the work done, whatever else the machine is doing.
+  const cpu = () => {
+    const start = process.cpuUsage();
+    return () => {
+      const u = process.cpuUsage(start);
+      return (u.user + u.system) / 1000;
+    };
+  };
+  it("cold today < 400 ms, warm reopen < 150 ms (CPU); two years reported", () => {
     const today = parisDay(Date.now());
-    let t = performance.now();
+    let stop = cpu();
     const sim = simAt(new Date().toISOString());
     materialize(sim.rows, Date.now(), handsOff);
-    const cold = performance.now() - t;
-    t = performance.now();
+    const cold = stop();
+    stop = cpu();
     sim.run(today); // nothing left to generate
     materialize(sim.rows, Date.now() + 60_000, handsOff);
-    const warm = performance.now() - t;
-    t = performance.now();
+    const warm = stop();
+    stop = cpu();
     const two = new Simulator(SIM_SEED);
     two.run(addDays("2026-07-01", 730));
     materialize(two.rows, Date.parse(`${addDays("2026-07-01", 730)}T12:00:00Z`), handsOff);
-    const projection = performance.now() - t;
-    console.info(`Sim performance (Node): cold ${cold.toFixed(0)} ms, warm ${warm.toFixed(0)} ms, 730 days cold ${projection.toFixed(0)} ms (${two.rows.orders.length} orders)`);
+    const projection = stop();
+    console.info(`Sim performance (Node, CPU): cold ${cold.toFixed(0)} ms, warm ${warm.toFixed(0)} ms, 730 days cold ${projection.toFixed(0)} ms (${two.rows.orders.length} orders)`);
     expect(cold).toBeLessThan(400);
     expect(warm).toBeLessThan(150);
   });

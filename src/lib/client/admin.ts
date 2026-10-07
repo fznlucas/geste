@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { setAdminOverlaySource, type AdminOverlay } from "@/lib/api";
+import { setAdminOverlaySource, whenSimReady, type AdminOverlay } from "@/lib/api";
 import { simNow } from "@/lib/clock";
 import type { StaffRole } from "@/lib/types";
 import { usePurchases } from "./purchases";
+import { useSimVersion } from "./sim";
 import { sessionStore } from "./session";
 import { createPersistentStore, isRecord, newId, useStore } from "./store";
 
@@ -151,14 +152,18 @@ export type AdminQuery<T> = { status: "loading"; data: undefined } | { status: "
 export function useAdminQuery<T>(load: () => Promise<T>, deps: readonly unknown[]): AdminQuery<T> {
   const overlay = useStore(adminStore);
   const purchases = usePurchases();
+  // The simulated history comes from a worker: read once it is there, again when it changes.
+  const sim = useSimVersion();
   const [state, setState] = useState<AdminQuery<T>>({ status: "loading", data: undefined });
   useEffect(() => {
     let live = true;
-    load().then((data) => live && setState({ status: "ready", data }));
+    whenSimReady()
+      .then(load)
+      .then((data) => live && setState({ status: "ready", data }));
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlay, purchases, ...deps]);
+  }, [overlay, purchases, sim, ...deps]);
   return state;
 }

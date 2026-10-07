@@ -12,7 +12,7 @@ import { Artwork, ButtonLink, CheckoutStepper, Tooltip, type CheckoutStep } from
 import { cn } from "@/lib/cn";
 import type { Orientation } from "@/lib/pricing";
 import { copyNumbersLabel as numbersLabel, getOrder, orderLineTitle as receiptTitle, type OrderDetail, type OrderItem } from "@/lib/api";
-import { useHydrated, usePurchases } from "@/lib/client";
+import { useHydrated, usePurchases, whenSimReady } from "@/lib/client";
 import { formatPrice } from "@/lib/format";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { deliveryName, deliveryWindow } from "@/lib/delivery";
@@ -34,7 +34,7 @@ export function SuccessPage() {
     let live = true;
     // Only orders placed in this browser: the mock tables' orders are not "just paid".
     const local = purchases.orders.some((o) => o.number === number);
-    const found = local ? getOrder(number) : Promise.resolve(null);
+    const found = local ? whenSimReady().then(() => getOrder(number)) : Promise.resolve(null);
     void found.then((order) => live && setLoad(order ? { status: "ready", order } : { status: "missing" }));
     return () => {
       live = false;

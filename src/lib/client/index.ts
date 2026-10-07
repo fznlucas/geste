@@ -12,3 +12,4 @@ export * from "./cookies";
 export * from "./support";
 export * from "./pwa";
 export * from "./currency";
+export * from "./sim";

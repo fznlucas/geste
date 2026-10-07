@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DEMO_CUSTOMER_ID, DEMO_STAFF_ID, findCustomerByEmail, getCustomer, getStaffMember, sessionExpired } from "@/lib/api";
+import { DEMO_CUSTOMER_ID, DEMO_STAFF_ID, findCustomerByEmail, getCustomer, getStaffMember, sessionExpired, whenSimReady } from "@/lib/api";
 import { clockSource } from "@/lib/clock";
 import type { StaffRole } from "@/lib/types";
 import { createPersistentStore, isRecord, useHydrated, useStore } from "./store";
@@ -77,7 +77,13 @@ export const isSixDigitCode = (code: string) => /^\d{6}$/.test(code);
 export async function signIn(input: { method: SignInMethod; email?: string }): Promise<CustomerSession> {
   const email = input.email?.trim();
   if (input.method !== "passkey" && !email) throw new Error("Enter your email.");
-  const known = email ? await findCustomerByEmail(email) : null;
+  // A simulated customer is known once the history has arrived from the worker (docs/admin-v2/01 §2):
+  // wait for it only when the email is not one of the fixtures' (the passkey is the demo customer).
+  let known = email ? await findCustomerByEmail(email) : null;
+  if (email && !known) {
+    await whenSimReady();
+    known = await findCustomerByEmail(email);
+  }
   const customer = known ?? (await getCustomer(DEMO_CUSTOMER_ID))!;
   const session: CustomerSession = {
     userId: customer.id,

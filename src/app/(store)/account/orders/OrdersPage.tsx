@@ -12,6 +12,7 @@ import { longDate } from "@/lib/dates";
 import { deliveryName } from "@/lib/delivery";
 import { formatPrice } from "@/lib/format";
 import { AccountFrame } from "../_parts/AccountFrame";
+import { whenSimReady } from "@/lib/client";
 
 export function OrdersPage() {
   return (
@@ -28,7 +29,7 @@ function Orders({ phone, customerId }: { phone: boolean; customerId: string }) {
 
   useEffect(() => {
     let live = true;
-    void getOrders({ customerId }).then((o) => live && setOrders(o));
+    void whenSimReady().then(() => getOrders({ customerId })).then((o) => live && setOrders(o));
     return () => {
       live = false;
     };

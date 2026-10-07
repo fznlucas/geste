@@ -33,7 +33,7 @@ import type {
 import { works } from "@/data/works";
 import { FEATURED_MAX, HANDS_OFF_HOURS, ORDER_NUMBER_START, SIM_SEED } from "@/sim/config";
 import { fixtureDevice, fixtureSource } from "@/sim/fixtures";
-import { preLaunchCounts, setSimSettings, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
+import { preLaunchCounts, setSimSettings, simCut, simRows, simSettings, type MaterializedRows, type SimAuditLine } from "@/sim";
 import { frozenSimOrder } from "@/sim/freeze";
 import { fixturePlans, materializeFixtures, type MaterializedFixtures } from "@/sim/fixturePlans";
 
@@ -459,7 +459,9 @@ const takeovers = memo(() => {
 const fixturesNow = memo((): MaterializedFixtures => {
   const s = sim();
   const settings = simSettings();
-  if (!settings.enabled || !s.now) return materializeFixtures(fixturePlans(settings.seed), Number.NEGATIVE_INFINITY, 0, new Map());
+  // No simulated rows (the worker has not answered yet, or the simulation is off): the fixtures follow
+  // their own plans at the current minute all the same (minus-infinity made no valid date).
+  if (!settings.enabled || !s.now) return materializeFixtures(fixturePlans(settings.seed), simCut(), settings.handsOffHours * 3_600_000, takeovers());
   return materializeFixtures(fixturePlans(settings.seed), s.now, s.handsOffMs, takeovers());
 });
 
@@ -472,3 +474,6 @@ const frozenSim = memo(() => {
   if (!touched.size) return s;
   return frozenSimOrder(s, touched);
 });
+
+/** The simulated history's readiness in the browser (worker + cache, docs/admin-v2/01 §2), for the hooks of `@/lib/client`. */
+export { simPending, simPrimeInfo, simVersion, subscribeSim, whenSimReady, type SimPrimeInfo } from "@/sim";

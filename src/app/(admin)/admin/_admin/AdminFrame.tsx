@@ -7,9 +7,9 @@
  */
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { AdminSidebar, ToastProvider, activeNavHref } from "@/components";
+import { AdminMistPage, AdminSidebar, ToastProvider, activeNavHref } from "@/components";
 import { todoCounts, type AdminCounts } from "@/lib/metrics";
-import { signOutStaff, useAdminQuery, useRequireStaff, type StaffSession } from "@/lib/client";
+import { signOutStaff, useAdminQuery, useRequireStaff, useSimReady, type StaffSession } from "@/lib/client";
 import { advanceJobs } from "@/lib/client/admin/ai";
 import { AlertNotifier } from "./AlertNotifier";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -32,6 +32,9 @@ export function useAdmin(): AdminContext {
 export function AdminFrame({ children }: { children: ReactNode }) {
   const state = useRequireStaff();
   const counts = useAdminQuery(todoCounts, []);
+  // The simulated history comes from a worker (docs/admin-v2/01 §2): Mist blocks until it is there, so no
+  // page computes on an empty history.
+  const simReady = useSimReady();
   const desktop = useMediaQuery("(min-width: 768px)");
   const path = usePathname();
   const router = useRouter();
@@ -57,11 +60,11 @@ export function AdminFrame({ children }: { children: ReactNode }) {
         {desktop ? (
           <div className="flex min-h-dvh bg-bg">
             <AdminSidebar role={staff.role} userName={staff.fullName} activeHref={activeNavHref(path)} counts={counts.data ?? {}} onLogOut={logOut} twoFactor={staff.aal2} />
-            <div className="relative flex min-w-0 flex-1 flex-col">{children}</div>
+            <div className="relative flex min-w-0 flex-1 flex-col">{simReady ? children : <AdminMistPage />}</div>
           </div>
         ) : (
           // Phone: header, scrolling main, tab bar in the flow (a sticky bar would cover the last targets of the page).
-          <div className="flex h-dvh flex-col bg-bg">{children}</div>
+          <div className="flex h-dvh flex-col bg-bg">{simReady ? children : <AdminMistPage phone />}</div>
         )}
       </ToastProvider>
     </Ctx.Provider>

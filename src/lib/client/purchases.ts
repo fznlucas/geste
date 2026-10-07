@@ -1,6 +1,6 @@
 "use client";
 
-import { DEMO_CUSTOMER_ID, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput } from "@/lib/api";
+import { DEMO_CUSTOMER_ID, buildOrder, findCustomerByEmail, setLocalRowsSource, type LocalRows, type PlaceOrderInput, whenSimReady } from "@/lib/api";
 import { simNow } from "@/lib/clock";
 import { clearCart } from "./cart";
 import { signIn } from "./session";
@@ -49,6 +49,8 @@ export interface PlaceOrderRequest extends Omit<PlaceOrderInput, "customerId" | 
  * Resolves with the order number for /checkout/success?order=.
  */
 export async function placeOrder(req: PlaceOrderRequest): Promise<string> {
+  // Numbers, stock and customers include the simulated history: wait for it (docs/admin-v2/01 §2).
+  await whenSimReady();
   const { firstName, ...input } = req;
   // The account the webhook finds or creates from the email (same rule as the fake sign-in).
   const customerId = (await findCustomerByEmail(input.email))?.id ?? DEMO_CUSTOMER_ID;

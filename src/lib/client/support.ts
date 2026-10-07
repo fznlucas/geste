@@ -6,7 +6,7 @@
  * nothing is sent; the thread is added to this browser's admin overlay, so it shows in
  * /admin/support here, and the page shows the board's "Message sent" line.
  */
-import { findCustomerByEmail, getOrder } from "@/lib/api";
+import { findCustomerByEmail, getOrder, whenSimReady } from "@/lib/api";
 import { adminNow, insertRow } from "./admin";
 
 export interface ContactInput {
@@ -30,6 +30,8 @@ export function validateContact(input: ContactInput): ContactErrors {
 
 /** Returns the new thread's id. Throws the field errors when the input is invalid. */
 export async function contactSupport(input: ContactInput): Promise<string> {
+  // Numbers, stock and customers include the simulated history: wait for it (docs/admin-v2/01 §2).
+  await whenSimReady();
   const errors = validateContact(input);
   if (Object.keys(errors).length) throw Object.assign(new Error("Invalid contact form"), { errors });
   const email = input.email.trim().toLowerCase();

@@ -8,7 +8,7 @@ import { allOrders } from "@/lib/api/local";
 import { vatRegime } from "@/lib/api/vat";
 import { parisDay, parisHour, simNow } from "@/lib/clock";
 import * as SIM from "@/sim/config";
-import { simSettings } from "@/sim";
+import { simPrimeInfo, simSettings } from "@/sim";
 
 // The read-only modules, not the index: the index carries the adapters, which write through the client.
 export { INTEGRATIONS, INTEGRATION_ROWS, PAYMENT_ROWS, type Integration } from "@/lib/integrations/registry";
@@ -29,7 +29,19 @@ export function simulationStatus() {
     generatedUpTo: `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}, ${String(parisHour(now)).padStart(2, "0")}:${minutes}`,
     time: `${String(parisHour(now)).padStart(2, "0")}:${minutes}`,
     orders: allOrders().filter((o) => o.origin === "sim").length,
+    history: historyLine(),
   };
+}
+
+/** How the history was brought to today in this tab (worker + cache, docs/admin-v2/01 §2), or null (Node, not yet). */
+function historyLine(): string | null {
+  const p = simPrimeInfo();
+  if (!p) return null;
+  const day = (d: string) => `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
+  const where = p.where === "worker" ? "in the background" : "on the page";
+  const days = `${p.daysComputed} ${p.daysComputed === 1 ? "day" : "days"}`;
+  if (p.from === "cache") return `History: from the cache up to ${day(p.cachedUpTo!)}, ${days} generated ${where} in ${p.ms} ms`;
+  return `History: generated from launch, ${days} ${where} in ${p.ms} ms${p.cache ? ", kept for the next opening" : " (no cache in this browser)"}`;
 }
 
 const pct = (n: number) => `${Math.round(n * 1000) / 10} %`;

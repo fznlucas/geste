@@ -10,7 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Artwork, ButtonLink, TrackingSteps } from "@/components";
 import { copyNumbersLabel, getOrderTracking, trackingCarrierLine, type OrderTracking } from "@/lib/api";
-import { useHydrated, usePurchases } from "@/lib/client";
+import { useHydrated, usePurchases, whenSimReady } from "@/lib/client";
 import { dateTime, weekdayDate } from "@/lib/dates";
 import { COUNTRIES } from "@/lib/delivery";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -27,7 +27,7 @@ export function TrackingPage() {
   useEffect(() => {
     if (!hydrated) return;
     let live = true;
-    void (number ? getOrderTracking(number) : Promise.resolve(null)).then((t) => live && setLoad(t ? { status: "ready", tracking: t } : { status: "missing" }));
+    void (number ? whenSimReady().then(() => getOrderTracking(number)) : Promise.resolve(null)).then((t) => live && setLoad(t ? { status: "ready", tracking: t } : { status: "missing" }));
     return () => {
       live = false;
     };

@@ -61,8 +61,22 @@ export class Rng {
       table = { entries, total: entries.reduce((s, [, w]) => s + w, 0) };
       tables.set(weights, table);
     }
-    const entries = table.entries as Array<readonly [K, number]>;
-    let r = this.next() * table.total;
+    return this.drawFrom(table.entries as Array<readonly [K, number]>, table.total);
+  }
+
+  /**
+   * The same draw from a table built for this one call (a deck's counts, today's candidates): not
+   * remembered, so the weak map does not fill with tables used once. Same order, same sum, same key.
+   */
+  weightedOnce<K extends string | number>(weights: Readonly<Record<K, number>> | ReadonlyArray<readonly [K, number]>): K {
+    const entries = (Array.isArray(weights) ? weights : Object.entries(weights)) as Array<readonly [K, number]>;
+    let total = 0;
+    for (const [, w] of entries) total += w;
+    return this.drawFrom(entries, total);
+  }
+
+  private drawFrom<K>(entries: ReadonlyArray<readonly [K, number]>, total: number): K {
+    let r = this.next() * total;
     for (const [k, w] of entries) {
       r -= w;
       if (r < 0) return k;

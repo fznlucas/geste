@@ -2,7 +2,7 @@
 
 /** /kit: dashboard and phone-shell pieces in every state (M6 "dashboard"). */
 import { useState } from "react";
-import { AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, CurrencySwitch, FilterSummary, InfoTip, KpiTile, StatusChip, type CurrencyChoice } from "@/components";
+import { AdminMistPage, AdminPhoneHeader, AdminRow, AdminTabBar, AlertsPopover, BarChart, CurrencySwitch, FilterSummary, InfoTip, KpiTile, MistBlock, StatusChip, type CurrencyChoice } from "@/components";
 
 function State({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -53,6 +53,13 @@ export function DashboardKit() {
       </State>
       <State label="CurrencySwitch (top bar) · EUR excl. VAT (default) · USD charged · disabled">
         <CurrencyStates />
+      </State>
+      <State label="MistBlock (loading, still) · AdminMistPage desktop and phone (the admin while the history is prepared)">
+        <div className="flex flex-col gap-12">
+          <MistBlock className="h-44 w-320" />
+          <div className="flex border border-border"><AdminMistPage busy={false} /></div>
+          <div className="flex w-390 border border-border"><AdminMistPage phone busy={false} /></div>
+        </div>
       </State>
       <State label="KpiTile · sm (AdminMToday)">
         <div className="grid w-358 grid-cols-2 gap-10">

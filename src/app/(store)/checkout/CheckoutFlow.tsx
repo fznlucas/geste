@@ -28,7 +28,7 @@ import {
   type OrderSummaryLine,
 } from "@/components";
 import { CheckoutError, DEMO_CUSTOMER_ID, codeKind, getCustomer, priceCart, type PricedCart } from "@/lib/api";
-import { placeOrder, useCart, useHydrated, useSession, type CustomerSession } from "@/lib/client";
+import { placeOrder, type CustomerSession, useCart, useHydrated, useSession, whenSimReady } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import { SHIPPING, type ShippingMethod } from "@/lib/pricing";
@@ -389,6 +389,7 @@ function Flow({ phone, session }: { phone: boolean; session: CustomerSession | n
       setPayErr(sold);
       return;
     }
+    await whenSimReady();
     const who = await getCustomer(session?.userId ?? DEMO_CUSTOMER_ID);
     const [fn = "", ...ln] = (who?.fullName ?? "Camille Martin").split(" ");
     const a = who?.address;

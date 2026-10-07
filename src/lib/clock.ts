@@ -127,10 +127,22 @@ export function parisParts(at: Date | string | number): { year: number; month: n
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** "2026-10-02": the Paris day of an instant. */
+const dayOfHour = new Map<number, string>();
+
+/**
+ * "2026-10-02": the Paris day of an instant. Remembered per UTC hour: Paris changes day and offset only on
+ * the hour, so every instant of one UTC hour is on the same Paris day (the simulation asks millions of times).
+ */
 export function parisDay(at: Date | string | number): string {
   const t = typeof at === "number" ? at : new Date(at).getTime();
-  return new Date(t + (summerTime(t) ? 120 : 60) * 60_000).toISOString().slice(0, 10);
+  const hour = Math.floor(t / 3_600_000);
+  let day = dayOfHour.get(hour);
+  if (day === undefined) {
+    day = new Date(t + (summerTime(t) ? 120 : 60) * 60_000).toISOString().slice(0, 10);
+    if (dayOfHour.size > 500_000) dayOfHour.clear();
+    dayOfHour.set(hour, day);
+  }
+  return day;
 }
 
 /** Today in Paris, by the simulated clock. */

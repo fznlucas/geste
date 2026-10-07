@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Checkbox, Field, Input, passwordOk, useToast } from "@/components";
 import { getAccountSecurity, getCustomer, type AccountSecurity, type CustomerDetail } from "@/lib/api";
-import { signOut } from "@/lib/client";
+import { signOut, whenSimReady } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { shortDate } from "@/lib/dates";
 import { AccountFrame } from "../_parts/AccountFrame";
@@ -32,7 +32,7 @@ function Settings({ phone, customerId, firstName }: { phone: boolean; customerId
   const [data, setData] = useState<Loaded | null>(null);
   useEffect(() => {
     let live = true;
-    void Promise.all([getCustomer(customerId), getAccountSecurity(customerId)]).then(([customer, security]) => live && customer && security && setData({ customer, security }));
+    void whenSimReady().then(() => Promise.all([getCustomer(customerId), getAccountSecurity(customerId)])).then(([customer, security]) => live && customer && security && setData({ customer, security }));
     return () => {
       live = false;
     };

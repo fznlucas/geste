@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSimVersion } from "./sim";
 import { priceCart, sameCartLine, type CartCodes, type PriceCartOptions } from "@/lib/api/cart";
 import type { CartLineInput, PricedCart, StoredCartLine } from "@/lib/api/types";
 import { LEVELS, isFormatKey } from "@/lib/pricing";
@@ -92,8 +93,11 @@ export function clearCart() {
 export function useCart(opts: PriceCartOptions & CartCodes = {}): PricedCart & { stored: StoredCartLine[] } {
   const stored = useStore(cartStore);
   const { shippingMethod, country, promoCode, giftCardCode, email } = opts;
+  // Stock and codes read the simulated history: price again when it arrives from the worker.
+  const sim = useSimVersion();
   return useMemo(
     () => ({ ...priceCart(stored, { shippingMethod, country, promoCode, giftCardCode, email }), stored }),
-    [stored, shippingMethod, country, promoCode, giftCardCode, email],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stored, shippingMethod, country, promoCode, giftCardCode, email, sim],
   );
 }

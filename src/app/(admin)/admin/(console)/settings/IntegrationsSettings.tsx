@@ -251,6 +251,7 @@ export function Simulation() {
   return (
     <div className="flex flex-col gap-24">
       <span className="text-fg-muted">Simulated data · generated up to {s.generatedUpTo} · seed “{s.seed}” · {s.orders} orders since launch. Your actions are kept on top of it.</span>
+      {s.history && <span className="-mt-16 text-fg-muted">{s.history}.</span>}
       <div className="grid grid-cols-1 gap-16 md:grid-cols-2">
         <form className="flex items-end gap-8" onSubmit={(e) => { e.preventDefault(); run(() => setSimulation({ seed }), `Seed “${seed.trim()}”: another history`); }}>
           <Field label="Seed"><Input value={seed} placeholder={s.seed} onChange={(e) => setSeed(e.target.value)} /></Field>

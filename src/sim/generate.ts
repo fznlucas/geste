@@ -87,6 +87,7 @@ const PARTNER_TABLE = AFFILIATE_PARTNERS.map((x) => [x.id, x.weight] as const);
 const isoOf = (ms: number) => new Date(Math.round(ms / 1000) * 1000).toISOString().slice(0, 19) + "Z";
 
 const EU = new Set(["FR", "BE", "DE", "NL", "ES", "IT"]);
+const BASKET_TABLES = new Map<string, Record<BasketKind, number>>();
 const zoneOf = (country: string): "FR" | "EU" | "INTL" => (country === "FR" ? "FR" : EU.has(country) ? "EU" : "INTL");
 const cardRegionOf = (country: string): PaymentRow["cardRegion"] => (country === "GB" ? "uk" : EU.has(country) ? "eea" : "intl");
 
@@ -108,6 +109,29 @@ export function preLaunchCounts(): Map<string, number> {
   return new Map(printEditions.map((e) => [e.id, Math.max(0, e.soldCount - (fixtureByEdition.get(e.id) ?? 0))]));
 }
 
+/**
+ * Everything the engine knows at the end of a day (docs/admin-v2/01 §2): the rows and the state the next
+ * days read (customers, schedules, balances, decks…). Plain data only — Maps, arrays, rows — so it
+ * crosses `postMessage` and IndexedDB by structured clone, shared references included (a customer's row is
+ * the same object in `customers` and in `rows.customers`).
+ */
+export interface SimSnapshot {
+  seed: string;
+  lastDay: string | null;
+  rows: SimRows;
+  seq: Map<string, number>;
+  customers: Map<string, SimCustomer>;
+  copiesById: Map<string, SimRows["copies"][number]>;
+  emails: Map<string, number>;
+  repeats: Map<string, string[]>;
+  giftUses: Map<string, string[]>;
+  giftBalance: Map<string, number>;
+  giftRecipient: Map<string, string>;
+  taken: Map<string, number>;
+  monthPlans: Map<string, { orders: number[]; visits: number[]; decks: Decks }>;
+  activeSubscribers: number[];
+}
+
 export class Simulator {
   readonly rows: SimRows = emptyRows();
   /** Last day generated (inclusive), or null. */
@@ -127,6 +151,26 @@ export class Simulator {
   private activeSubscribers: number[] = [];
 
   constructor(readonly seed: string) {}
+
+  /** The engine's state, by reference: clone it (structuredClone, IndexedDB, postMessage) before running on. */
+  snapshot(): SimSnapshot {
+    return {
+      seed: this.seed, lastDay: this.lastDay, rows: this.rows, seq: this.seq, customers: this.customers, copiesById: this.copiesById,
+      emails: this.emails, repeats: this.repeats, giftUses: this.giftUses, giftBalance: this.giftBalance, giftRecipient: this.giftRecipient,
+      taken: this.taken, monthPlans: this.monthPlans, activeSubscribers: this.activeSubscribers,
+    };
+  }
+
+  /** An engine that goes on from a snapshot (owned from now on: pass a clone if the snapshot is used elsewhere). */
+  static restore(s: SimSnapshot): Simulator {
+    const sim = new Simulator(s.seed);
+    Object.assign(sim, {
+      rows: s.rows, lastDay: s.lastDay, seq: s.seq, customers: s.customers, copiesById: s.copiesById, emails: s.emails, repeats: s.repeats,
+      giftUses: s.giftUses, giftBalance: s.giftBalance, giftRecipient: s.giftRecipient, taken: s.taken, monthPlans: s.monthPlans,
+      activeSubscribers: s.activeSubscribers,
+    });
+    return sim;
+  }
 
   private next(kind: string): number {
     const n = (this.seq.get(kind) ?? 0) + 1;
@@ -257,7 +301,7 @@ export class Simulator {
     if (deckOf) {
       const entries = [...deckOf].filter(([k, n]) => n > 0 && (weights[k] ?? 0) > 0).map(([k, n]) => [k, n * weights[k]] as const);
       if (entries.length) {
-        const k = r.weighted(entries);
+        const k = r.weightedOnce(entries);
         deckOf.set(k, deckOf.get(k)! - 1);
         return k;
       }
@@ -365,7 +409,7 @@ export class Simulator {
       const size = this.draw(sizes, Object.fromEntries([...new Set(candidates.map((e) => e.size))].map((s) => [s, 1])) as Record<PrintSize, number>, r);
       candidates = candidates.filter((e) => e.size === size);
     }
-    const edition = r.weighted(
+    const edition = r.weightedOnce(
       candidates.map((e) => [e.id, (PRINT_WORK_WEIGHTS[works.findIndex((w) => w.id === e.workId)] ?? 1) * PRINT_SIZE_WEIGHTS[e.size as PrintSize]] as const),
     );
     return { kind: "print", id: `l${this.next("line")}`, addedAt: "", editionId: edition, quantity: 1 };
@@ -373,10 +417,16 @@ export class Simulator {
 
   private basket(day: string, r: Rng, giftCard: boolean): StoredCartLine[] {
     const decks = this.decksOf(day);
-    const weights: Record<BasketKind, number> = { ...(decks ? ONE : BASKET_WEIGHTS) };
-    if (isGiftSeason(day)) weights.giftCard *= DECEMBER.giftCardBoost;
-    // A gift card is not bought with a gift card.
-    if (giftCard) weights.giftCard = 0;
+    // One table per case (anchored month or not, gift season, paying with a gift card): built once, remembered.
+    const key = `${decks ? 1 : 0}${isGiftSeason(day) ? 1 : 0}${giftCard ? 1 : 0}`;
+    let weights = BASKET_TABLES.get(key);
+    if (!weights) {
+      weights = { ...(decks ? ONE : BASKET_WEIGHTS) };
+      if (isGiftSeason(day)) weights.giftCard *= DECEMBER.giftCardBoost;
+      // A gift card is not bought with a gift card.
+      if (giftCard) weights.giftCard = 0;
+      BASKET_TABLES.set(key, weights);
+    }
     const kind = this.draw(decks?.basket, weights, r);
     if (kind === "giftCard") {
       return [{ kind: "gift_card", id: `l${this.next("line")}`, addedAt: "", amountCents: Number(r.weighted(GIFT_CARD_WEIGHTS)), recipientName: r.pick(NAME_POOLS.FR!.first) }];
@@ -740,7 +790,7 @@ export class Simulator {
     const weights: Record<string, number> = { ...SUPPORT_TOPICS };
     delete weights.refund;
     if (!firstPrint) delete weights.print_eta;
-    const topic = r.weighted(weights) as ThreadTopic;
+    const topic = r.weightedOnce(weights) as ThreadTopic;
     const lags: Record<string, [number, number]> = { print_eta: [2, 6], format_swap: [0.05, 2], access: [0.01, 1], invoice: [0, 10] };
     const [a, b] = lags[topic] ?? [0, 3];
     const format = guide?.config.format ? formatLabel(r.pick(formatsOf(works.find((w) => w.id === guide.workId)!.proportion))) : undefined;

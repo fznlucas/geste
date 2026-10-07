@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button, ButtonLink, LibraryRow } from "@/components";
 import { getLibrary, libraryProgress, type LibraryItem } from "@/lib/api";
-import { useLibraryProgress } from "@/lib/client";
+import { useLibraryProgress, whenSimReady } from "@/lib/client";
 import { dayMonth } from "@/lib/dates";
 import { LEVELS, formatLabel } from "@/lib/pricing";
 import { AccountFrame } from "./_parts/AccountFrame";
@@ -32,7 +32,7 @@ function Library({ phone, customerId }: { phone: boolean; customerId: string }) 
 
   useEffect(() => {
     let live = true;
-    void getLibrary(customerId).then((r) => live && setRows(r));
+    void whenSimReady().then(() => getLibrary(customerId)).then((r) => live && setRows(r));
     return () => {
       live = false;
     };

@@ -18,7 +18,7 @@ export { getLibrary, getEntitlement, getEntitlementIds, libraryProgress } from "
 export { getReviews } from "./reviews";
 export { checkGiftCard, checkPromo, codeKind, priceCart, sameCartLine, GIFT_CARD_PRESETS, GIFT_CARD_MIN, GIFT_CARD_MAX, type CartCodes } from "./cart";
 export { buildOrder, nextOrderNumber, CheckoutError, type PlaceOrderInput } from "./checkout";
-export { setLocalRowsSource, setAdminOverlaySource, type LocalRows, type AdminOverlay } from "./local";
+export { setLocalRowsSource, setAdminOverlaySource, simPending, simPrimeInfo, simVersion, subscribeSim, whenSimReady, type LocalRows, type AdminOverlay, type SimPrimeInfo } from "./local";
 export { getStaffMember, sessionExpired, sessionTimeoutHours } from "./staff";
 export { getAdminCounts, getAdminAlerts, getLowEdition, getPushSettings, PUSH_TOPICS, getOrderNotes, setAiToReviewSource, type AdminCounts, type AdminAlert, type OrderNote } from "./admin";
 export { getSupportThreads, getSupportThread, getSavedReplies } from "./support";
